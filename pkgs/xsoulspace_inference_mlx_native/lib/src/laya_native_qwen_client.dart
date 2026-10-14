@@ -37,6 +37,40 @@ external void _qwenUnload(int handle);
 )
 external int _qwenClearCache(int handle, Pointer<Uint8> actor);
 
+@Native<Int32 Function()>(
+  symbol: 'mlx_native_qwen_cancel_api_version',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
+)
+external int _qwenCancelApiVersion();
+
+@Native<Int64 Function(Int64)>(
+  symbol: 'mlx_native_qwen_request_create',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
+)
+external int _qwenRequestCreate(int handle);
+
+@Native<Int32 Function(Int64, Int64)>(
+  symbol: 'mlx_native_qwen_request_cancel',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
+)
+external int _qwenRequestCancel(int handle, int requestId);
+
+@Native<Int32 Function(Int64, Int64)>(
+  symbol: 'mlx_native_qwen_request_finish',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
+)
+external int _qwenRequestFinish(int handle, int requestId);
+
+@Native<Pointer<Uint8> Function(Int64, Int64, Pointer<Uint8>)>(
+  symbol: 'mlx_native_qwen_generate_request',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
+)
+external Pointer<Uint8> _qwenGenerateRequest(
+  int handle,
+  int requestId,
+  Pointer<Uint8> requestJson,
+);
+
 /// One in-process greedy completion: prompt ids, full token sequence, and
 /// the generated text (decoded by the checkpoint's byte-level BPE in the
 /// dylib).
@@ -64,6 +98,14 @@ final class NativeQwenCompletion {
   final int cacheReusedTokens;
 }
 
+final class NativeQwenRequestCancelled implements Exception {
+  const NativeQwenRequestCancelled();
+}
+
+final class NativeQwenCancellationUnavailable implements Exception {
+  const NativeQwenCancellationUnavailable();
+}
+
 /// The R2 dense text engine in-process: greedy decode over the cached
 /// Qwen3 snapshot through the same dylib that serves laya decisions
 /// (64/64 token-for-token parity vs mlx-lm — the fixture gate).
@@ -77,6 +119,15 @@ final class NativeQwenTextEngine {
 
   final int _handle;
   final String snapshotDir;
+
+  /// False on older native assets that implement only legacy generation.
+  bool get supportsRequestCancellation {
+    try {
+      return _qwenCancelApiVersion() == 1;
+    } on ArgumentError {
+      return false;
+    }
+  }
 
   /// Loads the cached snapshot: [snapshotDir], else `QWEN3_SNAPSHOT`, else
   /// the Qwen3-0.6B-4bit checkout under the HF hub cache (never downloads).
@@ -199,6 +250,82 @@ final class NativeQwenTextEngine {
         cacheReset: cacheReset,
       ),
     );
+  }
+
+  /// Request-scoped generation for independently cancellable clients. The
+  /// request id is created synchronously before worker dispatch so a host
+  /// cancellation cannot race ahead of native request registration.
+  Future<NativeQwenCompletion> generateRequestAsync({
+    required final void Function(int requestId) onRequestCreated,
+    final String? prompt,
+    final List<int>? promptIds,
+    final int maxTokens = 64,
+    final bool stopOnEos = false,
+    final List<int>? eosIds,
+    final QwenCacheScope? cacheScope,
+    final bool cacheReset = false,
+  }) {
+    if (!supportsRequestCancellation) {
+      throw const NativeQwenCancellationUnavailable();
+    }
+    final requestId = _qwenRequestCreate(_handle);
+    if (requestId <= 0) {
+      throw StateError('native Qwen request registration failed ($requestId)');
+    }
+    try {
+      onRequestCreated(requestId);
+      final request = jsonEncode(<String, Object?>{
+        'prompt': ?prompt,
+        'prompt_ids': ?promptIds,
+        'max_tokens': maxTokens,
+        'stop_on_eos': stopOnEos,
+        'eos_ids': ?eosIds,
+        'cache_scope': ?cacheScope?.toJson(),
+        'cache_reset': cacheReset,
+      });
+      return Isolate.run(
+        () => generateRequestByHandle(_handle, requestId, request),
+      ).whenComplete(() {
+        _qwenRequestFinish(_handle, requestId);
+      });
+    } on Object {
+      _qwenRequestFinish(_handle, requestId);
+      rethrow;
+    }
+  }
+
+  /// Blocking request-scoped FFI entry used only by the worker isolate.
+  static NativeQwenCompletion generateRequestByHandle(
+    final int handle,
+    final int requestId,
+    final String request,
+  ) {
+    final requestNative = toNativeUtf8(request);
+    try {
+      final reply = _qwenGenerateRequest(handle, requestId, requestNative);
+      final payload = fromNativeUtf8(reply);
+      final json = jsonDecode(payload) as Map<String, dynamic>;
+      if (json['cancelled'] == true) {
+        throw const NativeQwenRequestCancelled();
+      }
+      if (json['error'] != null) {
+        throw StateError('laya qwen generate failed: ${json['error']}');
+      }
+      return NativeQwenCompletion(
+        promptIds: <int>[for (final v in json['prompt_ids'] as List) v as int],
+        ids: <int>[for (final v in json['ids'] as List) v as int],
+        text: json['text'] as String? ?? '',
+        cacheReusedTokens: json['cache_reused_tokens'] as int? ?? 0,
+      );
+    } finally {
+      malloc.free(requestNative);
+    }
+  }
+
+  /// Sets the native cancellation flag for exactly one registered request.
+  void cancelRequest(final int requestId) {
+    final result = _qwenRequestCancel(_handle, requestId);
+    if (result == -1) throw StateError('native Qwen engine is unloaded');
   }
 
   /// Purge all epochs for this host-bound actor after in-flight inference ends.

@@ -13,6 +13,7 @@
 //! A declared per-step plan tree is a later increment, not this rung.
 
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde::Deserialize;
 
@@ -20,6 +21,14 @@ use crate::bindings::BindingTable;
 use crate::mlx::{Array, Dtype, MlxError, MlxResult, Stream};
 use crate::plan::{BinKind, Node, Op, UnaryKind};
 use crate::safetensors::{QuantizedTensor, SafetensorsFile};
+
+fn check_cancelled(cancelled: Option<&AtomicBool>) -> MlxResult<()> {
+    if cancelled.is_some_and(|flag| flag.load(Ordering::Acquire)) {
+        Err(MlxError(-980))
+    } else {
+        Ok(())
+    }
+}
 
 /// Env-gated step profiler (LAYA_QWEN_PROFILE=1): per-section wall time,
 /// accumulated across steps, printed by [`qwen_profile_flush`]. Diagnostic
@@ -1198,11 +1207,29 @@ impl Qwen3 {
         stop: Option<&[i32]>,
         s: Stream,
     ) -> MlxResult<Vec<i32>> {
+        self.generate_greedy_cancellable(prompt_ids, max_tokens, stop, s, None)
+    }
+
+    pub(crate) fn generate_greedy_cancellable(
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: Stream,
+        cancelled: Option<&AtomicBool>,
+    ) -> MlxResult<Vec<i32>> {
         if prompt_ids.is_empty() {
             return Err(MlxError(-978));
         }
         let mut cache = KvCache::new(self.cfg.layers);
-        self.generate_greedy_cached(prompt_ids, max_tokens, stop, s, &mut cache)
+        self.generate_greedy_cached_cancellable(
+            prompt_ids,
+            max_tokens,
+            stop,
+            s,
+            &mut cache,
+            cancelled,
+        )
     }
 
     /// Continue from an exact, already computed prefix. Caller owns isolation
@@ -1211,6 +1238,26 @@ impl Qwen3 {
         &self, prompt_ids: &[i32], max_tokens: usize, stop: Option<&[i32]>,
         s: Stream, cache: &mut KvCache,
     ) -> MlxResult<Vec<i32>> {
+        self.generate_greedy_cached_cancellable(
+            prompt_ids,
+            max_tokens,
+            stop,
+            s,
+            cache,
+            None,
+        )
+    }
+
+    pub(crate) fn generate_greedy_cached_cancellable(
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: Stream,
+        cache: &mut KvCache,
+        cancelled: Option<&AtomicBool>,
+    ) -> MlxResult<Vec<i32>> {
+        check_cancelled(cancelled)?;
         if prompt_ids.is_empty() || cache.offset >= prompt_ids.len() {
             return Err(MlxError(-978));
         }
@@ -1229,6 +1276,7 @@ impl Qwen3 {
         let pacing = crate::power::PrefillPacing::for_request();
         let mut rest = &prompt_ids[cache.offset..];
         while rest.len() > 1 {
+            check_cancelled(cancelled)?;
             let n = PREFILL_STEP.min(rest.len() - 1);
             let t = Array::from_data_i32(&rest[..n], &[1, n])?;
             // KV-only chunk: no lm_head (a chunk's logits are never read).
@@ -1241,6 +1289,7 @@ impl Qwen3 {
         // f32: token ids up to ~152k are exact in f32).
         let mut next: i32 = rest[0];
         for _ in 0..max_tokens {
+            check_cancelled(cancelled)?;
             let tokens = Array::from_data_i32(&[next], &[1, 1])?;
             let logits = self.forward_step(&tokens, cache, s)?;
             let am = logits.argmax_axis(-1, false, s)?;
@@ -1253,6 +1302,7 @@ impl Qwen3 {
                 break;
             }
         }
+        check_cancelled(cancelled)?;
         if qwen_profiling() {
             qwen_profile_flush();
         }

@@ -137,6 +137,27 @@ fixture-gated renderer; LFM maps explicit tool turns to user turns and warns.
 The deterministic transport tests prove normalization and observation
 rendering, not useful model coding or real-model acceptance.
 
+## Request-scoped Qwen cancellation
+
+The native FFI exposes an additive request-cancellation API, versioned by
+`mlx_native_qwen_cancel_api_version()` (currently `1`). Existing callers can
+continue using `mlx_native_qwen_generate`; the new path is for clients that
+dispatch blocking generation to a worker and need to cancel one request
+without waiting for the model-wide forward lock.
+
+Create the request synchronously with
+`mlx_native_qwen_request_create(handle)` before dispatching
+`mlx_native_qwen_generate_request(handle, requestId, requestJson)` to the
+worker. Call `mlx_native_qwen_request_cancel(handle, requestId)` from the
+owning isolate to set that request's cancellation flag, then await the worker
+settling and call `mlx_native_qwen_request_finish(handle, requestId)` in
+cleanup. Cancellation is observed after the current MLX operation and at
+prefill-chunk/decode-step boundaries; an in-flight Metal kernel is not
+preempted. A canceled generation returns
+`{\"error\":\"cancelled\",\"cancelled\":true}` rather than partial token output.
+Clients should probe the API version and retain the legacy generate path when
+loading a dylib that does not export the cancellation API.
+
 ## Prepared native CLI closure
 
 Developer preparation uses `tool/prepare_native_cli.dart` with four arguments:

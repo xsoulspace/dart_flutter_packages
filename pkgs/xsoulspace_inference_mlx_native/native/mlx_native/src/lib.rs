@@ -34,7 +34,7 @@ use std::ffi::{c_char, CStr, CString};
 use std::fs::File;
 use std::os::raw::c_int;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
 use mlx::{gpu, set_metallib_path, Array};
@@ -426,12 +426,36 @@ pub extern "C" fn mlx_native_unload(handle: i64) {
 
 struct QwenEngine {
     prefixes: Mutex<qwen_prefix::PrefixPool>,
+    requests: Mutex<HashMap<i64, Arc<QwenRequestState>>>,
     model: Arc<crate::qwen::Qwen3>,
     tokenizer: crate::bpe::ByteLevelBpe,
 }
 
+struct QwenRequestState {
+    cancelled: AtomicBool,
+}
+
+struct QwenRequestSettlement {
+    engine: Arc<QwenEngine>,
+    request_id: i64,
+}
+
+impl Drop for QwenRequestSettlement {
+    fn drop(&mut self) {
+        self.engine.requests.lock().unwrap().remove(&self.request_id);
+    }
+}
+
 static QWEN_REGISTRY: OnceLock<Mutex<HashMap<i64, Arc<QwenEngine>>>> = OnceLock::new();
 static QWEN_NEXT_HANDLE: AtomicI64 = AtomicI64::new(1);
+static QWEN_NEXT_REQUEST: AtomicI64 = AtomicI64::new(1);
+
+/// Runtime capability probe for additive request-scoped cancellation ABI.
+/// Older dylibs lack this symbol and remain usable through legacy generation.
+#[no_mangle]
+pub extern "C" fn mlx_native_qwen_cancel_api_version() -> i32 {
+    1
+}
 
 fn qwen_registry() -> &'static Mutex<HashMap<i64, Arc<QwenEngine>>> {
     QWEN_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
@@ -482,9 +506,54 @@ pub extern "C" fn mlx_native_qwen_load(model_dir: *const c_char) -> i64 {
     let handle = QWEN_NEXT_HANDLE.fetch_add(1, Ordering::SeqCst);
     qwen_registry().lock().unwrap().insert(
         handle,
-        Arc::new(QwenEngine { model: Arc::new(model), tokenizer, prefixes: Mutex::new(qwen_prefix::PrefixPool::default()) }),
+        Arc::new(QwenEngine {
+            model: Arc::new(model),
+            tokenizer,
+            prefixes: Mutex::new(qwen_prefix::PrefixPool::default()),
+            requests: Mutex::new(HashMap::new()),
+        }),
     );
     handle
+}
+
+/// Create request state before dispatching the blocking generation FFI to a
+/// worker isolate. The returned positive id is scoped to this process and
+/// engine handle. Every caller must finish the id after its worker settles.
+#[no_mangle]
+pub extern "C" fn mlx_native_qwen_request_create(handle: i64) -> i64 {
+    let engine = qwen_registry().lock().unwrap().get(&handle).map(Arc::clone);
+    let Some(engine) = engine else { return -1; };
+    let request_id = QWEN_NEXT_REQUEST.fetch_add(1, Ordering::Relaxed);
+    if request_id <= 0 { return -2; }
+    engine.requests.lock().unwrap().insert(
+        request_id,
+        Arc::new(QwenRequestState { cancelled: AtomicBool::new(false) }),
+    );
+    request_id
+}
+
+/// Request cancellation without taking the global MLX forward lock. The flag
+/// is observed at prefill-chunk and decode-step boundaries.
+/// Returns 0 when the request exists, -1 for an unknown engine, and -2 when
+/// the request has already settled or was never created.
+#[no_mangle]
+pub extern "C" fn mlx_native_qwen_request_cancel(handle: i64, request_id: i64) -> i32 {
+    let engine = qwen_registry().lock().unwrap().get(&handle).map(Arc::clone);
+    let Some(engine) = engine else { return -1; };
+    let request = engine.requests.lock().unwrap().get(&request_id).map(Arc::clone);
+    let Some(request) = request else { return -2; };
+    request.cancelled.store(true, Ordering::Release);
+    0
+}
+
+/// Idempotent cleanup for dispatch failures that never entered the FFI.
+/// Generation also removes its request state when the native call settles.
+#[no_mangle]
+pub extern "C" fn mlx_native_qwen_request_finish(handle: i64, request_id: i64) -> i32 {
+    let engine = qwen_registry().lock().unwrap().get(&handle).map(Arc::clone);
+    let Some(engine) = engine else { return -1; };
+    engine.requests.lock().unwrap().remove(&request_id);
+    0
 }
 
 /// Greedy text generation. Request: `{"prompt": "…", "max_tokens": 64}` (or
@@ -493,6 +562,25 @@ pub extern "C" fn mlx_native_qwen_load(model_dir: *const c_char) -> i64 {
 /// `{"ids": [...], "text": "…", "prompt_ids": [...]}` or `{"error": "…"}`.
 #[no_mangle]
 pub extern "C" fn mlx_native_qwen_generate(handle: i64, request_json: *const c_char) -> *mut c_char {
+    qwen_generate(handle, None, request_json)
+}
+
+/// Cancellable counterpart to `mlx_native_qwen_generate`. Its request id must
+/// have been created before starting the worker isolate.
+#[no_mangle]
+pub extern "C" fn mlx_native_qwen_generate_request(
+    handle: i64,
+    request_id: i64,
+    request_json: *const c_char,
+) -> *mut c_char {
+    qwen_generate(handle, Some(request_id), request_json)
+}
+
+fn qwen_generate(
+    handle: i64,
+    request_id: Option<i64>,
+    request_json: *const c_char,
+) -> *mut c_char {
     if request_json.is_null() {
         return fail("missing request");
     }
@@ -500,6 +588,18 @@ pub extern "C" fn mlx_native_qwen_generate(handle: i64, request_json: *const c_c
     let Some(engine) = engine else {
         return fail("unknown handle");
     };
+    let cancellation = match request_id {
+        Some(id) => {
+            let request = engine.requests.lock().unwrap().get(&id).map(Arc::clone);
+            let Some(request) = request else { return fail("unknown request"); };
+            Some(request)
+        }
+        None => None,
+    };
+    let _settlement = request_id.map(|id| QwenRequestSettlement {
+        engine: Arc::clone(&engine),
+        request_id: id,
+    });
     let request: QwenGenerateRequest = match serde_json::from_slice(unsafe {
         CStr::from_ptr(request_json)
     }
@@ -509,6 +609,9 @@ pub extern "C" fn mlx_native_qwen_generate(handle: i64, request_json: *const c_c
         Err(_) => return fail("unreadable request JSON"),
     };
     let _guard = forward_lock().lock().unwrap();
+    if is_qwen_cancelled(cancellation.as_deref()) {
+        return qwen_cancelled();
+    }
     let stream = match gpu() {
         Ok(stream) => stream,
         Err(e) => return fail(&format!("stream initialization failed: mlx status {}", e.0)),
@@ -524,16 +627,42 @@ pub extern "C" fn mlx_native_qwen_generate(handle: i64, request_json: *const c_c
             None => return fail("request needs prompt or prompt_ids"),
         }
     };
+    if is_qwen_cancelled(cancellation.as_deref()) {
+        return qwen_cancelled();
+    }
     let stop: Option<&[i32]> = if request.stop_on_eos {
         Some(&request.eos_ids)
     } else {
         None
     };
     let mut prefixes = engine.prefixes.lock().unwrap();
-    let result = prefixes.generate(&engine.model, &prompt_ids, request.max_tokens,
-        stop, stream, request.cache_scope, request.cache_reset);
+    let result = if let Some(state) = cancellation.as_ref() {
+        prefixes.generate_cancellable(
+            &engine.model,
+            &prompt_ids,
+            request.max_tokens,
+            stop,
+            stream,
+            request.cache_scope,
+            request.cache_reset,
+            Some(&state.cancelled),
+        )
+    } else {
+        prefixes.generate(
+            &engine.model,
+            &prompt_ids,
+            request.max_tokens,
+            stop,
+            stream,
+            request.cache_scope,
+            request.cache_reset,
+        )
+    };
     match result {
         Ok((ids, reused)) => {
+            if is_qwen_cancelled(cancellation.as_deref()) {
+                return qwen_cancelled();
+            }
             let text = engine
                 .tokenizer
                 .decode(&ids[prompt_ids.len()..].iter().map(|&i| i as u32).collect::<Vec<_>>())
@@ -550,8 +679,21 @@ pub extern "C" fn mlx_native_qwen_generate(handle: i64, request_json: *const c_c
                 Err(_) => fail("encode"),
             }
         }
+        Err(e) if e.0 == -980 && is_qwen_cancelled(cancellation.as_deref()) => {
+            qwen_cancelled()
+        }
         Err(e) => fail(&format!("generate failed: mlx status {}", e.0)),
     }
+}
+
+fn is_qwen_cancelled(request: Option<&QwenRequestState>) -> bool {
+    request.is_some_and(|state| state.cancelled.load(Ordering::Acquire))
+}
+
+fn qwen_cancelled() -> *mut c_char {
+    CString::new(r#"{"error":"cancelled","cancelled":true}"#)
+        .unwrap()
+        .into_raw()
 }
 
 /// Synchronous host revocation: waits for any in-flight generation, then purges.

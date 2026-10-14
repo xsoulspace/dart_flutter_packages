@@ -1,5 +1,0 @@
-include: package:xsoulspace_lints/library.yaml
-
-analyzer:
-  exclude:
-    - build/**

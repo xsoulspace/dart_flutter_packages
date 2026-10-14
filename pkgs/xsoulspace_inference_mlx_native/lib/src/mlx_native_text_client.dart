@@ -89,6 +89,8 @@ final class MlxNativeTextClient implements InferenceClient {
     required this.defaultTemperature,
     required this.toolSyntax,
     this._loadEngine,
+    this._qwenEngine,
+    this._qwenCacheScope,
   });
 
   /// The Qwen3 cast: ChatML with the thinking switch, EOS stop on
@@ -132,6 +134,8 @@ final class MlxNativeTextClient implements InferenceClient {
     defaultMaxTokens: defaultMaxTokens,
     defaultTemperature: defaultTemperature,
     toolSyntax: toolSyntax,
+    qwenEngine: () => engine,
+    qwenCacheScope: cacheScope,
   );
 
   /// The LFM2.5 cast: the fixture-gated instruct template (tools render
@@ -201,6 +205,7 @@ final class MlxNativeTextClient implements InferenceClient {
       loadEngine: () async {
         engine = await NativeQwenTextEngine.load(snapshotDir: snapshotDir);
       },
+      qwenEngine: () => engine,
     );
     client._onUnloadEngine = () {
       engine?.dispose();
@@ -371,6 +376,8 @@ final class MlxNativeTextClient implements InferenceClient {
 
   /// Performs the deferred weight load (lazy form only; null = eager).
   final Future<void> Function()? _loadEngine;
+  final NativeQwenTextEngine? Function()? _qwenEngine;
+  final QwenCacheScope? _qwenCacheScope;
 
   /// The cast's constructor-default thinking switch. Requests override
   /// per call (`request.thinking`).
@@ -438,6 +445,12 @@ final class MlxNativeTextClient implements InferenceClient {
   Future<InferenceResult<InferenceResponse>> infer(
     final InferenceRequest request, {
     final ToolRegistry? toolRegistry,
+  }) => _inferUsing(request, toolRegistry: toolRegistry, generate: _generate);
+
+  Future<InferenceResult<InferenceResponse>> _inferUsing(
+    final InferenceRequest request, {
+    required final ToolRegistry? toolRegistry,
+    required final _Generate generate,
   }) async {
     if (request.task != InferenceTask.text) {
       return InferenceResult.fail(
@@ -453,6 +466,17 @@ final class MlxNativeTextClient implements InferenceClient {
         message: 'The native engine client was disposed',
         details: <String, Object?>{'retryable': false},
       );
+    }
+    List<Object?>? tools;
+    if (toolRegistry != null && toolRegistry.tools.isNotEmpty) {
+      try {
+        tools = nativeTextFunctionTools(toolRegistry);
+      } on ArgumentError catch (error) {
+        return InferenceResult.fail(
+          code: 'tool_schema_unsupported',
+          message: 'Native function schema cannot be materialized: $error',
+        );
+      }
     }
     if (!isAvailable) {
       await load();
@@ -481,10 +505,6 @@ final class MlxNativeTextClient implements InferenceClient {
         'honored as a plain generation',
       );
     }
-    List<Object?>? tools;
-    if (toolRegistry != null && toolRegistry.tools.isNotEmpty) {
-      tools = nativeTextFunctionTools(toolRegistry);
-    }
     final messages = nativeTextMessages(request);
     if (!hasThinkingSwitch &&
         messages.any((final message) => message.role == ChatRole.tool)) {
@@ -496,7 +516,7 @@ final class MlxNativeTextClient implements InferenceClient {
     final maxTokens = request.maxTokens ?? defaultMaxTokens;
     final ({List<int> promptIds, List<int> ids, String text}) completion;
     try {
-      completion = await _generate(
+      completion = await generate(
         prompt: _render(
           system: request.systemPrompt,
           user: request.prompt,
@@ -507,6 +527,19 @@ final class MlxNativeTextClient implements InferenceClient {
         maxTokens: maxTokens,
         stopOnEos: true,
         eosIds: _eosIds(),
+      );
+    } on NativeQwenRequestCancelled {
+      return InferenceResult.fail(
+        code: 'cancelled',
+        message: 'Native Qwen generation was cancelled before completion',
+        details: <String, Object?>{'retryable': false},
+      );
+    } on NativeQwenCancellationUnavailable {
+      return InferenceResult.fail(
+        code: 'unavailable',
+        message:
+            'This native Qwen library does not support request cancellation',
+        details: <String, Object?>{'retryable': false},
       );
     } on StateError catch (error) {
       return InferenceResult.fail(
@@ -553,6 +586,12 @@ final class MlxNativeTextClient implements InferenceClient {
     );
   }
 
+  /// Creates a request-cancellable view of this Qwen client. The view shares
+  /// the same lazy engine and weights while keeping cancellation request IDs
+  /// local to that view, so sibling routers cannot cancel one another.
+  CancellableInferenceClient cancellableQwenScope() =>
+      _NativeQwenInferenceScope(this);
+
   /// Marks this client disposed (subsequent [infer] calls answer the
   /// typed `unavailable` failure). Does NOT unload the engine — whoever
   /// loaded it owns its lifetime ([NativeQwenTextEngine.dispose] /
@@ -576,4 +615,132 @@ final class MlxNativeTextClient implements InferenceClient {
 
   /// Set by the lazy factories: disposes the loaded engine box.
   void Function()? _onUnloadEngine;
+}
+
+final class _NativeQwenInferenceScope implements CancellableInferenceClient {
+  _NativeQwenInferenceScope(this._base);
+
+  final MlxNativeTextClient _base;
+  final Set<int> _requestIds = <int>{};
+  final Set<Future<InferenceResult<InferenceResponse>>> _inflight =
+      <Future<InferenceResult<InferenceResponse>>>{};
+  int _cancelEpoch = 0;
+  bool _closed = false;
+
+  NativeQwenTextEngine? get _engine => _base._qwenEngine?.call();
+  bool get _canCancel => _engine?.supportsRequestCancellation ?? false;
+
+  @override
+  String get id => _base.id;
+  @override
+  Set<InferenceTask> get supportedTasks => _base.supportedTasks;
+  @override
+  bool get isAvailable => _base.isAvailable && _canCancel && !_closed;
+
+  @override
+  Future<void> load() async {
+    await _base.load();
+  }
+
+  @override
+  Future<bool> refreshAvailability() async {
+    await _base.refreshAvailability();
+    return isAvailable;
+  }
+
+  @override
+  void resetAvailabilityCache() => _base.resetAvailabilityCache();
+
+  @override
+  Future<InferenceResult<InferenceResponse>> infer(
+    final InferenceRequest request, {
+    final ToolRegistry? toolRegistry,
+  }) {
+    if (_closed) {
+      return Future.value(
+        InferenceResult.fail(
+          code: 'unavailable',
+          message: 'The cancellable native Qwen scope is closed',
+          details: <String, Object?>{'retryable': false},
+        ),
+      );
+    }
+    final epoch = _cancelEpoch;
+    late final Future<InferenceResult<InferenceResponse>> future;
+    future = _base._inferUsing(
+      request,
+      toolRegistry: toolRegistry,
+      generate:
+          ({
+            required final String prompt,
+            required final int maxTokens,
+            required final bool stopOnEos,
+            required final List<int> eosIds,
+          }) async {
+            if (_closed) {
+              throw StateError('cancellable native Qwen scope is closed');
+            }
+            final engine = _engine;
+            if (engine == null || !engine.supportsRequestCancellation) {
+              throw const NativeQwenCancellationUnavailable();
+            }
+            var requestId = 0;
+            final completionFuture = engine.generateRequestAsync(
+              onRequestCreated: (final value) {
+                requestId = value;
+                _requestIds.add(value);
+                if (epoch < _cancelEpoch) engine.cancelRequest(value);
+              },
+              prompt: prompt,
+              maxTokens: maxTokens,
+              stopOnEos: stopOnEos,
+              eosIds: eosIds,
+              cacheScope: _base._qwenCacheScope,
+            );
+            try {
+              final result = await completionFuture;
+              return _toRecord(result.promptIds, result.ids, result.text);
+            } finally {
+              if (requestId != 0) _requestIds.remove(requestId);
+            }
+          },
+    );
+    _inflight.add(future);
+    return future.whenComplete(() => _inflight.remove(future));
+  }
+
+  @override
+  void cancelActive() {
+    _cancelEpoch++;
+    final engine = _engine;
+    if (engine == null || !engine.supportsRequestCancellation) return;
+    for (final id in List<int>.of(_requestIds)) {
+      engine.cancelRequest(id);
+    }
+  }
+
+  @override
+  Future<void> settleActive() async {
+    while (_inflight.isNotEmpty) {
+      final current = List<Future<InferenceResult<InferenceResponse>>>.of(
+        _inflight,
+      );
+      await Future.wait(
+        current.map((final future) async {
+          try {
+            await future;
+          } on Object {
+            // Settlement is about native completion, not task success.
+          }
+        }),
+      );
+    }
+  }
+
+  @override
+  void close() {
+    if (_closed) return;
+    _closed = true;
+    cancelActive();
+  }
 }

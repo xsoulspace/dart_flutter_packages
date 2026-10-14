@@ -5,7 +5,6 @@ description: >-
   gate runner. Transport-free by design — ACP, doc routers and OS dialogs stay
   product-side.
 version: 0.1.0
-publish_to: none
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
 
