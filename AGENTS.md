@@ -68,22 +68,24 @@ For more information on the project charter and decisions:
 - Read [ADR Index](docs/decisions/README) (if present)
 
 <!-- codemap-index:start -->
-# Codemap Graph Index — Code Intelligence for this repo
+# Codemap — navigate this repo
 
-This repo is indexed by codemap's persistent graph index (`.codemap/index/`, gitignored,
-derivable — the same parser-backed payload all codemap surfaces use). Navigation is fast
-and carries an honest freshness contract: a stale index refuses or degrades loudly, never
-silently. MCP tools `map_index_search` / `map_index_query` / `map_index_status` /
-`map_index_changes` / `map_index_build` are globally mounted; the CLI form runs from the
-codemap checkout: `~/xs/codemap/.venv/bin/python ~/xs/codemap/codemap_cli.py --json exec <command> --args '{"root": "/Users/antonio/xs/storage_problem/dart_flutter_packages", ...}'`.
+Discover once per session: `resources/read` `codemap://surface/v1`, or `map_surface`.
+Then call `map_index` with `operation=`. The transport refuses retired names
+(`map_index_search`, `map_index_query`, `map_index_build`, and the other `map_index_*` tools).
 
-## Always Do
+Pass `"root": "/Users/antonio/xs/storage_problem/dart_flutter_packages"` when the client cwd is not this repo.
 
-- **Find symbols by graph, not grep:** `map_index_search` with `{"root": "/Users/antonio/xs/storage_problem/dart_flutter_packages", "query": "<substr>"}` (regex via `"use_regex": true`).
-- **Blast radius before editing a symbol:** `map_index_query` with `{"root": "/Users/antonio/xs/storage_problem/dart_flutter_packages", "kind": "impact", "symbol": "<rel/path.ext::unit.name>"}`; `{"kind": "context"}` for the node + inbound/outbound edges.
-- **Freshness before trusting:** every payload carries `freshness`; a stale index REFUSES by default — pass `"require_fresh": false` only when a visible-stale answer is acceptable; `map_index_status` reports full drift.
-- **Before committing:** `map_index_changes` maps file drift to changed symbols + one-hop affected callers.
-- **Rebuild when stale:** `map_index_build` with `{"root": "/Users/antonio/xs/storage_problem/dart_flutter_packages", "ignore_prefixes": ["build/"]}` — incremental (unchanged files splice from cached contributions); a fresh tree answers in seconds.
-- Symbol ids are `rel/path.ext::unit.name` — get exact ids from `index_search`. Never invent edges from grep; unresolved calls are in the payload, never guessed.
+1. **Start** — `map_doctor`, then `map_index` `{"operation":"build","root":"/Users/antonio/xs/storage_problem/dart_flutter_packages","ignore_prefixes":["build/","dist/",".dart_tool/","target/"]}`, then `map_index` `{"operation":"context_map","root":"/Users/antonio/xs/storage_problem/dart_flutter_packages","limit":24}`.
+2. **Find** — `operation=search` and `query`. Concept-shaped queries add `"mode":"bm25"`.
+3. **Before an edit** — `operation=query`, `kind=impact`, `symbol` = `rel/path.ext::unit.name` from search. `kind=context` returns the node and its edges. `kind=trace` also needs `target`.
+4. **One evidence packet** — `operation=evidence` with `purpose` (`understand`, `impact`, or `trace`) and `budget_bytes`. Open the exact original with `operation=expand` and the handle in `meta.expansion`.
+5. **Before commit** — `operation=changes`.
+6. **On every answer** — read `freshness` and `meta.transport`. Ordinary reads refresh a stale index. `freshness_policy=refuse` starts no repair. Navigation facts are review leads; they do not authorize adoption.
 
+CLI, from the codemap checkout:
+
+`~/xs/codemap/.venv/bin/python ~/xs/codemap/engines/versions/py_engine/codemap_cli.py --json exec <index_command> --args '{"root":"/Users/antonio/xs/storage_problem/dart_flutter_packages",...}'`
+
+Parser edges only. Unresolved calls stay in the payload.
 <!-- codemap-index:end -->
