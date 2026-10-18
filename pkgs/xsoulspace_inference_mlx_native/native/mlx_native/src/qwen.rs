@@ -203,6 +203,20 @@ pub struct Qwen3 {
     table: BindingTable,
 }
 
+/// Acceptance counters for one speculative greedy decode run (ADR 0057
+/// bottleneck 1). `rounds` = propose+verify rounds executed; `drafted` =
+/// tokens proposed by the draft (k per round); `accepted` = verified-prefix
+/// tokens the target kept (the correction/bonus token is not an
+/// acceptance). `decode` times only the round loop — prefill excluded —
+/// so a bench can report decode-only tok/s.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct SpecStats {
+    pub rounds: usize,
+    pub drafted: usize,
+    pub accepted: usize,
+    pub decode: std::time::Duration,
+}
+
 /// Per-layer KV cache mirroring mlx_lm's `KVCache` growth policy exactly:
 /// zero-padded buffers grown in steps of 256, slice-assignment writes,
 /// strided views for reads. The previous exact-size concat per step copied
@@ -1333,9 +1347,31 @@ impl Qwen3 {
         k: usize,
         s: Stream,
     ) -> MlxResult<Vec<i32>> {
+        self.generate_greedy_speculative_with_stats(draft, prompt_ids, max_tokens, k, s)
+            .map(|(tokens, _)| tokens)
+    }
+
+    /// [`Self::generate_greedy_speculative`] plus the acceptance counters
+    /// and the decode-only clock the ADR 0057 bench needs: `drafted` is the
+    /// number of tokens the draft proposed (k per round), `accepted` the
+    /// verified-prefix tokens the target kept (the correction/bonus token
+    /// is NOT an acceptance), and `decode` covers ONLY the propose+verify
+    /// round loop — prefill is excluded so benches can report decode-only
+    /// tok/s for the plain-vs-speculative A/B without subtracting two
+    /// wall clocks.
+    pub fn generate_greedy_speculative_with_stats(
+        &self,
+        draft: &Qwen3,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        k: usize,
+        s: Stream,
+    ) -> MlxResult<(Vec<i32>, SpecStats)> {
         if prompt_ids.is_empty() || k == 0 {
             return Err(MlxError(-978));
         }
+        let mut stats = SpecStats::default();
+        let decode_clock = std::time::Instant::now();
         let mut cache = KvCache::new(self.cfg.layers);
         let mut dcache = KvCache::new(draft.cfg.layers);
         // Whole-window reservation for BOTH engines (the spike lesson):
@@ -1368,6 +1404,8 @@ impl Qwen3 {
         };
 
         while out.len() - prompt_ids.len() < max_tokens {
+            stats.rounds += 1;
+            stats.drafted += k;
             // (a) Draft propose: k greedy steps on the draft engine.
             let mut d = Vec::with_capacity(k);
             let mut probe = seed;
@@ -1400,6 +1438,7 @@ impl Qwen3 {
             while a < k && t[a] == d[a] {
                 a += 1;
             }
+            stats.accepted += a;
             let bonus = t[a];
 
             // (d) Emit d[0..a] + bonus, capped by max_tokens.
@@ -1418,6 +1457,7 @@ impl Qwen3 {
             dcache.offset = pre;
             seed = bonus;
         }
-        Ok(out)
+        stats.decode = decode_clock.elapsed();
+        Ok((out, stats))
     }
 }
