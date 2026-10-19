@@ -1,0 +1,63 @@
+{
+  "provenance": {
+    "generator_source": "x=mx.array([[[1.,0.],[0.,1.],[-1.,0.]],[[0.,1.],[1.,0.],[0.,-1.]]]); w=mx.zeros((2,1)); y=mx.array([[1.,0.,0.],[0.,1.,0.]]); p=mx.softmax((x.reshape(6,2)@w).reshape(2,3),axis=-1); grad=x.reshape(6,2).T@(p-y).reshape(6,1)/2; next_w=w-0.1*grad; logits=x[0]@mx.array([[0.4],[-0.2]])",
+    "generator_sha256": "476017dd92e6b716014bf74f9bae8651c3a3c0addbb54c99c75adae59315960d",
+    "mlx_version": "0.32.3",
+    "oracle": "Python MLX independent ranker arithmetic; generated before Rust parity run"
+  },
+  "fit": {
+    "schema": "local-ranker-fit/v1",
+    "rows": [
+      {
+        "features": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0
+          ],
+          [
+            -1.0,
+            0.0
+          ]
+        ],
+        "target": 0
+      },
+      {
+        "features": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            -1.0
+          ]
+        ],
+        "target": 1
+      }
+    ],
+    "epochs": 1,
+    "learning_rate": 0.1,
+    "l2": 0.02
+  },
+  "weights": [
+    0.4,
+    -0.2
+  ],
+  "weights_after_one_step": [
+    0.0833333358168602,
+    -0.01666666753590107
+  ],
+  "logits": [
+    0.4000000059604645,
+    -0.20000000298023224,
+    -0.4000000059604645
+  ]
+}

@@ -33,6 +33,25 @@ enum OpenRouterCacheBreakpointPolicy { unknown, anthropicEphemeral }
 /// [DefaultGenerationHandler] could route
 /// them to the world's `toolExecutionSystem` — the same path as raw LLM
 /// backends. The client never executes tools itself.
+/// The chat-completions endpoint for a declared API root.
+///
+/// The root is the API VERSION path (`https://openrouter.ai/api/v1`, a
+/// proxy's `https://gateway.internal/v1`); the operation is appended. A
+/// root that already names the operation is used verbatim. The default root
+/// yields exactly the historical endpoint, so an unconfigured client is
+/// byte-identical to before.
+Uri chatCompletionsUri(String baseUrl) {
+  final trimmed = baseUrl.trim();
+  if (trimmed.isEmpty) {
+    return Uri.https('openrouter.ai', '/api/v1/chat/completions');
+  }
+  final root = Uri.parse(trimmed);
+  final path = root.path;
+  if (path.endsWith('/chat/completions')) return root;
+  final suffix = path.endsWith('/') ? 'chat/completions' : '/chat/completions';
+  return root.replace(path: '$path$suffix');
+}
+
 class OpenRouterInferenceClient implements InferenceClient {
   OpenRouterInferenceClient({
     this._apiKey = '',
@@ -53,6 +72,11 @@ class OpenRouterInferenceClient implements InferenceClient {
 
   final String _apiKey;
   final String defaultModel;
+
+  /// The API root this client posts to (e.g. `https://openrouter.ai/api/v1`,
+  /// or a proxy's `https://gateway.internal/v1`). The chat-completions
+  /// endpoint is DERIVED from it, so a configured provider actually reaches
+  /// its declared host instead of silently falling back to openrouter.ai.
   final String baseUrl;
   final http.Client _httpClient;
   final bool _ownsHttpClient;
@@ -243,7 +267,7 @@ class OpenRouterInferenceClient implements InferenceClient {
     var diagnosticOutcome = 'failed';
     var transport = <String, Object?>{};
     try {
-      final uri = Uri.https('openrouter.ai', '/api/v1/chat/completions');
+      final uri = chatCompletionsUri(baseUrl);
       final encodedBody = jsonEncode(body);
       final headers = <String, String>{
         'authorization': 'Bearer $_apiKey',

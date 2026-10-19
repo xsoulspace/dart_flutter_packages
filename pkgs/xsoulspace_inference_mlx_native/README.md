@@ -192,3 +192,20 @@ another model's GPU work. Cancellation during active prefill/decode remains
 cooperative at existing boundaries; a caller deadline is not physical settlement.
 Hosts must await settlement before unload, replay or fallback, and quarantine
 uncertain requests. This admission fix changes no model math or chunk sizes.
+
+## Bounded numeric ranker experiment
+
+`native/mlx_native/src/bin/local_ranker.rs` is an opt-in consumer of the existing
+MLX array API: `fit INPUT FRESH_OUTPUT METALLIB` or
+`score INPUT FRESH_OUTPUT METALLIB`. It learns a small linear candidate scorer
+with explicit per-row normalization and bounded analytic gradients. It has no
+network, checkpoint download, process dispatch or product policy. Fit caps are
+256 rows,16 candidates,256 features,200 epochs and30 seconds. The artifact
+records its input and metallib hashes. Score requests carry features and sealed
+weights, without labels. Existing dylib exports and providers are unchanged.
+
+Qualify it with `cargo test --offline --release --bin local_ranker` in the native
+crate. `testdata/linear_ranker_parity.json` pins Python-MLX reference logits and
+one optimizer step, including its generator source and version. Corpus curation,
+feature extraction, held-out evaluation and adoption policy belong to the
+harness experiments package (ADR0103), not this numeric tool.
