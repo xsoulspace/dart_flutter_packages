@@ -1,0 +1,38 @@
+{
+  "rung": "PERM-E2E",
+  "role": "PERM-GATE-1 attempt-3 line: end-to-end nursery training on the permission corpus; the model's label head IS the 2-way perm decision (label_kinds = [abstain, allow_once])",
+  "config": {
+    "hidden_size": 128,
+    "num_hidden_layers": 4,
+    "num_experts": 8,
+    "num_experts_per_tok": 2,
+    "moe_intermediate_size": 256,
+    "vocab_size": 258,
+    "rms_norm_eps": 1e-05,
+    "router_margin_target": 1.0,
+    "lam_label": 1.0,
+    "lam_margin": 0.1,
+    "lam_route": 0.05,
+    "max_seq_len": 512,
+    "routing_window": 1,
+    "label_kinds": [
+      "abstain",
+      "allow_once"
+    ],
+    "seed": 0
+  },
+  "training": {
+    "learning_rate": 0.003,
+    "steps": 414,
+    "log_every": 50,
+    "note": "6 epochs x 69 batches at batch 16 over 1095 train rows; fast path; eval split ~10% by split_of law"
+  },
+  "gates": {
+    "note": "PERM-GATE-1 via run_harness is the only acceptance; train-gates not consulted for this slot run"
+  },
+  "data": {
+    "dataset": "bench/nursery/data/perm_corpus_clause.jsonl",
+    "split_law": "model_def.split_of"
+  },
+  "status": "CONFIG ONLY"
+}

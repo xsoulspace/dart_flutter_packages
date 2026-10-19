@@ -134,14 +134,7 @@ final class NativeLayaDecisionEngine implements CalibratedLayaDecisionEngine {
   /// never downloads).
   static Future<NativeLayaDecisionEngine> load({String? modelDir}) async {
     final dir = resolveModelDir(modelDir);
-    final library = await Isolate.resolvePackageUri(
-      Uri.parse(
-        'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.dart',
-      ),
-    );
-    final packageRoot = library == null
-        ? null
-        : File.fromUri(library).parent.parent.path;
+    final packageRoot = await resolveNativePackageRoot();
     _ensureNativeBindingsAvailable(packageRoot: packageRoot);
     final dirNative = _toNative(dir);
     final handle = _layaNativeLoad(dirNative);
@@ -151,9 +144,9 @@ final class NativeLayaDecisionEngine implements CalibratedLayaDecisionEngine {
         'laya native load failed (code $handle) for model dir $dir',
       );
     }
-    final config =
-        jsonDecode(File('$dir/rl_agent_config.json').readAsStringSync())
-            as Map<String, dynamic>;
+    final config = jsonDecode(
+      File('$dir/rl_agent_config.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
     final temps = [
       for (final t in config['temperature'] as List? ?? const [1.0, 1.0, 1.0])
         clampTemperature((t as num).toDouble()),
@@ -280,9 +273,8 @@ final class NativeLayaDecisionEngine implements CalibratedLayaDecisionEngine {
             actProbability: actExp[0] / actSum,
           );
         case 'score':
-          final scoreValue = [
-            for (var i = 0; i < k; i++) i * probs[i],
-          ].fold(0.0, (a, b) => a + b);
+          final scoreValue = [for (var i = 0; i < k; i++) i * probs[i]]
+              .fold(0.0, (a, b) => a + b);
           result[keys[r]] = LayaTypedDecision(
             type: 'score',
             score: scoreValue,
@@ -480,6 +472,22 @@ String _home() {
 }
 
 /// Public shims for sibling native-client files (the qwen text engine).
+/// Flutter bundles native assets but does not expose package URI resolution.
+/// Package-relative preload is optional; native-assets probing stays first.
+Future<String?> resolveNativePackageRoot() async {
+  try {
+    final library = await Isolate.resolvePackageUri(
+      Uri.parse(
+        'package:xsoulspace_inference_mlx_native/'
+        'xsoulspace_inference_mlx_native.dart',
+      ),
+    );
+    return library == null ? null : File.fromUri(library).parent.parent.path;
+  } on UnsupportedError {
+    return null;
+  }
+}
+
 Pointer<Uint8> toNativeUtf8(String text) => _toNative(text);
 
 String fromNativeUtf8(Pointer<Uint8> pointer) => _fromNative(pointer);
@@ -502,7 +510,8 @@ String? resolveQwenSnapshotDir(String? override) {
       final snapshots = Directory('${entry.path}/snapshots');
       if (!snapshots.existsSync()) continue;
       for (final snap in snapshots.listSync()) {
-        if (snap is Directory && File('${snap.path}/config.json').existsSync()) {
+        if (snap is Directory &&
+            File('${snap.path}/config.json').existsSync()) {
           return snap.path;
         }
       }

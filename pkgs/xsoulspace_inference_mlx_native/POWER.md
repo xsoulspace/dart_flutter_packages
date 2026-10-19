@@ -41,6 +41,19 @@ gates keep asserting on `unknown` (no silent weakening).
 
 `mlx_native::power::perf_gate(name, ok, detail)` implements the perf row.
 
+## The charge-current hole (found 2026-10-18, closed as a recorded gap)
+
+**pmset "AC" ≠ charge current.** `pmset -g ps` reports the *source*
+("AC Power") while the adapter may deliver only a trickle. Measured on this
+machine's 8 W USB brick: `AC Power` with ioreg `Amperage` = 149 mA
+(≈1.6 W at 5% SoC), and ~0 under GPU load — break-even; GPU work stalls
+charging. So perf-gate "on AC" requires **real charge current**: the gate
+input is `ioreg -rn AppleSmartBattery` → `Amperage` (mA; strongly positive =
+actually charging) read under load — not the pmset source flag. Wiring that
+check into `PowerFacts` (Dart + Rust, one shape) is the recorded follow-up;
+until it lands, treat `ac` on a weak brick as non-baseline and record
+Amperage beside every number.
+
 ## Non-claims (recorded, do not re-litigate)
 
 - AC is the calibration point, not a guarantee — sustained load can still

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
@@ -36,7 +37,8 @@ final class ChatGptModel {
 }
 
 /// Bounded structural observation of one settled request. Contains counts and
-/// allowlisted numeric usage only; never text, arguments, IDs or credentials.
+/// allowlisted numeric usage, request hashes/lengths and tool names only; never
+/// text, arguments, request IDs or credentials.
 final class ResponsesDecisionReceipt {
   ResponsesDecisionReceipt({
     required this.advertisedTools,
@@ -55,6 +57,9 @@ final class ResponsesDecisionReceipt {
     required this.usage,
     required this.outcome,
     this.reasoningEffort,
+    this.requestSegments = const {},
+    this.advertisedToolNames = const [],
+    this.omittedInputSegments = 0,
   });
 
   final int advertisedTools;
@@ -73,9 +78,18 @@ final class ResponsesDecisionReceipt {
   final Map<String, int> usage;
   final String outcome;
   final String? reasoningEffort;
+  final Map<String, Map<String, Object>> requestSegments;
+  final List<String> advertisedToolNames;
+  final int omittedInputSegments;
 
   Map<String, Object?> toJson() => {
     'advertisedTools': advertisedTools,
+    'advertisedToolNames': List<String>.of(advertisedToolNames),
+    'requestSegments': {
+      for (final entry in requestSegments.entries)
+        entry.key: Map<String, Object>.of(entry.value),
+    },
+    'omittedInputSegments': omittedInputSegments,
     'schemaRequested': schemaRequested,
     'httpStatus': httpStatus,
     'elapsedMs': elapsedMs,
@@ -414,8 +428,7 @@ final class OpenAiResponsesClient
           {
             'type': 'namespace',
             'name': 'harness',
-            'description':
-                'Host-authorized actions; execution and acceptance are host-owned.',
+            'description': 'Host-authorized actions; execution and acceptance are host-owned.',
             'tools': definitions
                 .map(
                   (t) => {
@@ -461,9 +474,19 @@ final class OpenAiResponsesClient
     final finalizedItems = <int, Map<String, dynamic>>{};
     var terminalOutputItems = 0;
     var usage = <String, int>{};
+    var requestSegments = <String, Map<String, Object>>{};
+    var omittedInputSegments = 0;
+    final advertisedToolNames =
+        tools?.tools.keys.map((name) => name.value).toList() ?? <String>[];
+    advertisedToolNames.sort();
     final timer = Timer(deadline, () => session.stop('inference_timeout'));
     try {
       final body = encodeRequest(request, tools: tools);
+      if (observeDecision != null) {
+        requestSegments = _requestSegments(body);
+        final input = body['input'] as List;
+        omittedInputSegments = input.length > 64 ? input.length - 64 : 0;
+      }
       // A cancelled cast detaches from shared auth work; it does not cancel
       // another actor's refresh or dispatch inference after auth later settles.
       final account = await Future.any<ChatGptAccount>([
@@ -710,6 +733,9 @@ final class OpenAiResponsesClient
           observer(
             ResponsesDecisionReceipt(
               advertisedTools: tools?.tools.length ?? 0,
+              advertisedToolNames: List.unmodifiable(advertisedToolNames),
+              requestSegments: Map.unmodifiable(requestSegments),
+              omittedInputSegments: omittedInputSegments,
               schemaRequested: request.outputSchema.isNotEmpty,
               httpStatus: httpStatus,
               elapsedMs: elapsed.elapsedMilliseconds,
@@ -768,6 +794,46 @@ final class OpenAiResponsesClient
     return jsonEncode(ordered(item));
   }
 
+  /// Hash encoded request segments without retaining their content. Provider
+  /// encrypted continuation material is excluded even from fingerprints.
+  static Map<String, Map<String, Object>> _requestSegments(
+    Map<String, dynamic> body,
+  ) {
+    Object? scrub(Object? value) {
+      if (value is Map) {
+        return {
+          for (final entry in value.entries)
+            if (entry.key != 'encrypted_content') entry.key: scrub(entry.value),
+        };
+      }
+      if (value is List) return value.map(scrub).toList();
+      return value;
+    }
+
+    Map<String, Object> fingerprint(Object? value) {
+      final bytes = utf8.encode(jsonEncode(scrub(value)));
+      return {
+        'bytes': bytes.length,
+        'sha256': sha256.convert(bytes).toString(),
+      };
+    }
+
+    final input = body['input'] as List;
+    return {
+      for (final name in [
+        'model',
+        'instructions',
+        'tools',
+        'reasoning',
+        'text',
+      ])
+        if (body.containsKey(name)) name: fingerprint(body[name]),
+      'input': fingerprint(input),
+      for (var i = 0; i < input.length && i < 64; i++)
+        'input[$i]': fingerprint(input[i]),
+    };
+  }
+
   static Map<String, int> _numericUsage(Object? value) {
     if (value is! Map) return {};
     final result = <String, int>{};
@@ -780,7 +846,13 @@ final class OpenAiResponsesClient
     }
     final input = value['input_tokens_details'];
     final output = value['output_tokens_details'];
-    if (input is Map) retain('cached_tokens', input['cached_tokens']);
+    if (input is Map) {
+      retain('cached_tokens', input['cached_tokens']);
+      retain('cache_write_tokens', input['cache_write_tokens']);
+    }
+    if (!result.containsKey('cache_write_tokens')) {
+      retain('cache_write_tokens', value['cache_write_tokens']);
+    }
     if (output is Map) retain('reasoning_tokens', output['reasoning_tokens']);
     return result;
   }

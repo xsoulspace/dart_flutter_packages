@@ -139,14 +139,7 @@ final class NativeQwenTextEngine {
         'Qwen3-0.6B-4bit under the HF hub (the runtime never downloads)',
       );
     }
-    final library = await Isolate.resolvePackageUri(
-      Uri.parse(
-        'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.dart',
-      ),
-    );
-    final packageRoot = library == null
-        ? null
-        : File.fromUri(library).parent.parent.path;
+    final packageRoot = await resolveNativePackageRoot();
     ensureNativeBindingsAvailable(packageRoot: packageRoot);
     final dirNative = toNativeUtf8(dir);
     final handle = _qwenLoad(dirNative);

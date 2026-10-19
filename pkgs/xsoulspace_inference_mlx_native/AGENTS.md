@@ -25,6 +25,11 @@ re-run standalone before calling it a failure.
 
 - Every new architecture = Rust port with a parity fixture (venv-recorded,
   provenance in the file). Never weaken an oracle.
+- MoE ports: routers compute fp32 end-to-end from dequantized weights, and
+  parity fixtures pin per-layer routes, not just logits (block-47 lesson;
+  [PORTING-MOE.md](native/mlx_native/PORTING-MOE.md)). Nursery models train
+  under [TRAIN-GATES.md](TRAIN-GATES.md) — gates frozen before the rung's
+  first run, self-test oracles mandatory.
 - The runtime NEVER downloads. Checkpoints resolve from the HF hub cache
   or explicit dirs.
 - Parity-fixture streams run with EOS stop OFF (byte-identical oracles);

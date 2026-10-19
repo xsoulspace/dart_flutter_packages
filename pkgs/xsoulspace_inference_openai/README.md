@@ -106,8 +106,13 @@ observations; applications also load their store's durable uncertainty projectio
 `observeDecision` optionally receives a settled `ResponsesDecisionReceipt` with
 advertised-tool/schema flags, observed HTTP status, elapsed time, fixed terminal
 output-kind counts, streamed/wire/parsed text lengths, parsed call/key counts and
-allowlisted nonnegative numeric usage. It carries no text, arguments, IDs or
-credentials. Observer exceptions cannot alter inference; keep this synchronous
+allowlisted nonnegative numeric usage (including reported cache-write tokens).
+Receipts also expose sorted advertised tool names and SHA-256/UTF-8 byte counts
+for encoded request instructions, tools, input, reasoning options and output
+format. Per-input segment fingerprints are capped at 64 with an omitted count;
+encrypted continuation fields are excluded from fingerprints. Hashes reveal
+request equality, so keep receipts within the authorized diagnostic boundary.
+They carry no text, arguments, IDs or credentials. Observer exceptions cannot alter inference; keep this synchronous
 callback quick because physical settlement waits for it. These diagnostics do not
 grant authority or prove tool execution, acceptance, or shared-auth settlement.
 

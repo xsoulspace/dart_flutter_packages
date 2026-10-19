@@ -17,6 +17,11 @@ assert only on AC..
 
 ## Model drivers
 
+Flutter embeds resolve the registered `mlx_native` native asset directly.
+Package-URI discovery is optional there: Flutter may reject
+`Isolate.resolvePackageUri`. Keep the native library/Metal resources bundled and
+the weights cached; successful Dart source discovery is not native readiness.
+
 All drivers ride the same crate, dylib, and FFI surface
 (`native/mlx_native`):
 

@@ -15,6 +15,8 @@
 
 pub mod mlx;
 pub mod model;
+pub mod nursery;
+pub mod nursery_model;
 pub mod plan;
 pub mod power;
 pub mod bindings;
@@ -711,6 +713,279 @@ pub extern "C" fn mlx_native_qwen_clear_cache(handle: i64, actor: *const c_char)
 #[no_mangle]
 pub extern "C" fn mlx_native_qwen_unload(handle: i64) {
     qwen_registry().lock().unwrap().remove(&handle);
+}
+
+// ---- nursery weights-splat store (Line I runtime-path seed) ----
+//
+// The LOAD path of the nursery runtime: open, verify, point-read a packed
+// store (contract nursery.weights-splat.v1, packed by
+// tool/nursery/pack_at_birth.py). Pure file I/O — no GPU, no stream, no
+// metallib pin — so a candidate's store can be opened and verified from
+// Dart the day it is packed. The forward engine arrives with RUNG-0
+// models and rides this same cdylib (PORTING-MOE.md carries the router
+// contract). Serialized behind the registry mutex like every engine here;
+// calls are rare and short.
+
+static NURSERY_REGISTRY: OnceLock<Mutex<HashMap<i64, nursery::NurseryStore>>> =
+    OnceLock::new();
+static NURSERY_NEXT_HANDLE: AtomicI64 = AtomicI64::new(1);
+
+fn nursery_registry() -> &'static Mutex<HashMap<i64, nursery::NurseryStore>> {
+    NURSERY_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Open a packed nursery store. Returns a positive handle, or -1 null arg,
+/// -2 open/contract failure.
+#[no_mangle]
+pub extern "C" fn mlx_native_nursery_open(model_dir: *const c_char) -> i64 {
+    if model_dir.is_null() {
+        return -1;
+    }
+    let dir = PathBuf::from(
+        unsafe { CStr::from_ptr(model_dir) }.to_string_lossy().to_string(),
+    );
+    match nursery::NurseryStore::open(&dir) {
+        Ok(store) => {
+            let handle = NURSERY_NEXT_HANDLE.fetch_add(1, Ordering::SeqCst);
+            nursery_registry().lock().unwrap().insert(handle, store);
+            handle
+        }
+        Err(_) => -2,
+    }
+}
+
+/// Digest-verify EVERY segment: `{"checked":N,"mismatched":0,"missing":0,
+/// "segments":N,"bytes":N}` — `mismatched: 0` means checks RAN. A corrupt
+/// store returns `{"error": ...}` (hard error, never a silent zero).
+#[no_mangle]
+pub extern "C" fn mlx_native_nursery_verify(handle: i64) -> *mut c_char {
+    let mut registry = nursery_registry().lock().unwrap();
+    let Some(store) = registry.get_mut(&handle) else {
+        return fail("unknown nursery handle");
+    };
+    let segments = store.manifest.segments.len();
+    match store.verify_all() {
+        Ok(report) => ok_json(&serde_json::json!({
+            "checked": report.checked,
+            "mismatched": report.mismatched,
+            "missing": report.missing,
+            "segments": segments,
+            "bytes": report.bytes,
+        })),
+        Err(message) => fail(&message),
+    }
+}
+
+/// Tensor addressing: `{"shape","dtype","nbytes","role","segment"}`
+/// without reading the bytes.
+#[no_mangle]
+pub extern "C" fn mlx_native_nursery_tensor_meta(
+    handle: i64,
+    name: *const c_char,
+) -> *mut c_char {
+    if name.is_null() {
+        return fail("missing tensor name");
+    }
+    let name = unsafe { CStr::from_ptr(name) }.to_string_lossy().to_string();
+    let registry = nursery_registry().lock().unwrap();
+    let Some(store) = registry.get(&handle) else {
+        return fail("unknown nursery handle");
+    };
+    let Some(meta) = store.tensor_meta(&name) else {
+        return fail(&format!("manifest has no tensor {name}"));
+    };
+    let segment = store
+        .tensor_location(&name)
+        .map(|(key, _, _)| key)
+        .unwrap_or_default();
+    ok_json(&serde_json::json!({
+        "name": name,
+        "shape": meta.shape,
+        "dtype": meta.dtype,
+        "nbytes": meta.nbytes,
+        "role": meta.role,
+        "segment": segment,
+    }))
+}
+
+/// Point-read a tensor and return (up to) `max_values` f32 values:
+/// `{"shape","dtype","elements":N,"values":[...]}`. Conversion rules live
+/// in `nursery::Tensor::to_f32_vec` (exact widenings; integer paths round
+/// like numpy — the parity fixture pins them).
+#[no_mangle]
+pub extern "C" fn mlx_native_nursery_tensor_f32(
+    handle: i64,
+    name: *const c_char,
+    max_values: i64,
+) -> *mut c_char {
+    if name.is_null() {
+        return fail("missing tensor name");
+    }
+    let name = unsafe { CStr::from_ptr(name) }.to_string_lossy().to_string();
+    let mut registry = nursery_registry().lock().unwrap();
+    let Some(store) = registry.get_mut(&handle) else {
+        return fail("unknown nursery handle");
+    };
+    let mut tensor = match store.read_tensor(&name) {
+        Ok(t) => t,
+        Err(message) => return fail(&message),
+    };
+    let elements = tensor.elements();
+    let values = match tensor.to_f32_vec() {
+        Ok(mut v) => {
+            v.truncate(max_values.max(0) as usize);
+            v
+        }
+        Err(message) => return fail(&message),
+    };
+    ok_json(&serde_json::json!({
+        "name": name,
+        "shape": tensor.shape,
+        "dtype": tensor.dtype,
+        "elements": elements,
+        "values": values,
+    }))
+}
+
+#[no_mangle]
+pub extern "C" fn mlx_native_nursery_unload(handle: i64) {
+    nursery_registry().lock().unwrap().remove(&handle);
+}
+
+// ---- nursery tiny-model runtime (Line I) — same handle/JSON conventions ----
+//
+// CODED 2026-10-18, never compiled/run (low-power session). The contract is
+// nursery_model::NurseryModel over tool/nursery/model_def.py; load
+// digest-verifies the whole store before any tensor is read. The separate
+// registry (from the store-reader ABI above) keeps reader-only consumers
+// and the runtime from evicting each other.
+
+struct NurseryModelEngine {
+    model: std::sync::Arc<nursery_model::NurseryModel>,
+}
+
+static NURSERY_MODEL_REGISTRY: OnceLock<Mutex<HashMap<i64, NurseryModelEngine>>> =
+    OnceLock::new();
+static NURSERY_MODEL_NEXT_HANDLE: AtomicI64 = AtomicI64::new(1);
+static NURSERY_MODEL_LAST_ERROR: OnceLock<Mutex<String>> = OnceLock::new();
+
+fn nursery_model_registry() -> &'static Mutex<HashMap<i64, NurseryModelEngine>> {
+    NURSERY_MODEL_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn nursery_model_note_error(message: &str) {
+    let cell = NURSERY_MODEL_LAST_ERROR.get_or_init(|| Mutex::new(String::new()));
+    *cell.lock().unwrap() = message.to_string();
+}
+
+/// The last failure message from any nursery-model call (the status codes
+/// are coarse; the text names the actual cause — a digest mismatch names
+/// its segment, a config miss names its key).
+#[no_mangle]
+pub extern "C" fn mlx_native_nursery_model_last_error() -> *mut c_char {
+    let cell = NURSERY_MODEL_LAST_ERROR.get_or_init(|| Mutex::new(String::new()));
+    ok_json(&serde_json::json!({ "error": cell.lock().unwrap().clone() }))
+}
+
+/// Load + full digest verification + resident build. Returns a positive
+/// handle, -1 null arg, -2 failure (see `..._last_error`).
+#[no_mangle]
+pub extern "C" fn mlx_native_nursery_model_load(model_dir: *const c_char) -> i64 {
+    if model_dir.is_null() {
+        return -1;
+    }
+    pin_metallib_colocated();
+    let dir = PathBuf::from(
+        unsafe { CStr::from_ptr(model_dir) }.to_string_lossy().to_string(),
+    );
+    match nursery_model::NurseryModel::load(&dir) {
+        Ok(model) => {
+            let handle = NURSERY_MODEL_NEXT_HANDLE.fetch_add(1, Ordering::SeqCst);
+            nursery_model_registry().lock().unwrap().insert(
+                handle,
+                NurseryModelEngine { model: std::sync::Arc::new(model) },
+            );
+            handle
+        }
+        Err(message) => {
+            nursery_model_note_error(&message);
+            -2
+        }
+    }
+}
+
+/// Greedy byte generation. Request:
+/// `{"bytes": [0..255], "max_new": 64}` — raw bytes, no tokenizer (the
+/// drosophila IS byte-level). Response:
+/// `{"emitted_bytes": [...], "text": "...", "label_logits": [...],
+///   "label_kinds": [...], "stop_reason": "eos"|"max_new",
+///   "routes": [{"pos","layer","experts"}, ...]}` — the routes array is a
+/// complete GATE-2 trace (stage1 row format).
+#[no_mangle]
+pub extern "C" fn mlx_native_nursery_model_generate(
+    handle: i64,
+    request_json: *const c_char,
+) -> *mut c_char {
+    if request_json.is_null() {
+        return fail("missing request");
+    }
+    #[derive(serde::Deserialize)]
+    struct NurseryGenerateRequest {
+        bytes: Vec<u8>,
+        #[serde(default = "default_max_new")]
+        max_new: usize,
+    }
+    fn default_max_new() -> usize {
+        64
+    }
+    let request: NurseryGenerateRequest = match serde_json::from_slice(unsafe {
+        CStr::from_ptr(request_json)
+    }
+    .to_bytes())
+    {
+        Ok(r) => r,
+        Err(_) => return fail("unreadable request JSON"),
+    };
+    let engine = nursery_model_registry()
+        .lock()
+        .unwrap()
+        .get(&handle)
+        .map(|e| e.model.clone());
+    let Some(engine) = engine else {
+        return fail("unknown nursery-model handle");
+    };
+    let _guard = forward_lock().lock().unwrap();
+    let stream = match gpu() {
+        Ok(s) => s,
+        Err(e) => {
+            let message = format!("stream initialization failed: mlx status {}", e.0);
+            nursery_model_note_error(&message);
+            return fail(&message);
+        }
+    };
+    match engine.generate(&request.bytes, request.max_new, stream) {
+        Ok(outcome) => {
+            let text = String::from_utf8_lossy(&outcome.emitted).into_owned();
+            let label_kinds = engine.config().label_kinds.clone();
+            ok_json(&serde_json::json!({
+                "emitted_bytes": outcome.emitted,
+                "text": text,
+                "label_logits": outcome.label_logits,
+                "label_kinds": label_kinds,
+                "stop_reason": outcome.stop_reason,
+                "routes": outcome.routes,
+            }))
+        }
+        Err(message) => {
+            nursery_model_note_error(&message);
+            fail(&message)
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn mlx_native_nursery_model_unload(handle: i64) {
+    nursery_model_registry().lock().unwrap().remove(&handle);
 }
 
 // ---- lfm2 text engine (ADR 0055 LFM2 rung) — same handle/JSON conventions ----

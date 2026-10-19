@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_inference_openai/xsoulspace_inference_openai.dart';
+
 import 'support.dart';
 
 String event(Map<String, dynamic> value) => 'data: ${jsonEncode(value)}\n\n';
@@ -232,68 +234,65 @@ void main() {
     );
     expect(result.error!.code, 'response_output_conflict');
   });
-  test(
-    'finalized streamed items reconstruct empty terminal output after completion',
-    () async {
-      final receipts = <ResponsesDecisionReceipt>[];
-      final reasoning = <String, dynamic>{
-        'type': 'reasoning',
-        'encrypted_content': 'opaque-secret',
-        'summary': [],
-      };
-      final call = <String, dynamic>{
-        'type': 'function_call',
-        'name': 'inspect',
-        'call_id': 'call-1',
-        'arguments': '{}',
-        'namespace': 'harness',
-      };
-      final tools = ToolRegistry()
-        ..register(
-          ToolDef(
-            name: const ToolName('inspect'),
-            description: 'inspect',
-            argsSchema: SchemaBundle.empty,
-            execute: (_) async => throw StateError('provider never executes'),
-          ),
-        );
-      final provider = await client(
-        MockClient(
-          (_) async => http.Response(
-            event({
-                  'type': 'response.output_item.done',
-                  'output_index': 1,
-                  'item': call,
-                }) +
-                event({
-                  'type': 'response.output_item.done',
-                  'output_index': 0,
-                  'item': reasoning,
-                }) +
-                event(completed(output: [])),
-            200,
-          ),
+  test('finalized streamed items reconstruct empty terminal output after completion', () async {
+    final receipts = <ResponsesDecisionReceipt>[];
+    final reasoning = <String, dynamic>{
+      'type': 'reasoning',
+      'encrypted_content': 'opaque-secret',
+      'summary': [],
+    };
+    final call = <String, dynamic>{
+      'type': 'function_call',
+      'name': 'inspect',
+      'call_id': 'call-1',
+      'arguments': '{}',
+      'namespace': 'harness',
+    };
+    final tools = ToolRegistry()
+      ..register(
+        ToolDef(
+          name: const ToolName('inspect'),
+          description: 'inspect',
+          argsSchema: SchemaBundle.empty,
+          execute: (_) async => throw StateError('provider never executes'),
         ),
-        observeDecision: receipts.add,
       );
-      addTearDown(provider.close);
-      addTearDown(provider.auth.close);
-      final result = await provider.infer(
-        InferenceRequest.structured(prompt: 'test'),
-        toolRegistry: tools,
-      );
-      expect(result.success, true);
-      expect(result.data!.toolCalls.single.callId, 'call-1');
-      expect(result.data!.meta['responses_output'], [reasoning, call]);
-      expect(receipts.single.terminalOutputItems, 0);
-      expect(receipts.single.streamedDoneItems, 2);
-      expect(receipts.single.parsedToolCalls, 1);
-      expect(
-        jsonEncode(receipts.single.toJson()),
-        isNot(contains('opaque-secret')),
-      );
-    },
-  );
+    final provider = await client(
+      MockClient(
+        (_) async => http.Response(
+          event({
+                'type': 'response.output_item.done',
+                'output_index': 1,
+                'item': call,
+              }) +
+              event({
+                'type': 'response.output_item.done',
+                'output_index': 0,
+                'item': reasoning,
+              }) +
+              event(completed(output: [])),
+          200,
+        ),
+      ),
+      observeDecision: receipts.add,
+    );
+    addTearDown(provider.close);
+    addTearDown(provider.auth.close);
+    final result = await provider.infer(
+      InferenceRequest.structured(prompt: 'test'),
+      toolRegistry: tools,
+    );
+    expect(result.success, true);
+    expect(result.data!.toolCalls.single.callId, 'call-1');
+    expect(result.data!.meta['responses_output'], [reasoning, call]);
+    expect(receipts.single.terminalOutputItems, 0);
+    expect(receipts.single.streamedDoneItems, 2);
+    expect(receipts.single.parsedToolCalls, 1);
+    expect(
+      jsonEncode(receipts.single.toJson()),
+      isNot(contains('opaque-secret')),
+    );
+  });
 
   test('item completion cannot admit output after terminal failure', () async {
     final provider = await client(
@@ -406,7 +405,11 @@ void main() {
         'input_tokens': 20,
         'output_tokens': 10,
         'total_tokens': 30,
-        'input_tokens_details': {'cached_tokens': 7, 'secret': 'secret-cache'},
+        'input_tokens_details': {
+          'cached_tokens': 7,
+          'cache_write_tokens': 0,
+          'secret': 'secret-cache',
+        },
         'output_tokens_details': {'reasoning_tokens': 10},
         'remote_secret': 'secret-usage',
       };
@@ -440,6 +443,7 @@ void main() {
         'output_tokens': 10,
         'total_tokens': 30,
         'cached_tokens': 7,
+        'cache_write_tokens': 0,
         'reasoning_tokens': 10,
       });
       expect(jsonEncode(receipt), isNot(contains('secret')));
@@ -492,6 +496,61 @@ void main() {
       expect(receipt['outputKinds'], {'function_call': 1});
       expect(receipt['parsedToolCalls'], 1);
       expect(jsonEncode(receipt), isNot(contains('secret')));
+    },
+  );
+
+  test(
+    'request fingerprints separate stable instructions from fresh input',
+    () async {
+      final receipts = <ResponsesDecisionReceipt>[];
+      final provider = await client(
+        MockClient((_) async => http.Response(event(completed()), 200)),
+        observeDecision: receipts.add,
+      );
+      addTearDown(provider.close);
+      addTearDown(provider.auth.close);
+      final tools = ToolRegistry();
+      for (final name in ['zeta', 'alpha']) {
+        tools.register(
+          ToolDef(
+            name: ToolName(name),
+            description: 'secret-description',
+            argsSchema: SchemaBundle.empty,
+            execute: (_) async => throw StateError('host-owned'),
+          ),
+        );
+      }
+      for (final prompt in ['secret-first', 'secret-next']) {
+        expect(
+          (await provider.infer(
+            InferenceRequest.structured(
+              prompt: prompt,
+              systemPrompt: 'secret-stable',
+            ),
+            toolRegistry: tools,
+          )).success,
+          true,
+        );
+      }
+      final first = receipts.first.toJson();
+      final next = receipts.last.toJson();
+      expect(first['advertisedToolNames'], ['alpha', 'zeta']);
+      final a = first['requestSegments'] as Map;
+      final b = next['requestSegments'] as Map;
+      expect(a['instructions'], b['instructions']);
+      expect(a['tools'], b['tools']);
+      expect(a['input'], isNot(b['input']));
+      expect(a['input[0]'], isNot(b['input[0]']));
+      expect((a['instructions'] as Map)['bytes'], greaterThan(0));
+      expect(
+        (a['instructions'] as Map)['sha256'],
+        matches(RegExp(r'^[0-9a-f]{64}$')),
+      );
+      expect(first['omittedInputSegments'], 0);
+      expect(
+        jsonEncode(receipts.map((r) => r.toJson()).toList()),
+        isNot(contains('secret')),
+      );
     },
   );
 
@@ -819,9 +878,8 @@ void main() {
         },
       ],
     ]) {
-      final request = ResponsesInput(
-        items,
-      ).attach(InferenceRequest(prompt: 'continue'));
+      final request = ResponsesInput(items)
+          .attach(InferenceRequest(prompt: 'continue'));
       expect(
         (await provider.infer(request)).error!.code,
         'tool_pair_incomplete',
@@ -944,9 +1002,9 @@ void main() {
         MockClient((_) async => http.Response(wire, 200)),
       );
       expect(
-        (await provider.infer(
-          InferenceRequest(prompt: 'question'),
-        )).error!.code,
+        (await provider.infer(InferenceRequest(prompt: 'question')))
+            .error!
+            .code,
         'stream_interrupted',
       );
     }

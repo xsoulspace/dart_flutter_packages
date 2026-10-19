@@ -12,6 +12,9 @@ crate-type = ["cdylib", "rlib"]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 unicode-normalization = "0.1"
+# Nursery weights-splat store digests (Line I); vendored via the local
+# cargo cache — the runtime never downloads, and neither does the build.
+sha2 = "0.10"
 
 [profile.release]
 opt-level = 3

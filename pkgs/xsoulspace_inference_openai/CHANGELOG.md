@@ -1,5 +1,9 @@
 ## 0.1.0-dev.1
 
+- Retain reported cache-write tokens and add bounded request segment hashes,
+  encoded byte counts and sorted tool names to optional decision receipts.
+  Exclude encrypted continuation content; request assembly remains unchanged.
+
 - Map explicit reasoning effort to native Responses, refuse unknown values
   before dispatch, retain effort in safe receipts, and expose the shared optional
   tool-streaming capability. Other unsupported generation knobs still refuse.
