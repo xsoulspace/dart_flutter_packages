@@ -1,5 +1,19 @@
 ## Unreleased
 
+- Add opt-in declarative session/cache composition and provider affinity; retain ordinary request defaults.
+
+- Add optional safe transport fingerprints and provider-assisted cache comparison
+  request metadata; adapter-declared diagnostic-only paths can be excluded from
+  compatibility without removing exact-wire evidence.
+
+- Share content-free HTTP rejection phrase hints across adapters; retain only
+  fixed categories and parameter names when code/param yield no safe reason.
+
+- Add provider-neutral offline context fingerprints, cumulative boundary evidence,
+  separate cache write/lookup declarations and comparison/matrix utilities.
+  Optional transport diagnostics default to no source; encrypted and missing
+  legacy evidence preserve incomplete or unknown coverage.
+
 - Preserve original provider output separately from nullable presentation text;
   explicit empty presentation carries no visible discussion.
 

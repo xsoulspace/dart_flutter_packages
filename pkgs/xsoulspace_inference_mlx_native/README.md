@@ -185,3 +185,10 @@ actual loaded image, and checks colocated Metal. This qualifies preparation
 and identity only. It does not load weights, execute GPU model inference,
 qualify other SDKs, or establish coding acceptance. Product integration should
 prepare/bundle this closure automatically rather than expose setup commands.
+
+Request-cancellable Qwen scopes share weights but isolate request IDs. A queued
+cancelled request now leaves the shared forward-lock queue without waiting for
+another model's GPU work. Cancellation during active prefill/decode remains
+cooperative at existing boundaries; a caller deadline is not physical settlement.
+Hosts must await settlement before unload, replay or fallback, and quarantine
+uncertain requests. This admission fix changes no model math or chunk sizes.

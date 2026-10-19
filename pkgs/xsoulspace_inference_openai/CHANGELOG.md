@@ -1,5 +1,20 @@
 ## 0.1.0-dev.1
 
+- Add opt-in declarative session/cache composition and provider affinity; retain ordinary request defaults.
+
+- Observe selected transport/cache controls without credential values; map
+  optional provider comparison requests without changing default cache policy.
+
+- Reuse shared safe rejection-message hints. A bounded Luna-low subscription
+  test classified explicit breakpoint rejection as not_supported with marker
+  and model mentions; ordinary message-boundary cache reuse remains unqualified.
+
+- Add optional generic context/cache diagnostic events at the encoded HTTP
+  boundary, with exact body capture opt-in only and excluded opaque inputs.
+  Translate explicit content-block cache intent for documented modern models;
+  preserve roles, text and default wire policy. Retain safe usage presence and
+  opt-in response/cache diagnostics. SIWC breakpoint support remains unqualified.
+
 - Retain reported cache-write tokens and add bounded request segment hashes,
   encoded byte counts and sorted tool names to optional decision receipts.
   Exclude encrypted continuation content; request assembly remains unchanged.

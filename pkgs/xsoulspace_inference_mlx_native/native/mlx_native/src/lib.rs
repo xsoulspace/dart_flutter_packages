@@ -610,7 +610,9 @@ fn qwen_generate(
         Ok(r) => r,
         Err(_) => return fail("unreadable request JSON"),
     };
-    let _guard = forward_lock().lock().unwrap();
+    let Some(_guard) = cancellable_qwen_forward_lock(forward_lock(), cancellation.as_deref()) else {
+        return qwen_cancelled();
+    };
     if is_qwen_cancelled(cancellation.as_deref()) {
         return qwen_cancelled();
     }
@@ -685,6 +687,24 @@ fn qwen_generate(
             qwen_cancelled()
         }
         Err(e) => fail(&format!("generate failed: mlx status {}", e.0)),
+    }
+}
+
+// Queued cancellation must not wait for another model's GPU operation.
+// Admission only: prefill/decode numerics and chunking remain unchanged.
+fn cancellable_qwen_forward_lock<'a>(
+    lock: &'a Mutex<()>,
+    request: Option<&QwenRequestState>,
+) -> Option<std::sync::MutexGuard<'a, ()>> {
+    if request.is_none() { return Some(lock.lock().unwrap()); }
+    loop {
+        if is_qwen_cancelled(request) { return None; }
+        match lock.try_lock() {
+            Ok(guard) => return Some(guard),
+            Err(std::sync::TryLockError::WouldBlock) =>
+                std::thread::sleep(std::time::Duration::from_millis(2)),
+            Err(std::sync::TryLockError::Poisoned(error)) => panic!("{error}"),
+        }
     }
 }
 
@@ -1189,6 +1209,27 @@ pub extern "C" fn mlx_native_normalize(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn queued_qwen_cancel_settles_without_waiting_for_gpu_owner() {
+        use std::sync::{atomic::{AtomicBool, Ordering}, Mutex, mpsc};
+        let lock = Mutex::new(());
+        let held = lock.lock().unwrap();
+        let request = super::QwenRequestState { cancelled: AtomicBool::new(false) };
+        std::thread::scope(|scope| {
+            let (send, receive) = mpsc::channel();
+            let lock_ref = &lock;
+            let request_ref = &request;
+            scope.spawn(move || {
+                let cancelled = super::cancellable_qwen_forward_lock(lock_ref, Some(request_ref)).is_none();
+                send.send(cancelled).unwrap();
+            });
+            request.cancelled.store(true, Ordering::Release);
+            let result = receive.recv_timeout(std::time::Duration::from_secs(1));
+            drop(held); // A failure must release the waiter, not hang CI.
+            assert_eq!(result.unwrap(), true);
+        });
+    }
+
     use super::mlx::*;
     use std::ffi::{CStr, CString};
     use std::path::PathBuf;

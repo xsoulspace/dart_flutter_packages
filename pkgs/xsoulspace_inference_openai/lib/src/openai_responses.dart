@@ -7,6 +7,8 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'chatgpt_auth.dart';
 
+part 'openai_session.dart';
+
 /// Provider-native items are a codec, never the durable conversation owner.
 /// Store outputs with the originating actor/request and reconstruct only the
 /// currently authorized working set. Tool call/output IDs remain atomic.
@@ -38,7 +40,8 @@ final class ChatGptModel {
 
 /// Bounded structural observation of one settled request. Contains counts and
 /// allowlisted numeric usage, request hashes/lengths and tool names only; never
-/// text, arguments, request IDs or credentials.
+/// text, arguments, request IDs or credentials. Separately opt-in diagnostics
+/// may retain safe response identifiers and cache diagnostic enums.
 final class ResponsesDecisionReceipt {
   ResponsesDecisionReceipt({
     required this.advertisedTools,
@@ -60,6 +63,18 @@ final class ResponsesDecisionReceipt {
     this.requestSegments = const {},
     this.advertisedToolNames = const [],
     this.omittedInputSegments = 0,
+    this.contextDiagnostic,
+    this.usageReported = false,
+    this.usageFieldPresence = const {},
+    this.responseFieldPresence = const {},
+    this.responseId,
+    this.responseModel,
+    this.serviceTier,
+    this.promptCacheDiagnostics = const {},
+    this.providerErrorCode,
+    this.providerErrorType,
+    this.providerErrorParam,
+    this.providerErrorFieldPresence = const {},
   });
 
   final int advertisedTools;
@@ -81,6 +96,18 @@ final class ResponsesDecisionReceipt {
   final Map<String, Map<String, Object>> requestSegments;
   final List<String> advertisedToolNames;
   final int omittedInputSegments;
+  final ContextDiagnosticSnapshot? contextDiagnostic;
+  final bool usageReported;
+  final Map<String, bool> usageFieldPresence;
+  final Map<String, bool> responseFieldPresence;
+  final String? responseId;
+  final String? responseModel;
+  final String? serviceTier;
+  final Map<String, Object> promptCacheDiagnostics;
+  final String? providerErrorCode;
+  final String? providerErrorType;
+  final String? providerErrorParam;
+  final Map<String, bool> providerErrorFieldPresence;
 
   Map<String, Object?> toJson() => {
     'advertisedTools': advertisedTools,
@@ -103,7 +130,24 @@ final class ResponsesDecisionReceipt {
     'parsedToolCalls': parsedToolCalls,
     'structuredKeys': structuredKeys,
     'usage': Map<String, int>.of(usage),
+    'usageReported': usageReported,
+    'usageFieldPresence': Map<String, bool>.of(usageFieldPresence),
+    'responseFieldPresence': Map<String, bool>.of(responseFieldPresence),
+    if (responseId != null) 'responseId': responseId,
+    if (responseModel != null) 'responseModel': responseModel,
+    if (serviceTier != null) 'serviceTier': serviceTier,
+    if (promptCacheDiagnostics.isNotEmpty)
+      'promptCacheDiagnostics': Map<String, Object>.of(promptCacheDiagnostics),
+    if (contextDiagnostic != null)
+      'contextDiagnostic': contextDiagnostic!.toJson(),
     'outcome': outcome,
+    if (providerErrorCode != null) 'providerErrorCode': providerErrorCode,
+    if (providerErrorType != null) 'providerErrorType': providerErrorType,
+    if (providerErrorParam != null) 'providerErrorParam': providerErrorParam,
+    if (providerErrorFieldPresence.isNotEmpty)
+      'providerErrorFieldPresence': Map<String, bool>.of(
+        providerErrorFieldPresence,
+      ),
     if (reasoningEffort != null) 'reasoningEffort': reasoningEffort,
   };
 }
@@ -124,8 +168,17 @@ final class OpenAiResponsesClient
     this.deadline = const Duration(minutes: 5),
     this.maxResponseBytes = 4 * 1024 * 1024,
     this.observeDecision,
+    this.diagnosticCapture,
+    OpenAiSessionState? sessionState,
   }) : _client = client ?? http.Client(),
-       _ownsClient = client == null;
+       _ownsClient = client == null,
+       _sessionState = sessionState ?? OpenAiSessionState();
+
+  final OpenAiSessionState _sessionState;
+
+  static int _diagnosticClientCounter = 0;
+  final String _diagnosticClientCohort =
+      'openai-http-${++_diagnosticClientCounter}';
 
   final ChatGptAuth auth;
   final String clientId;
@@ -146,6 +199,10 @@ final class OpenAiResponsesClient
 
   /// Best-effort observer; throwing cannot change inference or settlement.
   final void Function(ResponsesDecisionReceipt receipt)? observeDecision;
+
+  /// Optional caller-owned context diagnostics. Source bodies require explicit
+  /// opt-in and are never captured for encrypted continuation input.
+  final ContextTransportDiagnosticCapture? diagnosticCapture;
   bool _available = false;
   final _sessions = <_ResponsesSession>{};
   final _catalogRequests = <_CatalogRequest>{};
@@ -416,7 +473,7 @@ final class OpenAiResponsesClient
     }
     final definitions = tools?.tools.values.toList() ?? <ToolDef>[];
     definitions.sort((a, b) => a.name.value.compareTo(b.name.value));
-    return {
+    final body = <String, dynamic>{
       'model': model,
       'store': false,
       'stream': true,
@@ -457,6 +514,257 @@ final class OpenAiResponsesClient
           },
         },
     };
+    _applyCacheIntent(body, request);
+    final context = InferenceSessionContext.fromRequest(request);
+    final sessionOptions = OpenAiSessionOptions.fromRequest(request);
+    if (sessionOptions != null && context == null) {
+      throw const FormatException('inference_session_required');
+    }
+    if (sessionOptions?.turnAffinity == true && context?.turn == null) {
+      throw const FormatException('inference_turn_required');
+    }
+    if (context != null) {
+      body['prompt_cache_key'] = context.session.effectiveCacheGroup;
+    }
+    final comparison = request.metadata[contextCacheComparisonMetadataKey];
+    if (comparison != null) {
+      try {
+        final option = ContextCacheComparisonRequest.fromJson(
+          (comparison as Map).cast<String, Object?>(),
+        );
+        body['prompt_cache_options'] = {
+          'comparison_response_id': option.baselineResponseId,
+        };
+      } on Object {
+        throw const _ResponseFailure('cache_comparison_invalid');
+      }
+    }
+
+    return body;
+  }
+
+  ContextCacheIntent _cacheIntent(InferenceRequest request) {
+    final value = request.metadata['context_cache_intent'];
+    if (value == null) return ContextCacheIntent();
+    if (value is! Map) throw const _ResponseFailure('cache_intent_invalid');
+    try {
+      final intent = ContextCacheIntent.fromJson(
+        Map<String, Object?>.from(value),
+      );
+      return ContextCacheIntent(
+        writeAfterSegmentIds: intent.writeAfterSegmentIds
+            .map(_wireCacheId)
+            .toSet()
+            .toList(),
+        lookupAfterSegmentIds: intent.lookupAfterSegmentIds
+            .map(_wireCacheId)
+            .toSet()
+            .toList(),
+        policyId: intent.policyId,
+      );
+    } on Object {
+      throw const _ResponseFailure('cache_intent_invalid');
+    }
+  }
+
+  static String _wireCacheId(String id) =>
+      id.replaceFirst(RegExp(r'^context(?=\[)'), 'input');
+
+  bool get _modernCacheModel =>
+      RegExp(r'^gpt-(?:5\.[6-9]|[6-9](?:\.|-)|[1-9][0-9])').hasMatch(model);
+
+  void _applyCacheIntent(Map<String, dynamic> body, InferenceRequest request) {
+    final intent = _cacheIntent(request);
+    if (intent.writeAfterSegmentIds.isEmpty &&
+        intent.lookupAfterSegmentIds.isEmpty) {
+      return;
+    }
+    if (!_modernCacheModel) {
+      throw const _ResponseFailure('cache_breakpoint_unsupported');
+    }
+    // Keep implicit policy: it writes one implicit plus the latest three
+    // explicit boundaries. Do not silently change request-wide caching mode.
+    if (intent.writeAfterSegmentIds.length > 3) {
+      throw const _ResponseFailure('cache_breakpoint_limit');
+    }
+    for (final id in intent.lookupAfterSegmentIds) {
+      if (!intent.writeAfterSegmentIds.contains(id)) {
+        throw const _ResponseFailure('cache_lookup_intent_unsupported');
+      }
+    }
+    final input = body['input'] as List;
+    for (final id in intent.writeAfterSegmentIds) {
+      final match = RegExp(r'^input\[(\d+)\](?:\.content\[(\d+)\])?$')
+          .firstMatch(id);
+      if (match == null) {
+        throw const _ResponseFailure('cache_breakpoint_invalid');
+      }
+      final index = int.parse(match[1]!);
+      if (index >= input.length || input[index] is! Map) {
+        throw const _ResponseFailure('cache_breakpoint_invalid');
+      }
+      final item = Map<String, dynamic>.from(input[index] as Map);
+      if ((item['type'] != null && item['type'] != 'message') ||
+          !['user', 'assistant'].contains(item['role'])) {
+        throw const _ResponseFailure('cache_breakpoint_invalid');
+      }
+      final content = item['content'];
+      final parts = content is String
+          ? <dynamic>[
+              {'type': 'input_text', 'text': content},
+            ]
+          : content is List
+          ? List<dynamic>.of(content)
+          : null;
+      if (parts == null || parts.isEmpty) {
+        throw const _ResponseFailure('cache_breakpoint_invalid');
+      }
+      final partIndex = match[2] == null
+          ? parts.length - 1
+          : int.parse(match[2]!);
+      if (partIndex >= parts.length || parts[partIndex] is! Map) {
+        throw const _ResponseFailure('cache_breakpoint_invalid');
+      }
+      final part = Map<String, dynamic>.from(parts[partIndex] as Map);
+      if (part['type'] != 'input_text' || part['text'] is! String) {
+        throw const _ResponseFailure('cache_breakpoint_invalid');
+      }
+      part['prompt_cache_breakpoint'] = {'mode': 'explicit'};
+      parts[partIndex] = part;
+      item['content'] = parts;
+      input[index] = item;
+    }
+  }
+
+  ContextDiagnosticSnapshot? _diagnostic(
+    Map<String, dynamic> body,
+    InferenceRequest request,
+    ContextTransportDiagnosticStage stage, {
+    String? encodedBody,
+    Map<String, int> usage = const {},
+    bool usageReported = false,
+    String? responseId,
+    String? responseModel,
+    String? serviceTier,
+    String? outcome,
+    int? httpStatus,
+    Map<String, Object?> safeError = const {},
+    Map<String, Object?> transport = const {},
+  }) {
+    final capture = diagnosticCapture;
+    if (capture == null) return null;
+    try {
+      final intent = _cacheIntent(request);
+      const policy = 'openai-gpt56plus-implicit-siwc-unqualified';
+      const provenance = [
+        'https://developers.openai.com/api/docs/guides/prompt-caching',
+      ];
+      final eligible = <String>[
+        if (_modernCacheModel &&
+            body['instructions'] is String &&
+            (body['instructions'] as String).isNotEmpty)
+          'instructions',
+        if (_modernCacheModel)
+          for (var i = 0; i < (body['input'] as List).length; i++)
+            if ((body['input'] as List)[i] case final Map item
+                when ((item['type'] == null || item['type'] == 'message') &&
+                        item['role'] == 'user') ||
+                    (item['type'] == 'function_call_output' &&
+                        (i + 1 == (body['input'] as List).length ||
+                            ((body['input'] as List)[i + 1] as Map)['type'] !=
+                                'function_call_output')))
+              'input[$i]',
+      ];
+      final snapshot = ContextCacheAnalyzer.captureJsonRequest(
+        body,
+        messageListPath: ['input'],
+        configurationIgnoredPaths: const [
+          ['prompt_cache_options', 'comparison_response_id'],
+        ],
+        representationId: 'openai-responses-json-utf8-v1',
+        exactWire: true,
+        compatibility: ContextRequestCompatibility(provider: id, model: model),
+        writeEndpoints: [
+          if (eligible.isNotEmpty)
+            CacheWriteEndpoint(
+              afterSegmentId: eligible.last,
+              policyId: policy,
+              provenanceRefs: provenance,
+            ),
+          for (final id in intent.writeAfterSegmentIds)
+            CacheWriteEndpoint(
+              afterSegmentId: id,
+              policyId: policy,
+              provenanceRefs: provenance,
+            ),
+        ],
+        lookupEndpoints: [
+          if (_modernCacheModel &&
+              body['instructions'] is String &&
+              (body['instructions'] as String).isNotEmpty)
+            CacheLookupEndpoint(
+              afterSegmentId: 'instructions',
+              policyId: policy,
+              provenanceRefs: provenance,
+            ),
+          for (final id
+              in eligible
+                  .skip((eligible.length - 21).clamp(0, eligible.length))
+                  .where((id) => id != 'instructions'))
+            CacheLookupEndpoint(
+              afterSegmentId: id,
+              policyId: policy,
+              provenanceRefs: provenance,
+            ),
+          for (final id in {
+            ...intent.lookupAfterSegmentIds,
+            ...intent.writeAfterSegmentIds,
+          })
+            CacheLookupEndpoint(
+              afterSegmentId: id,
+              policyId: policy,
+              provenanceRefs: provenance,
+            ),
+        ],
+        usage: usageReported
+            ? ContextCacheUsage(
+                inputTokens: usage['input_tokens'],
+                cachedTokens: usage['cached_tokens'],
+                cacheWriteTokens: usage['cache_write_tokens'],
+                outputTokens: usage['output_tokens'],
+              )
+            : null,
+      );
+      capture.observer(
+        ContextTransportDiagnosticEvent(
+          stage: stage,
+          snapshot: snapshot,
+          exactEncodedBody: capture.includeEncodedBody && snapshot.exactWire
+              ? encodedBody
+              : null,
+          usageReported: usageReported,
+          numericUsage: usage,
+          responseId: responseId,
+          model: responseModel ?? model,
+          serviceTier: serviceTier,
+          outcome: outcome,
+          httpStatus: httpStatus,
+          transport: transport,
+          providerErrorCode: safeError['code'] as String?,
+          providerErrorType: safeError['type'] as String?,
+          providerErrorParam: safeError['param'] as String?,
+          providerErrorMessageHint:
+              (safeError['messageHint'] as Map?)?.cast<String, Object?>() ??
+              const {},
+          providerErrorFieldPresence:
+              (safeError['presence'] as Map?)?.cast<String, bool>() ?? const {},
+        ),
+      );
+      return snapshot;
+    } on Object {
+      // Caller diagnostics cannot change transport, results or settlement.
+      return null;
+    }
   }
 
   Future<void> _run(
@@ -474,6 +782,16 @@ final class OpenAiResponsesClient
     final finalizedItems = <int, Map<String, dynamic>>{};
     var terminalOutputItems = 0;
     var usage = <String, int>{};
+    var usageReported = false;
+    Map<String, dynamic>? diagnosticBody;
+    String? responseId;
+    String? responseModel;
+    String? serviceTier;
+    var usageFieldPresence = <String, bool>{};
+    var responseFieldPresence = <String, bool>{};
+    var promptCacheDiagnostics = <String, Object>{};
+    var safeError = <String, Object?>{};
+    var transport = <String, Object?>{};
     var requestSegments = <String, Map<String, Object>>{};
     var omittedInputSegments = 0;
     final advertisedToolNames =
@@ -482,6 +800,8 @@ final class OpenAiResponsesClient
     final timer = Timer(deadline, () => session.stop('inference_timeout'));
     try {
       final body = encodeRequest(request, tools: tools);
+      final encodedBody = jsonEncode(body);
+      diagnosticBody = body;
       if (observeDecision != null) {
         requestSegments = _requestSegments(body);
         final input = body['input'] as List;
@@ -496,6 +816,11 @@ final class OpenAiResponsesClient
         ),
       ]);
       if (session.stopped) return;
+      final context = InferenceSessionContext.fromRequest(request);
+      final sessionOptions = OpenAiSessionOptions.fromRequest(request);
+      final routing = context == null || sessionOptions?.turnAffinity != true
+          ? null
+          : _sessionState._reconcile(context, account, auth, model);
       final wire =
           http.AbortableRequest(
               'POST',
@@ -507,13 +832,51 @@ final class OpenAiResponsesClient
               'Authorization': 'Bearer ${account.accessToken}',
               'Content-Type': 'application/json',
               'Accept': 'text/event-stream',
+              if (context != null && sessionOptions?.sessionAffinity == true)
+                'session-id': context.session.effectiveAffinityKey,
+              if (context != null && sessionOptions?.sessionAffinity == true)
+                'thread-id': context.session.id,
+              if (routing?.token != null) 'x-codex-turn-state': routing!.token!,
             })
-            ..body = jsonEncode(body);
+            ..body = encodedBody;
+      if (diagnosticCapture != null) {
+        transport = captureContextTransportMetadata(
+          endpoint: wire.url,
+          method: wire.method,
+          requestHeaders: wire.headers,
+          requestBody: body,
+          clientCohort: _diagnosticClientCohort,
+          followRedirects: wire.followRedirects,
+        );
+      }
+      _diagnostic(
+        body,
+        request,
+        ContextTransportDiagnosticStage.request,
+        encodedBody: encodedBody,
+        transport: transport,
+      );
       final response = await _client.send(wire);
+      if (response.statusCode == 200 && routing != null) {
+        _sessionState._observe(routing, response.headers);
+      }
+      if (diagnosticCapture != null) {
+        transport = captureContextTransportMetadata(
+          endpoint: wire.url,
+          method: wire.method,
+          requestHeaders: wire.headers,
+          requestBody: body,
+          clientCohort: _diagnosticClientCohort,
+          followRedirects: wire.followRedirects,
+          responseHeaders: response.headers,
+        );
+      }
       httpStatus = response.statusCode;
       if (response.statusCode != 200) {
         _available = false;
-        throw _ResponseFailure(await _httpFailure(response));
+        throw _ResponseFailure(
+          await _httpFailure(response, body, (value) => safeError = value),
+        );
       }
       session.emit(
         InferenceStructuredTextStreamEventType.lifecycle,
@@ -579,6 +942,43 @@ final class OpenAiResponsesClient
               throw const _ResponseFailure('invalid_terminal_status');
             }
             usage = _numericUsage(completed['usage']);
+            usageReported = completed.containsKey('usage');
+            responseId = _safeIdentifier(completed['id']);
+            responseModel = _safeIdentifier(completed['model']);
+            serviceTier = _safeIdentifier(completed['service_tier']);
+            promptCacheDiagnostics = _safeCacheDiagnostics(
+              completed['prompt_cache_diagnostics'],
+            );
+            responseFieldPresence = {
+              for (final key in [
+                'id',
+                'model',
+                'service_tier',
+                'prompt_cache_diagnostics',
+                'cache_diagnostics',
+              ])
+                key: completed.containsKey(key),
+            };
+            final rawUsage = completed['usage'];
+            if (rawUsage is Map) {
+              usageFieldPresence = {
+                for (final key in [
+                  'input_tokens',
+                  'output_tokens',
+                  'total_tokens',
+                  'cache_write_tokens',
+                  'input_tokens_details',
+                  'output_tokens_details',
+                ])
+                  key: rawUsage.containsKey(key),
+                for (final key in ['cached_tokens', 'cache_write_tokens'])
+                  'input_tokens_details.$key':
+                      rawUsage['input_tokens_details'] is Map &&
+                      (rawUsage['input_tokens_details'] as Map).containsKey(
+                        key,
+                      ),
+              };
+            }
             final terminal = (completed['output'] as List)
                 .cast<Map<String, dynamic>>();
             terminalOutputItems = terminal.length;
@@ -726,6 +1126,26 @@ final class OpenAiResponsesClient
       session.stop('responses_transport_failed');
     } finally {
       timer.cancel();
+      ContextDiagnosticSnapshot? contextDiagnostic;
+      if (diagnosticBody case final body?) {
+        final result = await session.result;
+        contextDiagnostic = _diagnostic(
+          body,
+          request,
+          ContextTransportDiagnosticStage.settled,
+          usage: usage,
+          usageReported: usageReported,
+          responseId: responseId,
+          responseModel: responseModel,
+          serviceTier: serviceTier,
+          outcome: result.success
+              ? 'completed'
+              : result.error?.code ?? 'failed',
+          httpStatus: httpStatus,
+          safeError: safeError,
+          transport: transport,
+        );
+      }
       if (observeDecision case final observer?) {
         final result = await session.result;
         final data = result.data;
@@ -753,6 +1173,22 @@ final class OpenAiResponsesClient
               parsedToolCalls: data?.toolCalls.length ?? 0,
               structuredKeys: data?.structuredOutput.length ?? 0,
               usage: Map.unmodifiable(usage),
+              usageReported: usageReported,
+              usageFieldPresence: Map.unmodifiable(usageFieldPresence),
+              responseFieldPresence: Map.unmodifiable(responseFieldPresence),
+              responseId: diagnosticCapture == null ? null : responseId,
+              responseModel: diagnosticCapture == null ? null : responseModel,
+              serviceTier: diagnosticCapture == null ? null : serviceTier,
+              promptCacheDiagnostics: diagnosticCapture == null
+                  ? const {}
+                  : Map.unmodifiable(promptCacheDiagnostics),
+              contextDiagnostic: contextDiagnostic,
+              providerErrorCode: safeError['code'] as String?,
+              providerErrorType: safeError['type'] as String?,
+              providerErrorParam: safeError['param'] as String?,
+              providerErrorFieldPresence:
+                  (safeError['presence'] as Map?)?.cast<String, bool>() ??
+                  const {},
               outcome: result.success
                   ? 'completed'
                   : result.error?.code ?? 'failed',
@@ -834,6 +1270,44 @@ final class OpenAiResponsesClient
     };
   }
 
+  static String? _safeIdentifier(Object? value) =>
+      value is String && RegExp(r'^[a-zA-Z0-9_.:/-]{1,160}$').hasMatch(value)
+      ? value
+      : null;
+
+  static Map<String, Object> _safeCacheDiagnostics(Object? value) {
+    if (value is! Map) return {};
+    return {
+      if (const [
+        'cache_hit',
+        'cache_miss',
+        'comparison_response_not_found',
+        'unavailable',
+      ].contains(value['type']))
+        'type': value['type'] as String,
+      if (const [
+        'model_changed',
+        'prompt_cache_key_changed',
+        'service_tier_changed',
+        'tools_changed',
+        'parallel_tool_calls_changed',
+        'response_format_changed',
+        'text_format_changed',
+        'reasoning_effort_changed',
+        'text_verbosity_changed',
+        'verbosity_changed',
+        'context_management_changed',
+        'context_compacted',
+        'input_changed',
+        'instructions_changed',
+      ].contains(value['reason']))
+        'reason': value['reason'] as String,
+      for (final key in ['comparison_reusable_tokens', 'cache_missed_tokens'])
+        if (value[key] is int && (value[key] as int) >= 0)
+          key: value[key] as int,
+    };
+  }
+
   static Map<String, int> _numericUsage(Object? value) {
     if (value is! Map) return {};
     final result = <String, int>{};
@@ -865,7 +1339,11 @@ final class OpenAiResponsesClient
 
   /// Remote messages can echo credentials or document content. Retain only a
   /// fixed diagnostic category and broad parameter family from bounded JSON.
-  static Future<String> _httpFailure(http.StreamedResponse response) async {
+  static Future<String> _httpFailure(
+    http.StreamedResponse response,
+    Map<String, dynamic> request,
+    void Function(Map<String, Object?>) observeSafeError,
+  ) async {
     if (response.statusCode == 401 || response.statusCode == 429) {
       await response.stream.listen((_) {}).cancel();
       return response.statusCode == 401
@@ -881,6 +1359,10 @@ final class OpenAiResponsesClient
       }
       final body = jsonDecode(utf8.decode(bytes));
       final error = body is Map ? body['error'] : null;
+      observeSafeError({
+        if (error is Map) ..._safeHttpError(error, request),
+        'messageHint': contextProviderErrorMessageHint(body),
+      });
       if (error is! Map) return base;
       final code = error['code'];
       if (code != 'invalid_json_schema' &&
@@ -899,6 +1381,71 @@ final class OpenAiResponsesClient
     } on Object {
       return base;
     }
+  }
+
+  static Map<String, Object?> _safeHttpError(
+    Map error,
+    Map<String, dynamic> request,
+  ) => {
+    'presence': {
+      for (final key in ['code', 'type', 'param']) key: error.containsKey(key),
+    },
+    'code':
+        const [
+          'invalid_request_error',
+          'invalid_value',
+          'unsupported_parameter',
+          'unsupported_value',
+          'unknown_parameter',
+          'invalid_json_schema',
+          'model_not_found',
+          'context_length_exceeded',
+          'insufficient_quota',
+          'rate_limit_exceeded',
+          'invalid_api_key',
+          'permission_denied',
+          'bad_request',
+        ].contains(error['code'])
+        ? error['code']
+        : null,
+    'type':
+        const [
+          'invalid_request_error',
+          'authentication_error',
+          'permission_error',
+          'rate_limit_error',
+          'api_error',
+          'server_error',
+          'not_found_error',
+          'bad_request_error',
+        ].contains(error['type'])
+        ? error['type']
+        : null,
+    'param': _requestParam(error['param'], request),
+  };
+
+  static String? _requestParam(Object? value, Map<String, dynamic> request) {
+    if (value is! String ||
+        value.length > 160 ||
+        !RegExp(
+          r'^[a-zA-Z_][a-zA-Z0-9_]*(?:(?:\.[a-zA-Z_][a-zA-Z0-9_]*)|(?:\[\d{1,6}\]))*$',
+        ).hasMatch(value)) {
+      return null;
+    }
+    Object? node = request;
+    for (final match in RegExp(
+      r'([a-zA-Z_][a-zA-Z0-9_]*)|\[(\d+)\]',
+    ).allMatches(value)) {
+      if (match[1] case final key?) {
+        if (node is! Map || !node.containsKey(key)) return null;
+        node = node[key];
+      } else {
+        final index = int.parse(match[2]!);
+        if (node is! List || index >= node.length) return null;
+        node = node[index];
+      }
+    }
+    return value;
   }
 
   static Map<String, dynamic> _outputSchema(InferenceRequest request) {

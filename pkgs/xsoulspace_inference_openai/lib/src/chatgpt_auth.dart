@@ -186,6 +186,10 @@ final class ChatGptAuth {
   final Set<String> _quarantined = {};
   final Map<String, bool> _discardedRevocations = {};
   final Map<String, int> _generations = {};
+
+  /// Local identity epoch for invalidating adapter routing state after signout.
+  /// Ordinary token renewal preserves the epoch and reveals no credentials.
+  int inferenceIdentityGeneration(String clientId) => _generations[clientId] ?? 0;
   final Map<String, Future<void>> _lanes = {};
   int _unboundGeneration = 0;
 

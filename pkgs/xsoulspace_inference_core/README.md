@@ -275,3 +275,94 @@ profile: null retains legacy raw presentation; empty explicitly means no visible
 discussion. Structured `toolCalls` remain structured. Consumers must not reparse
 presentation into executable calls, erase originals, or treat streamed provisional
 text as a durable effect. Final settlement can correct provisional text.
+
+## Offline context/cache diagnostics
+
+`ContextCacheAnalyzer.capture` hashes ordered caller-rendered UTF-8 segments.
+`captureJsonRequest` takes an explicit `messageListPath` and captures the
+`jsonEncode` representation, including cumulative prefixes at message/content
+boundaries. This is a JSON representation, not hidden provider token rendering.
+Set `exactWire` only when it is the exact encoded request the caller sends.
+Core performs no network or file access.
+
+Snapshots serialize hashes and byte counts, never source text. Fields containing
+`encrypted_content` are excluded from hashes; coverage and subsequent prefixes
+become incomplete and `exactWire` becomes false. Transport observers default to
+no encoded body; adapters can explicitly opt into exact body capture only with
+complete coverage. Never pass headers or credentials into capture.
+
+Declare `CacheWriteEndpoint` and `CacheLookupEndpoint` separately, with policy ID
+and known or unknown support. Core supplies no vendor cache policy. `compare`
+and directional `reuseMatrix` report eligible matching endpoints only with known
+configuration compatibility and cumulative prefix evidence. Eligibility is not
+an observed cache hit. Tools/settings contribute to compatibility fingerprints.
+Nullable `ContextCacheUsage` retains missing versus reported zero counters.
+
+`importLegacyFingerprints` imports independent `{bytes, sha256}` entries without
+inventing request ordering, exact-wire coverage or cumulative boundaries. An
+optional attributed `boundaryEvidence` sidecar supplies independently proven
+prefixes; absent evidence stays unknown. Invalid counts, hashes and duplicate
+segment/boundary IDs are refused. Snapshot, usage, intent and event JSON codecs
+support offline CLI analysis. Exact raw JSON decoding/duplicate-key refusal
+belongs to the caller before passing a map into this analyzer.
+
+`compareJsonRequests(earlier, later, messageListPath: [...])` reports the exact
+common JSON UTF-8 prefix length/hash, first changed ordered JSON path, and
+optional internal text-prefix UTF-8 byte/UTF-16 code-unit lengths with suffix
+byte counts. It exports no text. Internal prefixes do not create cache endpoints.
+Missing message lists, encrypted fields or non-JSON opaque objects return
+incomplete coverage without hashing the full request. Byte prefixes can end
+inside a multibyte character; they are diagnostic lengths, not text boundaries.
+
+Raw comparison has no default byte or depth budget. Callers may explicitly pass
+`maxEncodedBytes` or `maxDepth`; exceeding one returns incomplete coverage with
+a named reason and no prefix hash, without truncation. Opaque values and cycles
+also return named incomplete reasons.
+
+Bounded HTTP rejection hints use `contextProviderErrorMessageHint`: only fixed
+phrase categories, a fixed message-field name and allowlisted parameter names
+survive. They support `error.message`, string `detail` and string `error` envelopes
+for both adapters, without retaining remote prose. These are lexical hints, not
+confirmed provider capability or exact parameter paths.
+
+Optional generic events now include `transport`: normalized endpoint, redirect
+policy, a process-local HTTP-client cohort, header-name inventory and SHA256
+fingerprints of allowlisted cache/routing controls and response headers. No
+authorization/cookie values or hashes, account identity, raw header values or
+URL userinfo/query are retained. Unknown credential scope, connection reuse and
+backend worker remain explicit. A response-header fingerprint is evidence of
+equality, not worker identity or cache affinity. Request bytes/policy are unchanged.
+
+`ContextCacheComparisonRequest` in `context_cache_comparison` metadata requests
+provider-assisted comparison to a previous response. It is independent of cache
+write intent. OpenAI maps it to `prompt_cache_options.comparison_response_id`;
+unqualified OpenRouter routes fail before HTTP (`cache_comparison_unsupported`).
+It is optional and never added to ordinary requests. Exact wire capture retains
+the field; OpenAI declares that diagnostic-only path excluded from compatibility
+configuration while mode/TTL changes remain visible. Actual route/model support
+must be measured; public API documentation is not subscription qualification.
+
+## Declarative session and cache composition
+
+Compose `InferenceSessionSpec` with `InferenceCachePolicy` and an optional
+`InferenceTurnSpec`, then attach the declaration to an existing request:
+
+```dart
+final session = InferenceSessionSpec(
+  id: actorThreadId,
+  affinityKey: routingGroup,
+  cache: InferenceCachePolicy(group: authorizedPrefixGroup),
+);
+final request = session.attach(existingRequest,
+  turn: InferenceTurnSpec(id: logicalTurnId));
+```
+
+Session identity, routing affinity and cache accounting are separate. Identifiers
+are bounded ASCII opaque keys; never include credentials or private source text.
+Use the same declarations across related requests. A turn is one model/tool loop,
+not an HTTP request. Sharing a cache group requires caller authorization and does
+not share context or actor authority. `cache.boundaries` composes the existing
+`ContextCacheIntent`; duplicate boundary declarations refuse. Adapters retain
+provider-specific routing resources, not conversation or world state. Providers
+that do not implement this metadata retain their existing behavior. A declaration
+is desired behavior, never proof of a cache hit.

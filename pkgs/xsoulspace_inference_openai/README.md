@@ -135,3 +135,104 @@ core capability; model eligibility remains a server decision. Unknown values
 refuse before dispatch. Safe decision receipts include only recognized effort.
 The shared `streamWithTools` capability forwards the existing SSE path and keeps
 completed typed calls/results intact; it never executes them.
+
+Optional `diagnosticCapture: ContextTransportDiagnosticCapture(...)` observes
+the exact encoded request before HTTP and its settled numeric usage. Default
+events contain only digests, lengths and safe structural metadata. Exact source
+body export requires `includeEncodedBody: true` and complete inspectable
+coverage; encrypted/opaque continuation content is never exported. Observer
+exceptions cannot affect results or physical settlement. Optional decision
+receipts reuse the same `contextDiagnostic` snapshot and retain usage-field
+presence, so missing cache counts stay distinct from reported zero. Actual
+response ID/model/service tier and allowlisted cache diagnostic enums/counts
+appear only with generic diagnostics enabled; no headers or arbitrary remote
+diagnostic text is captured.
+
+Explicit `context_cache_intent` metadata uses core `ContextCacheIntent` and
+encoded paths such as `input[0].content[0]`. For documented GPT-5.6+ model names,
+declared text blocks receive `prompt_cache_breakpoint: {mode: explicit}`.
+Message-end intent can wrap the same string in a single `input_text` block;
+roles/text/order remain unchanged. Request-wide implicit policy is preserved,
+so this profile permits at most three explicit writes. Unknown models or
+unsupported boundaries refuse before dispatch; no cache key, TTL or output
+bound is invented.
+
+The [OpenAI cache guide](https://developers.openai.com/api/docs/guides/prompt-caching)
+documents the modern API policy, and the
+[cache diagnostics guide](https://developers.openai.com/api/docs/guides/prompt-caching/diagnostics)
+documents optional response comparison results. The current
+[SIWC inference guide](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference)
+does not separately qualify these cache options for the subscription route.
+Endpoint support therefore stays explicitly unknown until that exact route is
+measured. UTF-8 JSON prefix evidence is not hidden provider tokens, a cache hit,
+subscription consumption, or product acceptance. No live request is required
+for deterministic package controls.
+
+Provider-neutral `context[0].content[0]` intent aliases the corresponding
+`input[0].content[0]` wire position; existing input IDs remain valid. Diagnostics
+retain actual encoded IDs. This does not reorder provider codecs or equate JSON
+key order (including `instructions`) with the model's rendered prompt order.
+Implicit endpoint candidates exclude assistant endings, include user endings
+and only the final output in a consecutive tool-output group, and retain the
+initial instruction analogue as unqualified evidence.
+
+HTTP failure diagnostics add status and optional allowlisted code/type plus a
+parameter path only when its keys/indices exist in the encoded request. Unknown
+values stay null with explicit presence flags. Error messages, bodies, headers
+and credentials never enter these fields. Existing error categories and the
+401/429 no-error-body parsing path remain unchanged. A retained status-only 400
+does not retrospectively identify which parameter was rejected.
+
+Generic HTTP diagnostics include the shared content-free rejection message hints
+when code/param are null or absent. Fixed categories and parameter names can
+identify an unsupported cache field without publishing the error message.
+
+Measured 2026-10-19: the Luna-low subscription route rejected the explicit
+breakpoint. Safe message hints classified `not_supported` and named the marker
+and model. An accepted complete-message prewarm/appended-message test still
+reported zero cached tokens, including the exact-repeat control. Public API
+model-generation documentation is not route-specific capability evidence.
+
+Optional generic events now include `transport`: normalized endpoint, redirect
+policy, a process-local HTTP-client cohort, header-name inventory and SHA256
+fingerprints of allowlisted cache/routing controls and response headers. No
+authorization/cookie values or hashes, account identity, raw header values or
+URL userinfo/query are retained. Unknown credential scope, connection reuse and
+backend worker remain explicit. A response-header fingerprint is evidence of
+equality, not worker identity or cache affinity. Request bytes/policy are unchanged.
+
+`ContextCacheComparisonRequest` in `context_cache_comparison` metadata requests
+provider-assisted comparison to a previous response. It is independent of cache
+write intent. OpenAI maps it to `prompt_cache_options.comparison_response_id`;
+unqualified OpenRouter routes fail before HTTP (`cache_comparison_unsupported`).
+It is optional and never added to ordinary requests. Exact wire capture retains
+the field; OpenAI declares that diagnostic-only path excluded from compatibility
+configuration while mode/TTL changes remain visible. Actual route/model support
+must be measured; public API documentation is not subscription qualification.
+
+## Session affinity (opt-in)
+
+The shared `InferenceSessionSpec` maps its effective cache group to
+`prompt_cache_key`. Without a declaration, the wire request is unchanged.
+`OpenAiSessionOptions(sessionAffinity: true)` additionally sends `session-id`
+(effective affinity key) and `thread-id` (actual session identity).
+`turnAffinity: true` requires both session affinity and a declared turn. It echoes
+only the first valid server-issued `x-codex-turn-state` from a successful response
+within that turn. These Codex conventions need qualification on the fixed SIWC
+route; HTTP acceptance alone does not establish routing or cache benefit.
+
+```dart
+final request = const OpenAiSessionOptions(
+  sessionAffinity: true,
+  turnAffinity: true,
+).attach(session.attach(existingRequest,
+  turn: InferenceTurnSpec(id: logicalTurnId)));
+```
+
+Inject an `OpenAiSessionState` when provider clients are short-lived. Reconciliation
+resets tokens on turn, model, cache group, affinity, auth owner/principal or local
+signout epoch changes; late old-turn responses cannot overwrite the new turn.
+Call `release(sessionId)` at session end and `clear()` when its owner is disposed.
+The bounded default capacity is 32 active sessions; overflow refuses explicitly.
+Tokens and principal identity stay in memory. This does not implement WebSocket
+continuation, switch endpoints, borrow Codex credentials or add an actor loop.

@@ -103,3 +103,25 @@ Retain indexed item-done originals, including encrypted reasoning, until a valid
 completed terminal. Empty terminal output may reconstruct those final items;
 nonempty output must agree. Gaps, conflicts and explicit noncompleted item states
 refuse. No delta or item completion can bypass the terminal success gate.
+
+## Declarative session/cache composition (2026-10-19)
+
+North Star impact: applies. Shared core declarations separate session identity,
+affinity key, authorized cache group and logical turn. They decorate the existing
+request and context-boundary intent; they do not own transcripts, scheduling,
+authority or source effects. No declaration preserves the prior wire defaults.
+OpenRouter maps the declarations to session_id and prompt_cache_key; OpenAI maps
+the cache group to prompt_cache_key and admits Codex-style session/turn headers
+only through explicit typed adapter options. Public Codex source at commit
+e4568a3538c9cab6627d64ff8cdfc7d98b79b7db informed lifecycle rules; its default ChatGPT
+backend differs from this provider's fixed SIWC endpoint. Qualification remains
+route-specific, and request acceptance does not establish cache benefit.
+
+The OpenAI adapter may retain bounded in-memory state across short-lived clients.
+It echoes a successful response's first server-issued turn token only within the
+matching session, turn, model, cache group, affinity and auth-owner generation.
+Late old-turn responses cannot rewrite a replaced turn. Caller release/disposal
+and auth changes invalidate state. No token enters durable memory or raw logs.
+Diagnostics retain allowlisted routing-header fingerprints and explicit missing
+states, not backend identity or credential fingerprints. WebSocket continuation
+and provider prewarm are separate capabilities, not implicitly added here.

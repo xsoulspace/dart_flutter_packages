@@ -33,6 +33,29 @@ http_testing.MockClientHandler _respondWith(
 
 void main() {
   group('OpenRouterInferenceClient', () {
+    test('output bound reaches the provider wire', () async {
+      final client = _clientWithMock((request) async {
+        final body = jsonDecode(request.body) as Map;
+        expect(body['max_tokens'], 4096);
+        expect(body['temperature'], 0);
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'content': 'bounded'},
+              },
+            ],
+          }),
+          200,
+        );
+      });
+      expect(
+        (await client.infer(
+          InferenceRequest(prompt: 'answer', maxTokens: 4096, temperature: 0),
+        )).success,
+        true,
+      );
+    });
     test('parses a text completion response', () async {
       final client = _clientWithMock(
         _respondWith('''
@@ -65,9 +88,11 @@ void main() {
       expect(result.data!.meta.containsKey('usage'), isFalse);
     });
 
-    test('passes provider-reported usage through onto the response meta', () async {
-      final client = _clientWithMock(
-        _respondWith('''
+    test(
+      'passes provider-reported usage through onto the response meta',
+      () async {
+        final client = _clientWithMock(
+          _respondWith('''
           {
             "choices": [
               {
@@ -84,23 +109,24 @@ void main() {
             }
           }
           '''),
-      );
+        );
 
-      final result = await client.infer(
-        InferenceRequest.structured(
-          prompt: 'Say hello',
-          systemPrompt: 'You are helpful.',
-          task: InferenceTask.text,
-        ),
-      );
+        final result = await client.infer(
+          InferenceRequest.structured(
+            prompt: 'Say hello',
+            systemPrompt: 'You are helpful.',
+            task: InferenceTask.text,
+          ),
+        );
 
-      expect(result.success, isTrue);
-      final usage = result.data!.meta['usage'];
-      expect(usage, isNotNull);
-      expect(usage['prompt_tokens'], 120);
-      expect(usage['completion_tokens'], 34);
-      expect(usage['total_tokens'], 154);
-    });
+        expect(result.success, isTrue);
+        final usage = result.data!.meta['usage'];
+        expect(usage, isNotNull);
+        expect(usage['prompt_tokens'], 120);
+        expect(usage['completion_tokens'], 34);
+        expect(usage['total_tokens'], 154);
+      },
+    );
 
     test('parses native tool calls into structured toolCalls', () async {
       final client = _clientWithMock(

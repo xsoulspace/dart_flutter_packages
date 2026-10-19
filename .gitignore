@@ -15,6 +15,7 @@ node_modules/
 .flutter_mcp
 /target/
 **/target/
+**/__pycache__/
 
 # Flutter-generated build artifacts (machine-local paths, regenerated on build)
 **/Flutter/ephemeral/
