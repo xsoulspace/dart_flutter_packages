@@ -52,7 +52,8 @@ Uri chatCompletionsUri(String baseUrl) {
   return root.replace(path: '$path$suffix');
 }
 
-class OpenRouterInferenceClient implements InferenceClient {
+class OpenRouterInferenceClient
+    implements InferenceClient, ReasoningEffortInferenceClient {
   OpenRouterInferenceClient({
     this._apiKey = '',
     this.defaultModel = 'openai/gpt-4o-mini',
@@ -117,6 +118,17 @@ class OpenRouterInferenceClient implements InferenceClient {
   Set<InferenceTask> get supportedTasks => const <InferenceTask>{
     InferenceTask.text,
     InferenceTask.nativelyStructuredText,
+  };
+
+  /// OpenRouter exposes reasoning as NAMED tiers, not a numeric 1-100 scale:
+  /// the wire parameter is `reasoning_effort` with one of these values.
+  @override
+  Set<String> get supportedReasoningEfforts => const {
+    'minimal',
+    'low',
+    'medium',
+    'high',
+    'xhigh',
   };
 
   @override
@@ -208,11 +220,24 @@ class OpenRouterInferenceClient implements InferenceClient {
         {'role': 'user', 'content': _buildUserContent(request)},
     ];
 
+    // OpenRouter has no `thinking` parameter: reasoning is expressed through
+    // the named `reasoning_effort` tiers. An explicit `thinking: false` drops
+    // the effort instead of inventing a 'none' tier that would change model
+    // behaviour invisibly; `thinking: true` without an effort stays on the
+    // provider default.
+    final reasoningEffort = request.thinking == false
+        ? null
+        : request.reasoningEffort;
+
     final body = <String, dynamic>{
       'model': model,
       'messages': messages,
       if (request.maxTokens != null) 'max_tokens': request.maxTokens,
       if (request.temperature != null) 'temperature': request.temperature,
+      'reasoning_effort': ?reasoningEffort,
+      'include_reasoning': ?request.includeReasoning,
+      if (request.stopSequences.isNotEmpty)
+        'stop_sequences': request.stopSequences,
       if (toolRegistry != null &&
           toolRegistry.tools.isNotEmpty) ...<String, dynamic>{
         'tools': _buildTools(toolRegistry),
@@ -297,6 +322,12 @@ class OpenRouterInferenceClient implements InferenceClient {
         'uri': uri.toString(),
         'body': encodedBody,
         'metadata': Map<String, Object?>.from(request.metadata),
+        'reasoning': <String, Object?>{
+          'thinking': request.thinking,
+          'effort': reasoningEffort,
+          'effort_omitted':
+              request.thinking == false && request.reasoningEffort != null,
+        },
       });
       final response = await _httpClient
           .post(uri, headers: headers, body: encodedBody)
@@ -727,6 +758,11 @@ class OpenRouterInferenceClient implements InferenceClient {
     final content = messageMap['content'];
     final contentStr = content is String ? content : '';
 
+    // OpenRouter returns the reasoning trace beside the answer when
+    // `include_reasoning` is on.
+    final reasoning = messageMap['reasoning'];
+    final reasoningStr = reasoning is String ? reasoning : '';
+
     // Extract native tool_calls as structured records.
     final toolCalls = messageMap['tool_calls'];
     final parsedCalls = <ToolCall>[];
@@ -801,6 +837,7 @@ class OpenRouterInferenceClient implements InferenceClient {
         // absence when the API response carries none.
         if (decoded['usage'] is Map<String, dynamic>)
           'usage': decoded['usage'] as Map<String, dynamic>,
+        if (reasoningStr.isNotEmpty) 'reasoning': reasoningStr,
       },
     );
   }

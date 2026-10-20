@@ -112,6 +112,19 @@ enum NWeight {
     },
 }
 
+impl NWeight {
+    /// The `[in, out]` array when this weight is plain f32 — the only shape a
+    /// LoRA merge can touch. Quantized weights return None: merging into a
+    /// packed weight needs dequantize → merge → requantize, which is a
+    /// different path and is refused rather than approximated.
+    fn plain_mut(&mut self) -> Option<&mut Array> {
+        match self {
+            NWeight::Plain { wt } => Some(wt),
+            NWeight::Quant { .. } => None,
+        }
+    }
+}
+
 struct Expert {
     gate: NWeight,
     up: NWeight,
@@ -224,10 +237,7 @@ impl NurseryModel {
         };
 
         fn plain_tensor(store: &mut NurseryStore, name: &str, s: Stream) -> Result<Array, String> {
-            if store
-                .tensor_meta(&format!("{name}.scales"))
-                .is_some()
-            {
+            if store.tensor_meta(&format!("{name}.scales")).is_some() {
                 return Err(format!(
                     "quantized {name} not supported by the nursery runtime yet \
                      (rung-0 saves f32); extend NWeight when a packed rung ships"
@@ -328,7 +338,17 @@ impl NurseryModel {
                     down: load_weight(&mut store, &format!("{b}.down_proj"), group_size, bits, s)?,
                 });
             }
-            layers.push(NurseryLayer { ln1, ln2, q, k, v, o, decay, router, experts });
+            layers.push(NurseryLayer {
+                ln1,
+                ln2,
+                q,
+                k,
+                v,
+                o,
+                decay,
+                router,
+                experts,
+            });
         }
 
         Ok(Self {
@@ -344,19 +364,120 @@ impl NurseryModel {
         })
     }
 
+    /// Load the store, then merge a LoRA adapter into it.
+    ///
+    /// The adapter is applied ONCE at load, not per token: on this device
+    /// decode is memory-bound, so a merged weight costs nothing extra while a
+    /// per-token `W + BA` would re-read A and B on every forward.
+    ///
+    /// A merged weight set is a DIFFERENT model — every cached prefix
+    /// computed under the base is stale. Callers that cache must key on the
+    /// adapter digest (`LoraAdapter::digest`).
+    pub fn load_with_adapter(
+        model_dir: &Path,
+        adapter_path: &Path,
+        scale: f32,
+    ) -> Result<Self, String> {
+        let mut model = Self::load(model_dir)?;
+        let s = mlx::gpu().map_err(|e| format!("gpu init failed: mlx status {}", e.0))?;
+        let adapter = crate::lora::LoraAdapter::load(adapter_path, scale, s)?;
+        let applied = model.apply_adapter(&adapter, s)?;
+        if applied == 0 {
+            return Err("adapter applied to zero weights".to_string());
+        }
+        Ok(model)
+    }
+
+    /// Merge every adapter pair into the resident weights.
+    ///
+    /// A target the model does not have is a HARD ERROR, never a skip: a
+    /// silently-unapplied adapter is the failure mode this surface exists to
+    /// prevent. Quantized weights are refused for the same reason (a merge
+    /// into a packed weight would need dequantize → merge → requantize).
+    pub fn apply_adapter(
+        &mut self,
+        adapter: &crate::lora::LoraAdapter,
+        s: Stream,
+    ) -> Result<usize, String> {
+        let mut applied = 0;
+        for pair in &adapter.pairs {
+            let name = pair
+                .target
+                .strip_suffix(".weight")
+                .unwrap_or(&pair.target)
+                .to_string();
+            let Some(arr) = self.weight_mut(&name) else {
+                return Err(format!(
+                    "adapter targets {name}: not present as a plain f32 weight \
+                     (missing, or quantized — a merge requires f32)"
+                ));
+            };
+            let merged = crate::lora::merge_transposed(arr, &pair.a, &pair.b, pair.scale, s)
+                .map_err(|e| format!("merge {name}: mlx status {}", e.0))?;
+            merged
+                .eval()
+                .map_err(|e| format!("merge {name}: mlx status {}", e.0))?;
+            *arr = merged;
+            applied += 1;
+        }
+        Ok(applied)
+    }
+
+    /// Resolve a canonical weight name to its `[in, out]` array.
+    ///
+    /// Only the weights a LoRA realistically targets are addressable: the
+    /// attention projections, the expert MLPs, and the two heads. Everything
+    /// else (norms, decay, router) is deliberately not — adapting a router
+    /// would break the fp32 router law, and adapting a norm is not a LoRA.
+    fn weight_mut(&mut self, name: &str) -> Option<&mut Array> {
+        if name == "model.lm_head" {
+            return self.lm_head.plain_mut();
+        }
+        if name == "model.label_head" {
+            return self.label_head.plain_mut();
+        }
+        let rest = name.strip_prefix("model.layers.")?;
+        let (l, tail) = rest.split_once('.')?;
+        let l: usize = l.parse().ok()?;
+        let layer = self.layers.get_mut(l)?;
+        if let Some(proj) = tail.strip_prefix("self_attn.") {
+            let proj = proj.strip_suffix("_proj")?;
+            return match proj {
+                "q" => Some(&mut layer.q),
+                "k" => Some(&mut layer.k),
+                "v" => Some(&mut layer.v),
+                "o" => Some(&mut layer.o),
+                _ => None,
+            };
+        }
+        if let Some(rest) = tail.strip_prefix("mlp.experts.") {
+            let (e, proj) = rest.split_once('.')?;
+            let e: usize = e.parse().ok()?;
+            let proj = proj.strip_suffix("_proj")?;
+            let expert = layer.experts.get_mut(e)?;
+            return match proj {
+                "gate" => expert.gate.plain_mut(),
+                "up" => expert.up.plain_mut(),
+                "down" => expert.down.plain_mut(),
+                _ => None,
+            };
+        }
+        None
+    }
+
     pub fn config(&self) -> &NurseryModelConfig {
         &self.cfg
     }
 
     fn linear(&self, w: &NWeight, x: &Array, s: Stream) -> Result<Array, String> {
         match w {
-            NWeight::Plain { wt } => {
-                x.matmul(wt, s).map_err(|e| format!("matmul: mlx status {}", e.0))
+            NWeight::Plain { wt } => x
+                .matmul(wt, s)
+                .map_err(|e| format!("matmul: mlx status {}", e.0)),
+            NWeight::Quant { w, scales, biases } => {
+                Array::quantized_matmul(x, w, scales, biases, true, self.group_size, self.bits, s)
+                    .map_err(|e| format!("quantized_matmul: mlx status {}", e.0))
             }
-            NWeight::Quant { w, scales, biases } => Array::quantized_matmul(
-                x, w, scales, biases, true, self.group_size, self.bits, s,
-            )
-            .map_err(|e| format!("quantized_matmul: mlx status {}", e.0)),
         }
     }
 
@@ -389,13 +510,7 @@ impl NurseryModel {
         s: Stream,
     ) -> Result<StepOut, String> {
         let h = self.cfg.hidden_size;
-        let mut x = gather_row(
-            &self.embed,
-            self.cfg.vocab_size,
-            token,
-            h,
-            s,
-        )?; // [1, H]
+        let mut x = gather_row(&self.embed, self.cfg.vocab_size, token, h, s)?; // [1, H]
 
         let mut routes = Vec::with_capacity(self.cfg.layers);
         for (l, lay) in self.layers.iter().enumerate() {
@@ -450,8 +565,8 @@ impl NurseryModel {
             let wv = w
                 .to_f32_vec(s)
                 .map_err(|e| format!("gate readback: mlx status {}", e.0))?;
-            let mut acc = Array::full_f32(0.0, &[1, h], s)
-                .map_err(|e| format!("acc: mlx status {}", e.0))?;
+            let mut acc =
+                Array::full_f32(0.0, &[1, h], s).map_err(|e| format!("acc: mlx status {}", e.0))?;
             for (j, &e) in sel.iter().enumerate() {
                 let d = self.expert_mlp(&lay.experts[e], &h2, s)?; // [1, H]
                 let scaled = d
@@ -460,7 +575,11 @@ impl NurseryModel {
                 acc = acc.add(&scaled, s).map_err(mperf("combine add"))?;
             }
             x = x.add(&acc, s).map_err(mperf("moe residual"))?;
-            routes.push(RouteRow { pos, layer: l, experts: sel });
+            routes.push(RouteRow {
+                pos,
+                layer: l,
+                experts: sel,
+            });
         }
 
         let t = Array::rms_norm(&x, &self.norm, self.cfg.rms_norm_eps, s)
@@ -602,8 +721,8 @@ fn gather_row(
     let flat = table
         .reshape(&[rows * cols], s)
         .map_err(mperf("gather reshape"))?;
-    let base = Array::from_data_i32(&[(row * cols) as i32], &[1, 1])
-        .map_err(mperf("gather base"))?;
+    let base =
+        Array::from_data_i32(&[(row * cols) as i32], &[1, 1]).map_err(mperf("gather base"))?;
     let col_idx = Array::arange_i32(0, cols as i32, s).map_err(mperf("gather cols"))?;
     let idx = base.add(&col_idx, s).map_err(mperf("gather idx"))?; // [1, cols]
     flat.take(&idx, s).map_err(mperf("gather take"))

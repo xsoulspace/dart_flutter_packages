@@ -33,6 +33,25 @@ void main() {
       expect(restored.thinking, isNull);
     }
   });
+  test('include-reasoning survives options and both request codecs', () {
+    const options = GenerationOptions(includeReasoning: true);
+    expect(options.toJson()['include_reasoning'], isTrue);
+    expect(
+      GenerationOptions.fromJson(options.toJson()).includeReasoning,
+      isTrue,
+    );
+    expect(options.copyWith(maxTokens: 64).includeReasoning, isTrue);
+    for (final request in [
+      InferenceRequest(prompt: 'question', includeReasoning: true),
+      InferenceRequest.structured(prompt: 'question', includeReasoning: true),
+    ]) {
+      final restored = InferenceRequest.fromJson(
+        request.copyWith(prompt: 'next').value,
+      );
+      expect(restored.includeReasoning, isTrue);
+      expect(restored.generationOptions.includeReasoning, isTrue);
+    }
+  });
   group('GenerationOptions', () {
     test('composes, copies, and JSON round-trips', () {
       const options = GenerationOptions(

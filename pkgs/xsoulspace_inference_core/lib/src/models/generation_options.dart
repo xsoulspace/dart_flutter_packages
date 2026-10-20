@@ -17,6 +17,7 @@ class GenerationOptions {
     this.stopSequences = const <String>[],
     this.thinking,
     this.reasoningEffort,
+    this.includeReasoning,
   });
 
   factory GenerationOptions.fromJson(Map<String, dynamic> json) =>
@@ -38,6 +39,10 @@ class GenerationOptions {
           final String effort => effort,
           _ => null,
         },
+        includeReasoning: switch (json['include_reasoning']) {
+          final bool include => include,
+          _ => null,
+        },
       );
 
   /// Upper bound on generated tokens. Providers with a required limit
@@ -56,18 +61,24 @@ class GenerationOptions {
   /// callers must not infer an effort from [thinking].
   final String? reasoningEffort;
 
+  /// Whether the provider should return its reasoning trace next to the
+  /// answer. Null leaves the provider default; false asks for no trace.
+  final bool? includeReasoning;
+
   GenerationOptions copyWith({
     int? maxTokens,
     double? temperature,
     List<String>? stopSequences,
     bool? thinking,
     String? reasoningEffort,
+    bool? includeReasoning,
   }) => GenerationOptions(
     maxTokens: maxTokens ?? this.maxTokens,
     temperature: temperature ?? this.temperature,
     stopSequences: stopSequences ?? this.stopSequences,
     thinking: thinking ?? this.thinking,
     reasoningEffort: reasoningEffort ?? this.reasoningEffort,
+    includeReasoning: includeReasoning ?? this.includeReasoning,
   );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -76,5 +87,6 @@ class GenerationOptions {
     if (stopSequences.isNotEmpty) 'stop_sequences': stopSequences,
     'thinking': ?thinking,
     'reasoning_effort': ?reasoningEffort,
+    'include_reasoning': ?includeReasoning,
   };
 }

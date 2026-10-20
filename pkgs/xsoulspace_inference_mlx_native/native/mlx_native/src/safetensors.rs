@@ -27,14 +27,12 @@ impl SafetensorsFile {
         if bytes.len() < 8 {
             return Err(MlxError(-12));
         }
-        let header_len =
-            u64::from_le_bytes(bytes[..8].try_into().unwrap()) as usize;
+        let header_len = u64::from_le_bytes(bytes[..8].try_into().unwrap()) as usize;
         if 8 + header_len > bytes.len() {
             return Err(MlxError(-12));
         }
         let header: HashMap<String, serde_json::Value> =
-            serde_json::from_slice(&bytes[8..8 + header_len])
-                .map_err(|_| MlxError(-12))?;
+            serde_json::from_slice(&bytes[8..8 + header_len]).map_err(|_| MlxError(-12))?;
         let mut tensors = HashMap::new();
         for (name, entry) in header {
             if name == "__metadata__" {
@@ -43,9 +41,16 @@ impl SafetensorsFile {
             let dtype = entry["dtype"].as_str().unwrap_or_default().to_string();
             let shape: Vec<usize> = entry["shape"]
                 .as_array()
-                .map(|a| a.iter().filter_map(|v| v.as_u64().map(|d| d as usize)).collect())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|v| v.as_u64().map(|d| d as usize))
+                        .collect()
+                })
                 .unwrap_or_default();
-            let offsets = entry["data_offsets"].as_array().cloned().unwrap_or_default();
+            let offsets = entry["data_offsets"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default();
             if offsets.len() != 2 {
                 return Err(MlxError(-12));
             }
@@ -54,7 +59,15 @@ impl SafetensorsFile {
             if end > bytes.len() {
                 return Err(MlxError(-12));
             }
-            tensors.insert(name, TensorInfo { dtype, shape, start, end });
+            tensors.insert(
+                name,
+                TensorInfo {
+                    dtype,
+                    shape,
+                    start,
+                    end,
+                },
+            );
         }
         Ok(SafetensorsFile { bytes, tensors })
     }
@@ -100,8 +113,15 @@ impl SafetensorsFile {
         Array::from_data_bf16(data, &shape)
     }
 
-    /// Plain checkpoint tensor in whatever float storage it ships as (fp16
-    /// or bf16) — the R2 fp16 rung's reader.
+    /// All tensor names in the file (sorted, deterministic).
+    pub fn names(&self) -> Vec<String> {
+        let mut v: Vec<String> = self.tensors.keys().cloned().collect();
+        v.sort();
+        v
+    }
+
+    /// Plain checkpoint tensor in whatever float storage it ships as (fp16,
+    /// bf16, or f32 — LoRA adapters are commonly saved f32).
     pub fn take_any(&self, name: &str) -> MlxResult<Array> {
         let (data, shape, dtype) = {
             let info = self.tensors.get(name).ok_or(MlxError(-13))?;
@@ -114,6 +134,13 @@ impl SafetensorsFile {
         match dtype.as_str() {
             "F16" => Array::from_data_f16(data, &shape),
             "BF16" => Array::from_data_bf16(data, &shape),
+            "F32" => {
+                let vals: Vec<f32> = data
+                    .chunks_exact(4)
+                    .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
+                    .collect();
+                Array::from_data_f32(&vals, &shape)
+            }
             _ => Err(MlxError(-14)),
         }
     }

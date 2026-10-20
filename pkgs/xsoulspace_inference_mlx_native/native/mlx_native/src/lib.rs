@@ -13,17 +13,18 @@
 //! Errors return `{"error":"..."}`. The forward path is serialized behind a
 //! lock; the harness server serves decisions one at a time.
 
+pub mod bindings;
+pub mod bpe;
+pub mod lfm2;
+pub mod lora;
 pub mod mlx;
 pub mod model;
 pub mod nursery;
 pub mod nursery_model;
 pub mod plan;
 pub mod power;
-pub mod bindings;
-pub mod lfm2;
 pub mod qwen;
 mod qwen_prefix;
-pub mod bpe;
 
 #[cfg(test)]
 pub fn gelu_ref(x: &mlx::Array, s: mlx::Stream) -> mlx::MlxResult<mlx::Array> {
@@ -83,11 +84,14 @@ impl DebugDump {
         let Some(dir) = &self.dir else { return };
         let _ = std::fs::create_dir_all(dir);
         let name = format!("fw{:02}_{name}", CURRENT_FW.with(|c| c.get()));
-        let dumped = arr.astype(mlx::Dtype::Float32, s).and_then(|a| a.to_f32_vec(s));
+        let dumped = arr
+            .astype(mlx::Dtype::Float32, s)
+            .and_then(|a| a.to_f32_vec(s));
         let vals = match dumped {
             Ok(v) => v,
             Err(e) => {
-                let _ = std::fs::write(dir.join(format!("DUMP_ERROR_{name}.txt")), format!("{e:?}"));
+                let _ =
+                    std::fs::write(dir.join(format!("DUMP_ERROR_{name}.txt")), format!("{e:?}"));
                 return;
             }
         };
@@ -222,9 +226,7 @@ fn looks_like_mlx_metallib(path: &Path) -> bool {
         if window.windows(NEEDLE.len()).any(|w| w == NEEDLE) {
             return true;
         }
-        tail = window
-            [window.len().saturating_sub(NEEDLE.len() - 1)..]
-            .to_vec();
+        tail = window[window.len().saturating_sub(NEEDLE.len() - 1)..].to_vec();
     }
 }
 
@@ -261,7 +263,11 @@ pub extern "C" fn mlx_native_load(model_dir: *const c_char) -> i64 {
         return -1;
     }
     pin_metallib_colocated();
-    let dir = PathBuf::from(unsafe { CStr::from_ptr(model_dir) }.to_string_lossy().to_string());
+    let dir = PathBuf::from(
+        unsafe { CStr::from_ptr(model_dir) }
+            .to_string_lossy()
+            .to_string(),
+    );
     let stream = match gpu() {
         Ok(s) => s,
         Err(_) => return -2,
@@ -301,7 +307,11 @@ pub extern "C" fn mlx_native_forward(handle: i64, request_json: *const c_char) -
     if request_json.is_null() {
         return fail("missing request");
     }
-    let engine = registry().lock().unwrap().get(&handle).map(|e| (Arc::clone(&e.model), Arc::clone(&e.compiled)));
+    let engine = registry()
+        .lock()
+        .unwrap()
+        .get(&handle)
+        .map(|e| (Arc::clone(&e.model), Arc::clone(&e.compiled)));
     let Some((model, compiled_slot)) = engine else {
         return fail("unknown handle");
     };
@@ -444,7 +454,11 @@ struct QwenRequestSettlement {
 
 impl Drop for QwenRequestSettlement {
     fn drop(&mut self) {
-        self.engine.requests.lock().unwrap().remove(&self.request_id);
+        self.engine
+            .requests
+            .lock()
+            .unwrap()
+            .remove(&self.request_id);
     }
 }
 
@@ -496,7 +510,11 @@ pub extern "C" fn mlx_native_qwen_load(model_dir: *const c_char) -> i64 {
         return -1;
     }
     pin_metallib_colocated();
-    let dir = PathBuf::from(unsafe { CStr::from_ptr(model_dir) }.to_string_lossy().to_string());
+    let dir = PathBuf::from(
+        unsafe { CStr::from_ptr(model_dir) }
+            .to_string_lossy()
+            .to_string(),
+    );
     let model = match crate::qwen::Qwen3::load(&dir) {
         Ok(m) => m,
         Err(_) => return -2,
@@ -524,12 +542,18 @@ pub extern "C" fn mlx_native_qwen_load(model_dir: *const c_char) -> i64 {
 #[no_mangle]
 pub extern "C" fn mlx_native_qwen_request_create(handle: i64) -> i64 {
     let engine = qwen_registry().lock().unwrap().get(&handle).map(Arc::clone);
-    let Some(engine) = engine else { return -1; };
+    let Some(engine) = engine else {
+        return -1;
+    };
     let request_id = QWEN_NEXT_REQUEST.fetch_add(1, Ordering::Relaxed);
-    if request_id <= 0 { return -2; }
+    if request_id <= 0 {
+        return -2;
+    }
     engine.requests.lock().unwrap().insert(
         request_id,
-        Arc::new(QwenRequestState { cancelled: AtomicBool::new(false) }),
+        Arc::new(QwenRequestState {
+            cancelled: AtomicBool::new(false),
+        }),
     );
     request_id
 }
@@ -541,9 +565,18 @@ pub extern "C" fn mlx_native_qwen_request_create(handle: i64) -> i64 {
 #[no_mangle]
 pub extern "C" fn mlx_native_qwen_request_cancel(handle: i64, request_id: i64) -> i32 {
     let engine = qwen_registry().lock().unwrap().get(&handle).map(Arc::clone);
-    let Some(engine) = engine else { return -1; };
-    let request = engine.requests.lock().unwrap().get(&request_id).map(Arc::clone);
-    let Some(request) = request else { return -2; };
+    let Some(engine) = engine else {
+        return -1;
+    };
+    let request = engine
+        .requests
+        .lock()
+        .unwrap()
+        .get(&request_id)
+        .map(Arc::clone);
+    let Some(request) = request else {
+        return -2;
+    };
     request.cancelled.store(true, Ordering::Release);
     0
 }
@@ -553,7 +586,9 @@ pub extern "C" fn mlx_native_qwen_request_cancel(handle: i64, request_id: i64) -
 #[no_mangle]
 pub extern "C" fn mlx_native_qwen_request_finish(handle: i64, request_id: i64) -> i32 {
     let engine = qwen_registry().lock().unwrap().get(&handle).map(Arc::clone);
-    let Some(engine) = engine else { return -1; };
+    let Some(engine) = engine else {
+        return -1;
+    };
     engine.requests.lock().unwrap().remove(&request_id);
     0
 }
@@ -563,7 +598,10 @@ pub extern "C" fn mlx_native_qwen_request_finish(handle: i64, request_id: i64) -
 /// `QwenGenerateRequest`). Response:
 /// `{"ids": [...], "text": "…", "prompt_ids": [...]}` or `{"error": "…"}`.
 #[no_mangle]
-pub extern "C" fn mlx_native_qwen_generate(handle: i64, request_json: *const c_char) -> *mut c_char {
+pub extern "C" fn mlx_native_qwen_generate(
+    handle: i64,
+    request_json: *const c_char,
+) -> *mut c_char {
     qwen_generate(handle, None, request_json)
 }
 
@@ -578,11 +616,7 @@ pub extern "C" fn mlx_native_qwen_generate_request(
     qwen_generate(handle, Some(request_id), request_json)
 }
 
-fn qwen_generate(
-    handle: i64,
-    request_id: Option<i64>,
-    request_json: *const c_char,
-) -> *mut c_char {
+fn qwen_generate(handle: i64, request_id: Option<i64>, request_json: *const c_char) -> *mut c_char {
     if request_json.is_null() {
         return fail("missing request");
     }
@@ -593,7 +627,9 @@ fn qwen_generate(
     let cancellation = match request_id {
         Some(id) => {
             let request = engine.requests.lock().unwrap().get(&id).map(Arc::clone);
-            let Some(request) = request else { return fail("unknown request"); };
+            let Some(request) = request else {
+                return fail("unknown request");
+            };
             Some(request)
         }
         None => None,
@@ -602,15 +638,13 @@ fn qwen_generate(
         engine: Arc::clone(&engine),
         request_id: id,
     });
-    let request: QwenGenerateRequest = match serde_json::from_slice(unsafe {
-        CStr::from_ptr(request_json)
-    }
-    .to_bytes())
-    {
-        Ok(r) => r,
-        Err(_) => return fail("unreadable request JSON"),
-    };
-    let Some(_guard) = cancellable_qwen_forward_lock(forward_lock(), cancellation.as_deref()) else {
+    let request: QwenGenerateRequest =
+        match serde_json::from_slice(unsafe { CStr::from_ptr(request_json) }.to_bytes()) {
+            Ok(r) => r,
+            Err(_) => return fail("unreadable request JSON"),
+        };
+    let Some(_guard) = cancellable_qwen_forward_lock(forward_lock(), cancellation.as_deref())
+    else {
         return qwen_cancelled();
     };
     if is_qwen_cancelled(cancellation.as_deref()) {
@@ -669,7 +703,12 @@ fn qwen_generate(
             }
             let text = engine
                 .tokenizer
-                .decode(&ids[prompt_ids.len()..].iter().map(|&i| i as u32).collect::<Vec<_>>())
+                .decode(
+                    &ids[prompt_ids.len()..]
+                        .iter()
+                        .map(|&i| i as u32)
+                        .collect::<Vec<_>>(),
+                )
                 .unwrap_or_default();
             let payload = serde_json::json!({
                 "cache_reused_tokens": reused,
@@ -683,9 +722,7 @@ fn qwen_generate(
                 Err(_) => fail("encode"),
             }
         }
-        Err(e) if e.0 == -980 && is_qwen_cancelled(cancellation.as_deref()) => {
-            qwen_cancelled()
-        }
+        Err(e) if e.0 == -980 && is_qwen_cancelled(cancellation.as_deref()) => qwen_cancelled(),
         Err(e) => fail(&format!("generate failed: mlx status {}", e.0)),
     }
 }
@@ -696,13 +733,18 @@ fn cancellable_qwen_forward_lock<'a>(
     lock: &'a Mutex<()>,
     request: Option<&QwenRequestState>,
 ) -> Option<std::sync::MutexGuard<'a, ()>> {
-    if request.is_none() { return Some(lock.lock().unwrap()); }
+    if request.is_none() {
+        return Some(lock.lock().unwrap());
+    }
     loop {
-        if is_qwen_cancelled(request) { return None; }
+        if is_qwen_cancelled(request) {
+            return None;
+        }
         match lock.try_lock() {
             Ok(guard) => return Some(guard),
-            Err(std::sync::TryLockError::WouldBlock) =>
-                std::thread::sleep(std::time::Duration::from_millis(2)),
+            Err(std::sync::TryLockError::WouldBlock) => {
+                std::thread::sleep(std::time::Duration::from_millis(2))
+            }
             Err(std::sync::TryLockError::Poisoned(error)) => panic!("{error}"),
         }
     }
@@ -721,9 +763,13 @@ fn qwen_cancelled() -> *mut c_char {
 /// Synchronous host revocation: waits for any in-flight generation, then purges.
 #[no_mangle]
 pub extern "C" fn mlx_native_qwen_clear_cache(handle: i64, actor: *const c_char) -> i32 {
-    if actor.is_null() { return -1; }
+    if actor.is_null() {
+        return -1;
+    }
     let engine = qwen_registry().lock().unwrap().get(&handle).map(Arc::clone);
-    let Some(engine) = engine else { return -2; };
+    let Some(engine) = engine else {
+        return -2;
+    };
     let actor = unsafe { CStr::from_ptr(actor) }.to_string_lossy();
     let _guard = forward_lock().lock().unwrap();
     engine.prefixes.lock().unwrap().clear_actor(&actor);
@@ -746,8 +792,7 @@ pub extern "C" fn mlx_native_qwen_unload(handle: i64) {
 // contract). Serialized behind the registry mutex like every engine here;
 // calls are rare and short.
 
-static NURSERY_REGISTRY: OnceLock<Mutex<HashMap<i64, nursery::NurseryStore>>> =
-    OnceLock::new();
+static NURSERY_REGISTRY: OnceLock<Mutex<HashMap<i64, nursery::NurseryStore>>> = OnceLock::new();
 static NURSERY_NEXT_HANDLE: AtomicI64 = AtomicI64::new(1);
 
 fn nursery_registry() -> &'static Mutex<HashMap<i64, nursery::NurseryStore>> {
@@ -762,7 +807,9 @@ pub extern "C" fn mlx_native_nursery_open(model_dir: *const c_char) -> i64 {
         return -1;
     }
     let dir = PathBuf::from(
-        unsafe { CStr::from_ptr(model_dir) }.to_string_lossy().to_string(),
+        unsafe { CStr::from_ptr(model_dir) }
+            .to_string_lossy()
+            .to_string(),
     );
     match nursery::NurseryStore::open(&dir) {
         Ok(store) => {
@@ -799,14 +846,13 @@ pub extern "C" fn mlx_native_nursery_verify(handle: i64) -> *mut c_char {
 /// Tensor addressing: `{"shape","dtype","nbytes","role","segment"}`
 /// without reading the bytes.
 #[no_mangle]
-pub extern "C" fn mlx_native_nursery_tensor_meta(
-    handle: i64,
-    name: *const c_char,
-) -> *mut c_char {
+pub extern "C" fn mlx_native_nursery_tensor_meta(handle: i64, name: *const c_char) -> *mut c_char {
     if name.is_null() {
         return fail("missing tensor name");
     }
-    let name = unsafe { CStr::from_ptr(name) }.to_string_lossy().to_string();
+    let name = unsafe { CStr::from_ptr(name) }
+        .to_string_lossy()
+        .to_string();
     let registry = nursery_registry().lock().unwrap();
     let Some(store) = registry.get(&handle) else {
         return fail("unknown nursery handle");
@@ -841,7 +887,9 @@ pub extern "C" fn mlx_native_nursery_tensor_f32(
     if name.is_null() {
         return fail("missing tensor name");
     }
-    let name = unsafe { CStr::from_ptr(name) }.to_string_lossy().to_string();
+    let name = unsafe { CStr::from_ptr(name) }
+        .to_string_lossy()
+        .to_string();
     let mut registry = nursery_registry().lock().unwrap();
     let Some(store) = registry.get_mut(&handle) else {
         return fail("unknown nursery handle");
@@ -884,8 +932,7 @@ struct NurseryModelEngine {
     model: std::sync::Arc<nursery_model::NurseryModel>,
 }
 
-static NURSERY_MODEL_REGISTRY: OnceLock<Mutex<HashMap<i64, NurseryModelEngine>>> =
-    OnceLock::new();
+static NURSERY_MODEL_REGISTRY: OnceLock<Mutex<HashMap<i64, NurseryModelEngine>>> = OnceLock::new();
 static NURSERY_MODEL_NEXT_HANDLE: AtomicI64 = AtomicI64::new(1);
 static NURSERY_MODEL_LAST_ERROR: OnceLock<Mutex<String>> = OnceLock::new();
 
@@ -916,14 +963,64 @@ pub extern "C" fn mlx_native_nursery_model_load(model_dir: *const c_char) -> i64
     }
     pin_metallib_colocated();
     let dir = PathBuf::from(
-        unsafe { CStr::from_ptr(model_dir) }.to_string_lossy().to_string(),
+        unsafe { CStr::from_ptr(model_dir) }
+            .to_string_lossy()
+            .to_string(),
     );
     match nursery_model::NurseryModel::load(&dir) {
         Ok(model) => {
             let handle = NURSERY_MODEL_NEXT_HANDLE.fetch_add(1, Ordering::SeqCst);
             nursery_model_registry().lock().unwrap().insert(
                 handle,
-                NurseryModelEngine { model: std::sync::Arc::new(model) },
+                NurseryModelEngine {
+                    model: std::sync::Arc::new(model),
+                },
+            );
+            handle
+        }
+        Err(message) => {
+            nursery_model_note_error(&message);
+            -2
+        }
+    }
+}
+
+/// Load the store, then merge a PEFT-style LoRA adapter into it.
+///
+/// `scale` is the final multiplier (PEFT's `alpha / r`). The adapter is
+/// merged ONCE at load — decode is memory-bound here, so a merged weight
+/// costs nothing per token. A target the model does not have, or a
+/// quantized target, is a hard error (see `..._last_error`), never a skip.
+///
+/// Returns a positive handle, -1 null arg, -2 failure.
+#[no_mangle]
+pub extern "C" fn mlx_native_nursery_model_load_with_adapter(
+    model_dir: *const c_char,
+    adapter_path: *const c_char,
+    scale: f32,
+) -> i64 {
+    if model_dir.is_null() || adapter_path.is_null() {
+        return -1;
+    }
+    pin_metallib_colocated();
+    let dir = PathBuf::from(
+        unsafe { CStr::from_ptr(model_dir) }
+            .to_string_lossy()
+            .to_string(),
+    );
+    let adapter = PathBuf::from(
+        unsafe { CStr::from_ptr(adapter_path) }
+            .to_string_lossy()
+            .to_string(),
+    );
+    match nursery_model::NurseryModel::load_with_adapter(&dir, &adapter, scale) {
+        Ok(model) => {
+            let handle = NURSERY_MODEL_NEXT_HANDLE.fetch_add(1, Ordering::SeqCst);
+            nursery_model_registry().lock().unwrap().insert(
+                handle,
+                NurseryModelEngine {
+                    model: std::sync::Arc::new(model),
+                },
             );
             handle
         }
@@ -958,14 +1055,11 @@ pub extern "C" fn mlx_native_nursery_model_generate(
     fn default_max_new() -> usize {
         64
     }
-    let request: NurseryGenerateRequest = match serde_json::from_slice(unsafe {
-        CStr::from_ptr(request_json)
-    }
-    .to_bytes())
-    {
-        Ok(r) => r,
-        Err(_) => return fail("unreadable request JSON"),
-    };
+    let request: NurseryGenerateRequest =
+        match serde_json::from_slice(unsafe { CStr::from_ptr(request_json) }.to_bytes()) {
+            Ok(r) => r,
+            Err(_) => return fail("unreadable request JSON"),
+        };
     let engine = nursery_model_registry()
         .lock()
         .unwrap()
@@ -1051,7 +1145,11 @@ pub extern "C" fn mlx_native_lfm2_load(model_dir: *const c_char) -> i64 {
         return -1;
     }
     pin_metallib_colocated();
-    let dir = PathBuf::from(unsafe { CStr::from_ptr(model_dir) }.to_string_lossy().to_string());
+    let dir = PathBuf::from(
+        unsafe { CStr::from_ptr(model_dir) }
+            .to_string_lossy()
+            .to_string(),
+    );
     let model = match crate::lfm2::Lfm2::load(&dir) {
         Ok(m) => m,
         Err(e) => {
@@ -1112,7 +1210,10 @@ pub extern "C" fn mlx_native_lfm2_special_ids(handle: i64) -> *mut c_char {
 /// `eos_ids`, default OFF — see `QwenGenerateRequest`). Response:
 /// `{"ids": [...], "text": "…", "prompt_ids": [...]}` or `{"error": "…"}`.
 #[no_mangle]
-pub extern "C" fn mlx_native_lfm2_generate(handle: i64, request_json: *const c_char) -> *mut c_char {
+pub extern "C" fn mlx_native_lfm2_generate(
+    handle: i64,
+    request_json: *const c_char,
+) -> *mut c_char {
     if request_json.is_null() {
         return fail("missing request");
     }
@@ -1120,14 +1221,11 @@ pub extern "C" fn mlx_native_lfm2_generate(handle: i64, request_json: *const c_c
     let Some(engine) = engine else {
         return fail("unknown handle");
     };
-    let request: QwenGenerateRequest = match serde_json::from_slice(unsafe {
-        CStr::from_ptr(request_json)
-    }
-    .to_bytes())
-    {
-        Ok(r) => r,
-        Err(_) => return fail("unreadable request JSON"),
-    };
+    let request: QwenGenerateRequest =
+        match serde_json::from_slice(unsafe { CStr::from_ptr(request_json) }.to_bytes()) {
+            Ok(r) => r,
+            Err(_) => return fail("unreadable request JSON"),
+        };
     let _guard = forward_lock().lock().unwrap();
     let stream = match gpu() {
         Ok(stream) => stream,
@@ -1160,7 +1258,12 @@ pub extern "C" fn mlx_native_lfm2_generate(handle: i64, request_json: *const c_c
         Ok(ids) => {
             let text = engine
                 .tokenizer
-                .decode(&ids[prompt_ids.len()..].iter().map(|&i| i as u32).collect::<Vec<_>>())
+                .decode(
+                    &ids[prompt_ids.len()..]
+                        .iter()
+                        .map(|&i| i as u32)
+                        .collect::<Vec<_>>(),
+                )
                 .unwrap_or_default();
             let payload = serde_json::json!({
                 "prompt_ids": prompt_ids,
@@ -1211,16 +1314,22 @@ pub extern "C" fn mlx_native_normalize(
 mod tests {
     #[test]
     fn queued_qwen_cancel_settles_without_waiting_for_gpu_owner() {
-        use std::sync::{atomic::{AtomicBool, Ordering}, Mutex, mpsc};
+        use std::sync::{
+            atomic::{AtomicBool, Ordering},
+            mpsc, Mutex,
+        };
         let lock = Mutex::new(());
         let held = lock.lock().unwrap();
-        let request = super::QwenRequestState { cancelled: AtomicBool::new(false) };
+        let request = super::QwenRequestState {
+            cancelled: AtomicBool::new(false),
+        };
         std::thread::scope(|scope| {
             let (send, receive) = mpsc::channel();
             let lock_ref = &lock;
             let request_ref = &request;
             scope.spawn(move || {
-                let cancelled = super::cancellable_qwen_forward_lock(lock_ref, Some(request_ref)).is_none();
+                let cancelled =
+                    super::cancellable_qwen_forward_lock(lock_ref, Some(request_ref)).is_none();
                 send.send(cancelled).unwrap();
             });
             request.cancelled.store(true, Ordering::Release);
@@ -1239,8 +1348,8 @@ mod tests {
     #[test]
     fn l0_ops_run_and_are_dispatch_cheap() {
         // Test binaries don't sit beside a metallib; pin the cmake-built one.
-        let metallib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("build/mlx-install/lib/mlx.metallib");
+        let metallib =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("build/mlx-install/lib/mlx.metallib");
         if metallib.is_file() {
             set_metallib_path(&metallib).unwrap();
         }
@@ -1302,8 +1411,7 @@ mod tests {
         }
         let last = sa.matmul(&sb, s).unwrap();
         last.eval().unwrap();
-        let per_submitted_us =
-            start.elapsed().as_micros() as f64 / (iters as f64 + 1.0);
+        let per_submitted_us = start.elapsed().as_micros() as f64 / (iters as f64 + 1.0);
         crate::power::perf_gate(
             "l0.submitted_op",
             per_submitted_us < 50.0,
@@ -1314,8 +1422,11 @@ mod tests {
         let heads = 8usize;
         let seq = 128usize;
         let dim = 64usize;
-        let q = Array::from_data_f16(&fp16_pattern(heads * seq * dim * 2, 97), &[1, heads, seq, dim])
-            .unwrap();
+        let q = Array::from_data_f16(
+            &fp16_pattern(heads * seq * dim * 2, 97),
+            &[1, heads, seq, dim],
+        )
+        .unwrap();
         let mask = Array::full(1.0, &[1, 1, seq, seq], Dtype::Bool, s).unwrap();
         let start = std::time::Instant::now();
         for _ in 0..50 {
@@ -1357,8 +1468,8 @@ mod tests {
 
 #[cfg(test)]
 mod perf_tests {
-    use super::model::{Batch, LayaModel};
     use super::mlx::{gpu, Array};
+    use super::model::{Batch, LayaModel};
     use std::path::PathBuf;
 
     /// Engine forward cost in-process (no dart): gates the ADR 0051 p50.
@@ -1373,14 +1484,13 @@ mod perf_tests {
             );
             return;
         }
-        let metallib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("build/mlx-install/lib/mlx.metallib");
+        let metallib =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("build/mlx-install/lib/mlx.metallib");
         if metallib.is_file() {
             super::set_metallib_path_pub(&metallib);
         }
         let s = gpu().unwrap();
-        let model_dir = std::env::var("HOME").unwrap()
-            + "/.cache/xsoulspace/laya-mlx";
+        let model_dir = std::env::var("HOME").unwrap() + "/.cache/xsoulspace/laya-mlx";
         let t0 = std::time::Instant::now();
         let model = LayaModel::load(std::path::Path::new(&model_dir), s).unwrap();
         eprintln!("load: {:?}", t0.elapsed());
@@ -1421,10 +1531,7 @@ mod perf_tests {
         for _ in 0..10 {
             model.forward(&batch, s).unwrap();
         }
-        eprintln!(
-            "steady forward: {:?}/iter",
-            t1.elapsed() / 10
-        );
+        eprintln!("steady forward: {:?}/iter", t1.elapsed() / 10);
         assert_eq!(out.logits.len(), b);
     }
 
@@ -1435,8 +1542,8 @@ mod perf_tests {
     #[test]
     #[ignore]
     fn r0_forward_sweep_b1_b20() {
-        let metallib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("build/mlx-install/lib/mlx.metallib");
+        let metallib =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("build/mlx-install/lib/mlx.metallib");
         if metallib.is_file() {
             super::set_metallib_path_pub(&metallib);
         }
@@ -1450,11 +1557,16 @@ mod perf_tests {
             // Deterministic pseudo-batch in the fw13 shape: real ids when the
             // dump exists (row 0 of it), else arange ids mod vocab.
             let dump = PathBuf::from("/tmp/laya-dump/fw13_in_ids.json");
-            let mut ids: Vec<i32> = (0..b * l).map(|i| (i * 7 + 13) as i32 % vocab as i32).collect();
+            let mut ids: Vec<i32> = (0..b * l)
+                .map(|i| (i * 7 + 13) as i32 % vocab as i32)
+                .collect();
             if dump.is_file() {
                 let meta: serde_json::Value =
                     serde_json::from_str(&std::fs::read_to_string(&dump).unwrap()).unwrap();
-                let bytes = std::fs::read(PathBuf::from("/tmp/laya-dump").join(meta["file"].as_str().unwrap())).unwrap();
+                let bytes = std::fs::read(
+                    PathBuf::from("/tmp/laya-dump").join(meta["file"].as_str().unwrap()),
+                )
+                .unwrap();
                 let real: Vec<f32> = bytes
                     .chunks_exact(4)
                     .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
@@ -1466,7 +1578,9 @@ mod perf_tests {
                 }
             }
             let mask = vec![1i32; b * l];
-            let pos: Vec<i32> = (0..b * k).map(|i| ((i * 11 + 17) % (l - 5)) as i32).collect();
+            let pos: Vec<i32> = (0..b * k)
+                .map(|i| ((i * 11 + 17) % (l - 5)) as i32)
+                .collect();
             let mmask: Vec<u8> = (0..b * k).map(|i| (i % k != k - 1) as u8).collect();
             let qt: Vec<i32> = (0..b).map(|i| (i % 3) as i32).collect();
             crate::model::Batch {
@@ -1514,8 +1628,8 @@ mod perf_tests {
     #[test]
     #[ignore]
     fn r0_plan_derived_microbench() {
-        let metallib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("build/mlx-install/lib/mlx.metallib");
+        let metallib =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("build/mlx-install/lib/mlx.metallib");
         if metallib.is_file() {
             super::set_metallib_path_pub(&metallib);
         }
@@ -1553,7 +1667,13 @@ mod perf_tests {
         rows.sort_by(|a, b| b.0.cmp(&a.0));
         let total: std::time::Duration = rows.iter().map(|r| r.0).sum();
         for (d, group, name, kind) in rows.iter().take(30) {
-            eprintln!("  {:>8.1}us {:>10} {:28} {}", d.as_nanos() as f64 / 1000.0, group, name, kind);
+            eprintln!(
+                "  {:>8.1}us {:>10} {:28} {}",
+                d.as_nanos() as f64 / 1000.0,
+                group,
+                name,
+                kind
+            );
         }
         eprintln!("  sum-of-op-times (upper bound incl. per-op sync): {total:?}");
     }
@@ -1567,7 +1687,10 @@ mod perf_tests {
         let hub = std::path::PathBuf::from(home).join(".cache/huggingface/hub");
         for e in std::fs::read_dir(&hub).ok()?.flatten() {
             if e.file_name().to_string_lossy().contains("Qwen3-0.6B-4bit") {
-                for s in std::fs::read_dir(e.path().join("snapshots")).ok()?.flatten() {
+                for s in std::fs::read_dir(e.path().join("snapshots"))
+                    .ok()?
+                    .flatten()
+                {
                     if s.path().join("config.json").is_file() {
                         return Some(s.path());
                     }
@@ -1584,8 +1707,8 @@ mod perf_tests {
     #[test]
     #[ignore]
     fn r2_qwen_greedy_bench() {
-        let metallib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("build/mlx-install/lib/mlx.metallib");
+        let metallib =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("build/mlx-install/lib/mlx.metallib");
         if metallib.is_file() {
             super::set_metallib_path_pub(&metallib);
         }
@@ -1652,8 +1775,8 @@ mod perf_tests {
     #[test]
     #[ignore]
     fn r1_compile_ab_probe() {
-        let metallib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("build/mlx-install/lib/mlx.metallib");
+        let metallib =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("build/mlx-install/lib/mlx.metallib");
         if metallib.is_file() {
             super::set_metallib_path_pub(&metallib);
         }
@@ -1687,7 +1810,8 @@ mod perf_tests {
             let _ = crate::model::CompiledForward::new(std::sync::Arc::clone(&model)).unwrap();
             t.elapsed().as_secs_f64() * 1e3
         };
-        let compiled_cold = crate::model::CompiledForward::new(std::sync::Arc::clone(&model)).unwrap();
+        let compiled_cold =
+            crate::model::CompiledForward::new(std::sync::Arc::clone(&model)).unwrap();
         let (first_call_ms, replay_ms) = {
             let t = std::time::Instant::now();
             compiled_cold.forward(&batch, s).unwrap();
@@ -1737,7 +1861,10 @@ pub fn qwen_snapshot_dir_pub() -> Option<std::path::PathBuf> {
     let hub = std::path::PathBuf::from(home).join(".cache/huggingface/hub");
     for e in std::fs::read_dir(&hub).ok()?.flatten() {
         if e.file_name().to_string_lossy().contains("Qwen3-0.6B-4bit") {
-            for s in std::fs::read_dir(e.path().join("snapshots")).ok()?.flatten() {
+            for s in std::fs::read_dir(e.path().join("snapshots"))
+                .ok()?
+                .flatten()
+            {
                 if s.path().join("config.json").is_file() {
                     return Some(s.path());
                 }
@@ -1768,8 +1895,8 @@ mod op_profiles {
 
     #[test]
     fn profile_engine_shapes() {
-        let metallib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("build/mlx-install/lib/mlx.metallib");
+        let metallib =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("build/mlx-install/lib/mlx.metallib");
         if metallib.is_file() {
             super::set_metallib_path_pub(&metallib);
         }
@@ -1785,46 +1912,124 @@ mod op_profiles {
         let w2 = Array::from_data_f16(&fp16(h * inter), &[h, inter]).unwrap();
         let ones = || Array::full(1.0, &[b, 1, l, l], Dtype::Bool, s).unwrap();
 
-        timed("Wqkv gemm [20,93,1024]x[1024,3072]", 20, || {
-            x.matmul(&wq.transpose_axes(&[1, 0], s).unwrap(), s).unwrap()
-        }, s);
-        let qkv = x.matmul(&wq.transpose_axes(&[1, 0], s).unwrap(), s).unwrap();
-        timed("split+squeeze+transpose qkv", 20, || {
-            let q3 = qkv.reshape(&[b, l, 3, heads, hd], s).unwrap();
-            let parts = q3.split_n(3, 2, s).unwrap();
-            parts[0].identity(s).unwrap().squeeze_axes(&[2], s).unwrap().transpose_axes(&[0, 2, 1, 3], s).unwrap()
-        }, s);
-        let q = qkv.reshape(&[b, l, 3, heads, hd], s).unwrap().split_n(3, 2, s).unwrap()[0]
-            .identity(s).unwrap().squeeze_axes(&[2], s).unwrap().transpose_axes(&[0, 2, 1, 3], s).unwrap();
-        timed("rope [20,16,93,64]", 20, || q.rope(hd as i32, 160000.0, 0, s).unwrap(), s);
+        timed(
+            "Wqkv gemm [20,93,1024]x[1024,3072]",
+            20,
+            || {
+                x.matmul(&wq.transpose_axes(&[1, 0], s).unwrap(), s)
+                    .unwrap()
+            },
+            s,
+        );
+        let qkv = x
+            .matmul(&wq.transpose_axes(&[1, 0], s).unwrap(), s)
+            .unwrap();
+        timed(
+            "split+squeeze+transpose qkv",
+            20,
+            || {
+                let q3 = qkv.reshape(&[b, l, 3, heads, hd], s).unwrap();
+                let parts = q3.split_n(3, 2, s).unwrap();
+                parts[0]
+                    .identity(s)
+                    .unwrap()
+                    .squeeze_axes(&[2], s)
+                    .unwrap()
+                    .transpose_axes(&[0, 2, 1, 3], s)
+                    .unwrap()
+            },
+            s,
+        );
+        let q = qkv
+            .reshape(&[b, l, 3, heads, hd], s)
+            .unwrap()
+            .split_n(3, 2, s)
+            .unwrap()[0]
+            .identity(s)
+            .unwrap()
+            .squeeze_axes(&[2], s)
+            .unwrap()
+            .transpose_axes(&[0, 2, 1, 3], s)
+            .unwrap();
+        timed(
+            "rope [20,16,93,64]",
+            20,
+            || q.rope(hd as i32, 160000.0, 0, s).unwrap(),
+            s,
+        );
         let qr = q.rope(hd as i32, 160000.0, 0, s).unwrap();
-        timed("sdp [20,16,93,64] bool mask", 20, || {
-            Array::sdp_attention(&qr, &qr, &qr, 0.125, &ones(), s).unwrap()
-        }, s);
+        timed(
+            "sdp [20,16,93,64] bool mask",
+            20,
+            || Array::sdp_attention(&qr, &qr, &qr, 0.125, &ones(), s).unwrap(),
+            s,
+        );
         let att = Array::sdp_attention(&qr, &qr, &qr, 0.125, &ones(), s).unwrap();
-        timed("wo gemm", 20, || {
-            att.transpose_axes(&[0, 2, 1, 3], s).unwrap().reshape(&[b, l, h], s).unwrap()
-                .matmul(&wo.transpose_axes(&[1, 0], s).unwrap(), s).unwrap()
-        }, s);
+        timed(
+            "wo gemm",
+            20,
+            || {
+                att.transpose_axes(&[0, 2, 1, 3], s)
+                    .unwrap()
+                    .reshape(&[b, l, h], s)
+                    .unwrap()
+                    .matmul(&wo.transpose_axes(&[1, 0], s).unwrap(), s)
+                    .unwrap()
+            },
+            s,
+        );
         let normed = x.identity(s).unwrap();
-        timed("Wi gemm [20,93,1024]x[1024,5248]", 20, || {
-            normed.matmul(&wi.transpose_axes(&[1, 0], s).unwrap(), s).unwrap()
-        }, s);
-        let wide = normed.matmul(&wi.transpose_axes(&[1, 0], s).unwrap(), s).unwrap();
-        timed("split2 + gelu + gate-mul", 20, || {
-            let (v, g) = wide.split2(-1, s).unwrap();
-            super::gelu_ref(&v, s).unwrap().mul(&g, s).unwrap()
-        }, s);
-        timed("Wo-mlp gemm [20,93,2624]x[2624,1024]", 20, || {
-            wide.split2(-1, s).unwrap().0.matmul(&w2.transpose_axes(&[1, 0], s).unwrap(), s).unwrap()
-        }, s);
-        timed("layernorm fp32 accum", 20, || {
-            let xf = x.astype(Dtype::Float32, s).unwrap();
-            let mu = xf.mean_axes(&[-1], true, s).unwrap();
-            let c = xf.sub(&mu, s).unwrap();
-            let v = c.mul(&c, s).unwrap().mean_axes(&[-1], true, s).unwrap();
-            c.div(&v.add(&Array::scalar_f32(1e-5), s).unwrap().sqrt(s).unwrap(), s).unwrap()
-                .mul(&x.astype(Dtype::Float32, s).unwrap(), s).unwrap()
-        }, s);
+        timed(
+            "Wi gemm [20,93,1024]x[1024,5248]",
+            20,
+            || {
+                normed
+                    .matmul(&wi.transpose_axes(&[1, 0], s).unwrap(), s)
+                    .unwrap()
+            },
+            s,
+        );
+        let wide = normed
+            .matmul(&wi.transpose_axes(&[1, 0], s).unwrap(), s)
+            .unwrap();
+        timed(
+            "split2 + gelu + gate-mul",
+            20,
+            || {
+                let (v, g) = wide.split2(-1, s).unwrap();
+                super::gelu_ref(&v, s).unwrap().mul(&g, s).unwrap()
+            },
+            s,
+        );
+        timed(
+            "Wo-mlp gemm [20,93,2624]x[2624,1024]",
+            20,
+            || {
+                wide.split2(-1, s)
+                    .unwrap()
+                    .0
+                    .matmul(&w2.transpose_axes(&[1, 0], s).unwrap(), s)
+                    .unwrap()
+            },
+            s,
+        );
+        timed(
+            "layernorm fp32 accum",
+            20,
+            || {
+                let xf = x.astype(Dtype::Float32, s).unwrap();
+                let mu = xf.mean_axes(&[-1], true, s).unwrap();
+                let c = xf.sub(&mu, s).unwrap();
+                let v = c.mul(&c, s).unwrap().mean_axes(&[-1], true, s).unwrap();
+                c.div(
+                    &v.add(&Array::scalar_f32(1e-5), s).unwrap().sqrt(s).unwrap(),
+                    s,
+                )
+                .unwrap()
+                .mul(&x.astype(Dtype::Float32, s).unwrap(), s)
+                .unwrap()
+            },
+            s,
+        );
     }
 }

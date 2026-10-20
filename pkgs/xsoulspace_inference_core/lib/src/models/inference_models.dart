@@ -91,6 +91,10 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     /// own default.
     bool? thinking,
     String? reasoningEffort,
+
+    /// Whether the provider should return its reasoning trace (ADR 0059 —
+    /// alongside the thinking switch and the explicit effort).
+    bool? includeReasoning,
   }) => InferenceRequest._(
     _buildRequestMap(
       prompt: prompt,
@@ -108,6 +112,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
       stopSequences: stopSequences,
       thinking: thinking,
       reasoningEffort: reasoningEffort,
+      includeReasoning: includeReasoning,
     ),
   );
   factory InferenceRequest.structured({
@@ -126,6 +131,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     List<String> stopSequences = const [],
     bool? thinking,
     String? reasoningEffort,
+    bool? includeReasoning,
   }) => InferenceRequest._(
     _buildRequestMap(
       prompt: prompt,
@@ -143,6 +149,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
       stopSequences: stopSequences,
       thinking: thinking,
       reasoningEffort: reasoningEffort,
+      includeReasoning: includeReasoning,
     ),
   );
 
@@ -200,6 +207,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     required List<String> stopSequences,
     required bool? thinking,
     required String? reasoningEffort,
+    required bool? includeReasoning,
   }) => <String, dynamic>{
     'task': task.name,
     'prompt': prompt,
@@ -219,6 +227,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     if (stopSequences.isNotEmpty) 'stop_sequences': stopSequences,
     'thinking': ?thinking,
     'reasoning_effort': ?reasoningEffort,
+    'include_reasoning': ?includeReasoning,
   };
 
   String get prompt => jsonDecodeString(value['prompt']);
@@ -263,6 +272,10 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     final String effort => effort,
     _ => null,
   };
+  bool? get includeReasoning => switch (value['include_reasoning']) {
+    final bool include => include,
+    _ => null,
+  };
   List<ChatMessage> get messages => <ChatMessage>[
     for (final json in jsonDecodeListAs<Map<String, dynamic>>(
       value['messages'],
@@ -278,6 +291,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     stopSequences: stopSequences,
     thinking: thinking,
     reasoningEffort: reasoningEffort,
+    includeReasoning: includeReasoning,
   );
 
   /// Derives a request with the given fields replaced (ADR 0059 — set-if-
@@ -298,6 +312,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     List<String>? stopSequences,
     bool? thinking,
     String? reasoningEffort,
+    bool? includeReasoning,
   }) => InferenceRequest._(
     _buildRequestMap(
       prompt: prompt ?? this.prompt,
@@ -315,6 +330,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
       stopSequences: stopSequences ?? this.stopSequences,
       thinking: thinking ?? this.thinking,
       reasoningEffort: reasoningEffort ?? this.reasoningEffort,
+      includeReasoning: includeReasoning ?? this.includeReasoning,
     ),
   );
 }
