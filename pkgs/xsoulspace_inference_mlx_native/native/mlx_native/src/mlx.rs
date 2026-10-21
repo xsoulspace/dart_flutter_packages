@@ -132,7 +132,10 @@ impl MetalKernel {
                 false,
             )
         };
-        Ok(MetalKernel { raw, name: name.to_string() })
+        Ok(MetalKernel {
+            raw,
+            name: name.to_string(),
+        })
     }
 
     /// One dispatch. `out_shapes`/`out_dtype` describe every output; grid
@@ -172,7 +175,10 @@ impl MetalKernel {
         chk_cfg(unsafe { mlx_fast_metal_kernel_config_set_grid(config, grid.0, grid.1, grid.2) })?;
         chk_cfg(unsafe {
             mlx_fast_metal_kernel_config_set_thread_group(
-                config, threadgroup.0, threadgroup.1, threadgroup.2,
+                config,
+                threadgroup.0,
+                threadgroup.1,
+                threadgroup.2,
             )
         })?;
         let vec = unsafe { mlx_vector_array_new() };
@@ -180,9 +186,8 @@ impl MetalKernel {
             chk(unsafe { mlx_vector_array_append_value(vec, a.0) })?;
         }
         let mut outs = unsafe { std::mem::zeroed() };
-        let result = chk(unsafe {
-            mlx_fast_metal_kernel_apply(&mut outs, self.raw, vec, config, s.0)
-        });
+        let result =
+            chk(unsafe { mlx_fast_metal_kernel_apply(&mut outs, self.raw, vec, config, s.0) });
         unsafe { mlx_vector_array_free(vec) };
         unsafe { mlx_fast_metal_kernel_config_free(config) };
         result?;
@@ -274,7 +279,6 @@ extern "C" {
     ) -> Status;
     fn mlx_metal_start_capture(path: *const std::ffi::c_char) -> Status;
     fn mlx_metal_stop_capture() -> Status;
-
 
     // ops.h — binary elementwise
     fn mlx_add(res: *mut RawArray, a: RawArray, b: RawArray, s: RawStream) -> Status;
@@ -374,7 +378,12 @@ extern "C" {
         axis: i32,
         s: RawStream,
     ) -> Status;
-    fn mlx_contiguous(res: *mut RawArray, a: RawArray, allow_col_major: bool, s: RawStream) -> Status;
+    fn mlx_contiguous(
+        res: *mut RawArray,
+        a: RawArray,
+        allow_col_major: bool,
+        s: RawStream,
+    ) -> Status;
     fn mlx_transpose(res: *mut RawArray, a: RawArray, s: RawStream) -> Status;
     fn mlx_transpose_axes(
         res: *mut RawArray,
@@ -514,10 +523,8 @@ extern "C" {
         size: usize,
         dtype: Dtype,
     ) -> Status;
-    fn mlx_fast_metal_kernel_config_set_verbose(
-        cls: RawMetalKernelConfig,
-        verbose: bool,
-    ) -> Status;
+    fn mlx_fast_metal_kernel_config_set_verbose(cls: RawMetalKernelConfig, verbose: bool)
+        -> Status;
     fn mlx_fast_metal_kernel_config_set_grid(
         cls: RawMetalKernelConfig,
         g1: i32,
@@ -538,7 +545,10 @@ extern "C" {
         stream: RawStream,
     ) -> Status;
     fn mlx_vector_string_new() -> RawVectorString;
-    fn mlx_vector_string_new_data(data: *const *const std::ffi::c_char, size: usize) -> RawVectorString;
+    fn mlx_vector_string_new_data(
+        data: *const *const std::ffi::c_char,
+        size: usize,
+    ) -> RawVectorString;
     // fast.h
     fn mlx_fast_rms_norm(
         res: *mut RawArray,
@@ -598,6 +608,11 @@ fn chk(status: Status) -> MlxResult<()> {
 pub struct Stream(RawStream);
 
 pub fn gpu() -> MlxResult<Stream> {
+    // Pin the kernel library BEFORE the first stream exists. A stream created
+    // against an unpinned (foreign) MLX build aborts inside
+    // `mlx::core::default_stream` with a vector error; the pin is idempotent
+    // and happens once per process.
+    crate::pin_metallib_colocated();
     let mut available = false;
     chk(unsafe { mlx_metal_is_available(&mut available) })?;
     if !available {
@@ -612,8 +627,8 @@ pub fn gpu() -> MlxResult<Stream> {
 
 /// Point MLX's Metal kernel library at `path` before the first GPU op.
 pub fn set_metallib_path(path: &std::path::Path) -> MlxResult<()> {
-    let c = std::ffi::CString::new(path.to_string_lossy().as_bytes())
-        .map_err(|_| MlxError(-998))?;
+    let c =
+        std::ffi::CString::new(path.to_string_lossy().as_bytes()).map_err(|_| MlxError(-998))?;
     chk(unsafe { mlx_metal_set_metallib_path(c.as_ptr()) })
 }
 
@@ -623,8 +638,8 @@ pub fn set_metallib_path(path: &std::path::Path) -> MlxResult<()> {
 /// [`stop_capture`] is recorded — bracket tightly around the section of
 /// interest (ADR 0055 P1).
 pub fn start_capture(path: &std::path::Path) -> MlxResult<()> {
-    let c = std::ffi::CString::new(path.to_string_lossy().as_bytes())
-        .map_err(|_| MlxError(-998))?;
+    let c =
+        std::ffi::CString::new(path.to_string_lossy().as_bytes()).map_err(|_| MlxError(-998))?;
     chk(unsafe { mlx_metal_start_capture(c.as_ptr()) })
 }
 
@@ -645,20 +660,18 @@ pub fn conv1d(
 ) -> MlxResult<Array> {
     let mut out = unsafe { std::mem::zeroed() };
     chk(unsafe {
-        mlx_conv1d(&mut out, input.0, weight.0, stride, padding, dilation, groups, s.0)
+        mlx_conv1d(
+            &mut out, input.0, weight.0, stride, padding, dilation, groups, s.0,
+        )
     })?;
     Ok(Array(out))
 }
 
 use crate::safetensors::SafetensorsFile;
 
-pub fn load_safetensors(
-    file: &std::path::Path,
-    _stream: Stream,
-) -> MlxResult<SafetensorsFile> {
+pub fn load_safetensors(file: &std::path::Path, _stream: Stream) -> MlxResult<SafetensorsFile> {
     SafetensorsFile::open(file)
 }
-
 
 /// Owned mlx array (+1 reference; freed on drop).
 pub struct Array(RawArray);
@@ -948,24 +961,15 @@ impl Array {
         Ok(Array(out))
     }
 
-    pub fn mean_axes(
-        &self,
-        axes: &[i32],
-        keepdims: bool,
-        s: Stream,
-    ) -> MlxResult<Array> {
+    pub fn mean_axes(&self, axes: &[i32], keepdims: bool, s: Stream) -> MlxResult<Array> {
         let mut out = unsafe { std::mem::zeroed() };
-        chk(unsafe {
-            mlx_mean_axes(&mut out, self.0, axes.as_ptr(), axes.len(), keepdims, s.0)
-        })?;
+        chk(unsafe { mlx_mean_axes(&mut out, self.0, axes.as_ptr(), axes.len(), keepdims, s.0) })?;
         Ok(Array(out))
     }
 
     pub fn sum_axes(&self, axes: &[i32], keepdims: bool, s: Stream) -> MlxResult<Array> {
         let mut out = unsafe { std::mem::zeroed() };
-        chk(unsafe {
-            mlx_sum_axes(&mut out, self.0, axes.as_ptr(), axes.len(), keepdims, s.0)
-        })?;
+        chk(unsafe { mlx_sum_axes(&mut out, self.0, axes.as_ptr(), axes.len(), keepdims, s.0) })?;
         Ok(Array(out))
     }
 
@@ -1009,25 +1013,19 @@ impl Array {
     pub fn reshape(&self, shape: &[usize], s: Stream) -> MlxResult<Array> {
         let shape_v: Vec<i32> = shape.iter().map(|d| *d as i32).collect();
         let mut out = unsafe { std::mem::zeroed() };
-        chk(unsafe {
-            mlx_reshape(&mut out, self.0, shape_v.as_ptr(), shape_v.len(), s.0)
-        })?;
+        chk(unsafe { mlx_reshape(&mut out, self.0, shape_v.as_ptr(), shape_v.len(), s.0) })?;
         Ok(Array(out))
     }
 
     pub fn expand_dims(&self, axes: &[i32], s: Stream) -> MlxResult<Array> {
         let mut out = unsafe { std::mem::zeroed() };
-        chk(unsafe {
-            mlx_expand_dims_axes(&mut out, self.0, axes.as_ptr(), axes.len(), s.0)
-        })?;
+        chk(unsafe { mlx_expand_dims_axes(&mut out, self.0, axes.as_ptr(), axes.len(), s.0) })?;
         Ok(Array(out))
     }
 
     pub fn squeeze_axes(&self, axes: &[i32], s: Stream) -> MlxResult<Array> {
         let mut out = unsafe { std::mem::zeroed() };
-        chk(unsafe {
-            mlx_squeeze_axes(&mut out, self.0, axes.as_ptr(), axes.len(), s.0)
-        })?;
+        chk(unsafe { mlx_squeeze_axes(&mut out, self.0, axes.as_ptr(), axes.len(), s.0) })?;
         Ok(Array(out))
     }
 
@@ -1092,13 +1090,7 @@ impl Array {
     }
 
     // ---- fast ops ----
-    pub fn rope(
-        &self,
-        dims: i32,
-        base: f32,
-        offset: i32,
-        s: Stream,
-    ) -> MlxResult<Array> {
+    pub fn rope(&self, dims: i32, base: f32, offset: i32, s: Stream) -> MlxResult<Array> {
         let mut out = unsafe { std::mem::zeroed() };
         chk(unsafe {
             mlx_fast_rope(
@@ -1229,20 +1221,21 @@ impl Array {
 
     /// `mx.quantize` (affine) → [w U32 packed, scales, biases] — the R3
     /// calibration entry (q8 laya). Group 64, bits 8 in our use.
-    pub fn quantize(
-        w: &Array,
-        group_size: i32,
-        bits: i32,
-        s: Stream,
-    ) -> MlxResult<Vec<Array>> {
+    pub fn quantize(w: &Array, group_size: i32, bits: i32, s: Stream) -> MlxResult<Vec<Array>> {
         let mode = b"affine\0";
         let mut vec = unsafe { mlx_vector_array_new() };
         chk(unsafe {
             mlx_quantize(
                 &mut vec,
                 w.0,
-                OptionalInt { value: group_size, has_value: true },
-                OptionalInt { value: bits, has_value: true },
+                OptionalInt {
+                    value: group_size,
+                    has_value: true,
+                },
+                OptionalInt {
+                    value: bits,
+                    has_value: true,
+                },
                 mode.as_ptr() as *const std::ffi::c_char,
                 std::mem::zeroed(),
                 s.0,
@@ -1286,8 +1279,14 @@ impl Array {
                 scales.0,
                 biases.0,
                 transpose,
-                OptionalInt { value: group_size, has_value: true },
-                OptionalInt { value: bits, has_value: true },
+                OptionalInt {
+                    value: group_size,
+                    has_value: true,
+                },
+                OptionalInt {
+                    value: bits,
+                    has_value: true,
+                },
                 mode.as_ptr() as *const std::ffi::c_char,
                 s.0,
             )
@@ -1313,11 +1312,20 @@ impl Array {
                 w.0,
                 scales.0,
                 biases.0,
-                OptionalInt { value: group_size, has_value: true },
-                OptionalInt { value: bits, has_value: true },
+                OptionalInt {
+                    value: group_size,
+                    has_value: true,
+                },
+                OptionalInt {
+                    value: bits,
+                    has_value: true,
+                },
                 mode.as_ptr() as *const std::ffi::c_char,
                 std::mem::zeroed(),
-                OptionalDtype { value: Dtype::Float32, has_value: false },
+                OptionalDtype {
+                    value: Dtype::Float32,
+                    has_value: false,
+                },
                 s.0,
             )
         })?;
@@ -1351,7 +1359,9 @@ impl Array {
         };
         chk(unsafe { mlx_synchronize(s.0) })?;
         let count = (0..source.ndim()).try_fold(1usize, |count, d| {
-            count.checked_mul(source.dim(d as i32)).ok_or(MlxError(-995))
+            count
+                .checked_mul(source.dim(d as i32))
+                .ok_or(MlxError(-995))
         })?;
         if count == 0 {
             return Ok(Vec::new());
@@ -1365,14 +1375,20 @@ impl Array {
 
     fn is_row_contiguous(&self) -> MlxResult<bool> {
         let ndim = self.ndim();
-        if ndim == 0 { return Ok(true); }
+        if ndim == 0 {
+            return Ok(true);
+        }
         let strides = unsafe { mlx_array_strides(self.0) };
-        if strides.is_null() { return Err(MlxError(-996)); }
+        if strides.is_null() {
+            return Err(MlxError(-996));
+        }
         let strides = unsafe { std::slice::from_raw_parts(strides, ndim) };
         let mut expected = 1usize;
         for dim in (0..ndim).rev() {
             let size = self.dim(dim as i32);
-            if size > 1 && strides[dim] != expected { return Ok(false); }
+            if size > 1 && strides[dim] != expected {
+                return Ok(false);
+            }
             expected = expected.checked_mul(size).ok_or(MlxError(-995))?;
         }
         Ok(true)
@@ -1455,7 +1471,11 @@ impl CompiledClosure {
         let boxed: Box<dyn Fn(&[&Array]) -> MlxResult<Vec<Array>> + Send + Sync> = Box::new(f);
         let payload = Box::into_raw(Box::new(boxed));
         let raw = unsafe {
-            mlx_closure_new_func_payload(Some(trampoline), payload as *mut c_void, Some(payload_dtor))
+            mlx_closure_new_func_payload(
+                Some(trampoline),
+                payload as *mut c_void,
+                Some(payload_dtor),
+            )
         };
         let mut compiled = unsafe { std::mem::zeroed() };
         if let Err(e) = chk(unsafe { mlx_compile(&mut compiled, raw, false) }) {
@@ -1504,37 +1524,62 @@ impl Drop for CompiledClosure {
 unsafe impl Send for CompiledClosure {}
 unsafe impl Sync for CompiledClosure {}
 
-
-
 #[cfg(test)]
 mod host_marshalling_tests {
     use super::*;
 
     extern "C" {
-        fn mlx_slice(res: *mut RawArray, a: RawArray,
-            start: *const i32, start_num: usize,
-            stop: *const i32, stop_num: usize,
-            strides: *const i32, strides_num: usize, s: RawStream) -> Status;
+        fn mlx_slice(
+            res: *mut RawArray,
+            a: RawArray,
+            start: *const i32,
+            start_num: usize,
+            stop: *const i32,
+            stop_num: usize,
+            strides: *const i32,
+            strides_num: usize,
+            s: RawStream,
+        ) -> Status;
     }
 
     fn slice(a: &Array, start: &[i32], stop: &[i32], strides: &[i32], s: Stream) -> Array {
         let mut out = unsafe { std::mem::zeroed() };
-        chk(unsafe { mlx_slice(&mut out, a.0, start.as_ptr(), start.len(),
-            stop.as_ptr(), stop.len(), strides.as_ptr(), strides.len(), s.0) }).unwrap();
+        chk(unsafe {
+            mlx_slice(
+                &mut out,
+                a.0,
+                start.as_ptr(),
+                start.len(),
+                stop.as_ptr(),
+                stop.len(),
+                strides.as_ptr(),
+                strides.len(),
+                s.0,
+            )
+        })
+        .unwrap();
         Array(out)
     }
 
     #[test]
     fn logical_host_copy_handles_transpose_slice_reverse_and_scalar() {
-        if std::env::var("LAYA_NATIVE_TEST").as_deref() != Ok("1") { return; }
+        if std::env::var("LAYA_NATIVE_TEST").as_deref() != Ok("1") {
+            return;
+        }
         let metal = std::env::var("LAYA_METALLIB").expect("explicit native test metallib");
         set_metallib_path(std::path::Path::new(&metal)).unwrap();
         let s = gpu().unwrap();
-        let flat = Array::arange_i32(0, 6, s).unwrap().astype(Dtype::Float32, s).unwrap();
+        let flat = Array::arange_i32(0, 6, s)
+            .unwrap()
+            .astype(Dtype::Float32, s)
+            .unwrap();
         let matrix = flat.reshape(&[2, 3], s).unwrap();
         assert_eq!(matrix.to_f32_vec(s).unwrap(), vec![0., 1., 2., 3., 4., 5.]);
         let transpose = matrix.transpose_axes(&[1, 0], s).unwrap();
-        assert_eq!(transpose.to_f32_vec(s).unwrap(), vec![0., 3., 1., 4., 2., 5.]);
+        assert_eq!(
+            transpose.to_f32_vec(s).unwrap(),
+            vec![0., 3., 1., 4., 2., 5.]
+        );
         let sparse = slice(&matrix, &[0, 0], &[2, 3], &[1, 2], s);
         assert_eq!(sparse.to_f32_vec(s).unwrap(), vec![0., 2., 3., 5.]);
         let reverse = slice(&flat, &[5], &[-7], &[-1], s);

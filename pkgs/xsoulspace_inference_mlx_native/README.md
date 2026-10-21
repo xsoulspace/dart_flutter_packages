@@ -60,8 +60,26 @@ All drivers ride the same crate, dylib, and FFI surface
    process that can load native assets (`dart run`/`dart test`; NOT
    `dart compile exe` — AOT drops them).
 
+   **Seed.** The native engines decode greedily (argmax), so a request seed
+   cannot move the draw: the answer is deterministic by construction, not
+   seed-derived. The seed is never dropped silently — it is echoed in the
+   response meta under `inferenceSeedMetaKey` and reported in
+   `InferenceResult.warnings` (ADR 0071's honesty law). There is no
+   counter-based sampler here, so no seed is consumed.
+
+   **Structured output.** `request.outputSchema` is supported on
+   `InferenceTask.implicitlyStructuredText`: the schema is rendered into the
+   prompt (standard JSON Schema, via the core's shared conversion) and the
+   model's answer is parsed back into `InferenceResponse.structuredOutput`.
+   A markdown fence and surrounding prose are tolerated. This is
+   PROMPT-RENDERED, not enforced: there is no server-side and no token-level
+   grammar enforcement, so `InferenceTask.nativelyStructuredText` is NOT
+   claimed, and an unparseable answer is the named
+   `structured_output_unparseable` failure — never a success with an empty
+   map.
+
 2. **Wire** — `dart run tool/serve_text.dart [--engine lfm2|qwen]
-   [--port N] [--raw] [--thinking]` serves the OpenAI-compatible loopback
+[--port N] [--raw] [--thinking]` serves the OpenAI-compatible loopback
    (`GET /health`, `POST /v1/chat/completions`); any HTTP client attaches
    (curl, the harness `mlx_local` attach-only client, other languages).
    The default cast is the measured production one (LFM2.5, template+EOS).
@@ -93,6 +111,97 @@ documented in git history and stays the reference route for iOS
   in-process native line; scorecards land in `bench/` and are the palette's
   cited evidence (thresholds pinned in ADR 0057 once two runs exist).
 - `tool/test_fresh.sh` — the golden parity cycle (63/63 @ 0.0 / 1.5e-8).
+
+## MTP and the swappable adapter set
+
+[`MTP-GATES.md`](MTP-GATES.md) holds the FROZEN gates for both lines (J-G1..
+J-G4 for the MTP lane, K-G1..K-G4 for the adapter lane) and the
+pre-registered failure readings. A threshold changes only by editing that
+file BEFORE the first run of that arm — it is tracked, so the freeze binds.
+
+**MTP (multi-token prediction, a shared-trunk draft head).** The native
+port lives in `native/mlx_native/src/qwen_mtp.rs` (head + chain + decode
+loop), with `tests/qwen_mtp_parity.rs` (pinned Python-recorded fixture, no
+checkpoint needed) and `src/bin/qwen_mtp_bench.rs` (the interleaved A/B).
+The python side is `tool/nursery/mtp_retarget.py` (the arm matrix) and
+`tool/nursery/run_mtp_arms.sh`.
+
+Measured 2026-10-21 (`bench/nursery/experiments/RESULTS-mtp-2026-10-21.md`):
+acceptance 0.124 decode-consistently (gate 0.60 — FAILS), MTP count
+closes at count 1, and the native port is **token-exact** but **0.42x** the
+plain greedy decode (gate 1.5x — FAILS).
+
+**The line is CLOSED on physics, and the recorded reason was corrected.**
+`src/bin/qwen_marginal_cost.rs` measures the trunk body at 1/2/4/8 positions
+with the tied projection timed separately: `body(8)/body(1) = 2.8–3.5` across
+runs, so the batched forward is **NOT flat** in position count. The earlier
+"nearly flat in k" series had no producing artifact in the tree and was
+contradicted by the same document's own forced-execution table. The gate's
+verdict is unchanged — MTP-as-speed does not pay on this device at ANY
+acceptance — but the reason is now a measured hardware fact rather than a
+guess. **No MTP head shape is bought**: attention raises per-head cost without
+touching the marginal cost of a verified position, which is the killer. See
+[`LINES.md`](LINES.md) Row J and `MTP-GATES.md` Part 2 (corrections C-1..C-10).
+
+**Swappable adapter set.** `native/mlx_native/src/lora_set.rs` is the
+runtime selection surface over the single-adapter merge in `lora.rs`:
+several adapters for one base, selected at runtime, and provably reversible
+(adapter-off == base byte-for-byte). `tests/lora_set_swap.rs` proves the
+gates.
+
+**The SET is the wrong shape, and the re-ask says which shape is right**
+(`bench/nursery/experiments/RESULTS-adapter-conditioning-2026-10-21.md`,
+`RESULTS-adapter-shared-2026-10-21.md`; ledger in [`LINES.md`](LINES.md)
+Row K). One adapter trained on **all** the tasks a base will serve, untagged,
+with each task keeping **its own option list**, carries both tasks
+(+0.24 perm and +0.44 veto over the matched trivial baseline, strict
+scoring) while a **single-task** adapter damages the unseen task below
+trivial. So the surface stays over-built and is retained only as a
+cheap-to-re-derive negative result; the product shape is one adapter per
+base. `LoraAdapter::load_auto` detects the on-disk layout (mlx-lm vs PEFT)
+and refuses a file in neither — or in both — instead of guessing.
+
+**The answer space is per task by default.** The `shared` arm (one option
+list for both tasks) still transfers — so the option list is a _refinement_,
+not the mechanism — but it cost ~7–9 points AND leaked 6 % of the veto answers
+into the perm family's vocabulary (`abstain` on gold `no_grant`: the same
+decision, the wrong words). The rule, stated identically in both result
+files: **a shared answer space is defensible only across a semantically
+_dissimilar_ group of tasks**, and this lane has not established one — its
+two tasks (perm, veto) are BOTH permission requests, so 6 % is an upper
+bound. `MTP-GATES.md` Part 4 **L-G7** is the arm that would establish it.
+
+## The acceleration program (Part 4) — and the Python boundary
+
+The mechanism question is closed; what is left is cheap. **L-G1..L-G7** are
+frozen in [`MTP-GATES.md`](MTP-GATES.md) Part 4, with their cost and
+pre-registered order in [`EXPERIMENT-PLAN.md`](EXPERIMENT-PLAN.md) Part B and
+their ledger row (**Row M**) in [`LINES.md`](LINES.md). **L-G1** (few-shot)
+and **L-G6** (ranking) are inference-only, cost minutes each, and **either
+passing closes the LoRA line** — they run first, and the training arms
+(L-G2, L-G7) are bought only if they fail.
+
+| file                                                                 | role                                                                                                                     | status                          |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------- |
+| `native/mlx_native/src/qwen_batch.rs`, `src/bin/qwen_batch_bench.rs` | the batched decode path and its bench (**L-G4**)                                                                         | in the tree (the gate is unrun) |
+| `native/mlx_native/src/qwen_rank.rs`, `src/bin/qwen_rank_bench.rs`   | ranking the legal labels instead of generating them (**L-G6**)                                                           | in the tree (the gate is unrun) |
+| `tool/nursery/scoring.py`                                            | the **single-definition** scoring module (strict + legacy extractors, matched trivial baseline, coverage, exact McNemar) | in the tree                     |
+| `tool/nursery/rank_labels.py`                                        | the ranking arm's labels and scoring (**L-G6**)                                                                          | in the tree                     |
+| `tool/nursery/third_task_dataset.py`                                 | the third, dissimilar task's corpus (**L-G7**)                                                                           | in the tree                     |
+| `tool/nursery/adapter_conditioning.py`                               | the arm driver (`--only-arms` today)                                                                                     | in the tree                     |
+| `tool/nursery/fast_score.py`                                         | the replay scorer — every gate question from the cache, no GPU                                                           | in the tree                     |
+| `PYTHON-BOUNDARY.md`                                                 | which Python may move to Rust, and the rule for when                                                                     | in the tree                     |
+
+**The Python boundary is priced, not asserted.**
+[`PYTHON-BOUNDARY.md`](PYTHON-BOUNDARY.md) answers "which Python should move
+to Rust to accelerate model experimentation" with the lane's own numbers: a
+training arm is **≈ 18 min** and the replay scorer is **0.183 s** over the
+same 10 cells; the scoring path does not import numpy at all; and the binding
+constraint is **bytes per token**, not compute. Only three things are worth
+porting — the **generation hot loop** (the batched path, the one unmeasured
+lever), the **scorer** (not for speed: to delete a second copy of the gate
+rules), and **nothing else yet**. A Rust port of the numerical stack is
+**not bought**; the non-example is written down so it is not re-opened.
 
 ## The composition API (ADR 0054) — every forward is a declared plan
 
@@ -209,3 +318,27 @@ crate. `testdata/linear_ranker_parity.json` pins Python-MLX reference logits and
 one optimizer step, including its generator source and version. Corpus curation,
 feature extraction, held-out evaluation and adoption policy belong to the
 harness experiments package (ADR0103), not this numeric tool.
+
+## What this package does NOT buy
+
+The lane's negative results, so a reader does not re-derive them. The full
+ledger with the evidence is in [`LINES.md`](LINES.md).
+
+- **An MTP attention head**, and **more MTP acceptance arms** on the current
+  head — the line is closed on physics (`body(8)/body(1)` = 2.0–3.5 against a
+  1.50 NOT-FLAT gate), and the current head measured a memorizing head
+  (in-sample 0.90 vs held-out 0.12).
+- **A 4-bit dequant→merge→requant path** — no consumer, and the requantization
+  error is the same order as the adapter delta.
+- **A rank / target-module sweep on the adapter** — it optimizes an unknown
+  before the product-shape question is closed.
+- **A `Task:` tag as the conditioning mechanism** — not significant against
+  the untagged control (perm p=0.185, veto p=1.000), both estimates negative.
+- **A shared answer space across semantically dissimilar tasks — UNESTABLISHED.**
+  The per-task list is the default; the exception has not been measured, and
+  the 6 % leak on the (semantically close) perm/veto pair is an **upper
+  bound** for it. **L-G7** is the arm that would establish it.
+- **A Rust port of the numerical stack** — see
+  [`PYTHON-BOUNDARY.md`](PYTHON-BOUNDARY.md): the scoring path is 0.183 s,
+  numpy is not on it, scipy and pandas are absent from the lane, and a port
+  would add a second copy of the rules.

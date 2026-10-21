@@ -201,6 +201,11 @@ pub struct Qwen3 {
     layers: Vec<Qwen3Layer>,
     norm: Array,
     table: BindingTable,
+    /// The identity of the WEIGHTS this model runs. A prefix cache computed
+    /// under one weight set is stale under another, so the cache keys on this
+    /// (see `qwen_prefix`). It is the CHECKPOINT's digest at load; a merged
+    /// adapter produces a different model and therefore a different identity.
+    weights_id: String,
 }
 
 /// Acceptance counters for one speculative greedy decode run (ADR 0057
@@ -389,7 +394,10 @@ impl KvCache {
             crate::mlx::synchronize_stream(s).ok();
             prof_add("cache", t0.elapsed().as_micros() as u64);
         }
-        *slot = KvLayer { k: Some(kb.identity(s)?), v: Some(vb.identity(s)?) };
+        *slot = KvLayer {
+            k: Some(kb.identity(s)?),
+            v: Some(vb.identity(s)?),
+        };
         // keys_and_values(): views down to the TOTAL written length
         // (prev + n), never the raw allocation.
         let total = prev + n;
@@ -479,13 +487,31 @@ impl Qwen3 {
             });
         }
 
+        // The weight identity is the CHECKPOINT's digest: the bytes that
+        // produced these weights. An adapter merge produces a different
+        // model, so it must produce a different identity.
+        let weights_id = {
+            let bytes = std::fs::read(dir.join("model.safetensors")).map_err(|_| MlxError(-12))?;
+            crate::nursery::sha256_hex(&bytes)
+        };
+
         Ok(Qwen3 {
             embed: weight("model.embed_tokens")?,
             layers,
             norm: st.take_any("model.norm.weight")?,
             cfg,
             table: BindingTable::baseline(),
+            weights_id,
         })
+    }
+
+    /// The identity of the weights this model runs.
+    ///
+    /// A prefix cache is only valid under the weights that produced it, so
+    /// this is what the cache keys on. Two models with the same identity are
+    /// the same model; two with different identities are not.
+    pub fn weight_identity(&self) -> String {
+        self.weights_id.clone()
     }
 
     // ---- op composites (the mlx-lm reference, op for op) ----
@@ -523,7 +549,9 @@ impl Qwen3 {
             &self.table,
             name,
             "q.norm",
-            Op::RmsNorm { eps: self.cfg.rms_eps },
+            Op::RmsNorm {
+                eps: self.cfg.rms_eps,
+            },
             &[x, weight],
             s,
         )
@@ -544,7 +572,10 @@ impl Qwen3 {
                     &self.table,
                     "embed.deq",
                     "q.embed",
-                    Op::Dequantize { group_size: self.cfg.group_size, bits: self.cfg.bits },
+                    Op::Dequantize {
+                        group_size: self.cfg.group_size,
+                        bits: self.cfg.bits,
+                    },
                     &[&wq, &ws, &wb],
                     s,
                 )
@@ -590,7 +621,9 @@ impl Qwen3 {
             &self.table,
             &format!("{name}.ids_col"),
             "q.embed",
-            Op::Reshape { shape: vec![1, l, 1] },
+            Op::Reshape {
+                shape: vec![1, l, 1],
+            },
             &[ids],
             s,
         )?;
@@ -606,7 +639,10 @@ impl Qwen3 {
             &self.table,
             &format!("{name}.cols_idx"),
             "q.embed",
-            Op::ArangeI32 { start: 0, stop: cols },
+            Op::ArangeI32 {
+                start: 0,
+                stop: cols,
+            },
             &[],
             s,
         )?;
@@ -618,7 +654,14 @@ impl Qwen3 {
             &[&scaled, &col_idx],
             s,
         )?;
-        eval1(&self.table, name, "q.embed", Op::Take, &[&flat, &flat_idx], s)
+        eval1(
+            &self.table,
+            name,
+            "q.embed",
+            Op::Take,
+            &[&flat, &flat_idx],
+            s,
+        )
     }
 
     /// The final-norm hidden state for `tokens` ([1, L] i32) with the
@@ -627,7 +670,12 @@ impl Qwen3 {
     /// the old path materialized a [1, 2047, 151936] logit tensor per
     /// chunk — ~0.6 GB and hundreds of GFLOPs of pure waste per 2k-prompt
     /// prefill).
-    pub fn forward_hidden(&self, tokens: &Array, cache: &mut KvCache, s: Stream) -> MlxResult<Array> {
+    pub fn forward_hidden(
+        &self,
+        tokens: &Array,
+        cache: &mut KvCache,
+        s: Stream,
+    ) -> MlxResult<Array> {
         self.hidden_states(tokens, cache, qwen_plan_mode(), s)
     }
 
@@ -693,8 +741,24 @@ impl Qwen3 {
         {
             let table = &self.table;
             for (li, slot) in cache.layers.iter_mut().enumerate() {
-                Self::ensure_capacity(table, &format!("cache.k{li}"), &mut slot.k, offset, l, (1, self.cfg.kv_heads, self.cfg.head_dim), s)?;
-                Self::ensure_capacity(table, &format!("cache.v{li}"), &mut slot.v, offset, l, (1, self.cfg.kv_heads, self.cfg.head_dim), s)?;
+                Self::ensure_capacity(
+                    table,
+                    &format!("cache.k{li}"),
+                    &mut slot.k,
+                    offset,
+                    l,
+                    (1, self.cfg.kv_heads, self.cfg.head_dim),
+                    s,
+                )?;
+                Self::ensure_capacity(
+                    table,
+                    &format!("cache.v{li}"),
+                    &mut slot.v,
+                    offset,
+                    l,
+                    (1, self.cfg.kv_heads, self.cfg.head_dim),
+                    s,
+                )?;
             }
         }
         let plan = self.build_forward_plan(tokens, cache, offset, l, with_head)?;
@@ -711,7 +775,11 @@ impl Qwen3 {
         if std::env::var_os("LAYA_QWEN_PLAN_DEBUG").is_some() {
             for (i, name) in plan.plan.ctx.iter().enumerate() {
                 let a = pool[i];
-                eprintln!("pool[{i}] {name} shape {:?} ndim {}", (0..a.ndim()).map(|d| a.dim(d as i32)).collect::<Vec<_>>(), a.ndim());
+                eprintln!(
+                    "pool[{i}] {name} shape {:?} ndim {}",
+                    (0..a.ndim()).map(|d| a.dim(d as i32)).collect::<Vec<_>>(),
+                    a.ndim()
+                );
             }
         }
         let outs = crate::plan::execute_outputs(
@@ -763,7 +831,11 @@ impl Qwen3 {
                     table,
                     &format!("{name}.zeros"),
                     "q.cache",
-                    Op::Full { value: 0.0, dtype: Dtype::BFloat16, shape: vec![b, h, alloc, d] },
+                    Op::Full {
+                        value: 0.0,
+                        dtype: Dtype::BFloat16,
+                        shape: vec![b, h, alloc, d],
+                    },
                     &[],
                     s,
                 )?
@@ -795,7 +867,11 @@ impl Qwen3 {
                     table,
                     &format!("{name}.zeros"),
                     "q.cache",
-                    Op::Full { value: 0.0, dtype: Dtype::BFloat16, shape: vec![b, h, block, d] },
+                    Op::Full {
+                        value: 0.0,
+                        dtype: Dtype::BFloat16,
+                        shape: vec![b, h, block, d],
+                    },
                     &[],
                     s,
                 )?;
@@ -840,10 +916,13 @@ impl Qwen3 {
         // an Input node; weights register lazily per use site — the executor
         // skips Input nodes, so duplicates only cost pool slots.
         let pin = |b: &mut crate::plan::PlanBuilder,
-                       pool: &mut Vec<&'a Array>,
-                       arr: &'a Array,
-                       name: &str|
-         -> crate::plan::NodeId { pool.push(arr); b.input(name, None) };
+                   pool: &mut Vec<&'a Array>,
+                   arr: &'a Array,
+                   name: &str|
+         -> crate::plan::NodeId {
+            pool.push(arr);
+            b.input(name, None)
+        };
 
         // pool[0]; NOT registered in pool_weights (the pool already carries it).
         let tok = b.input("q.tokens", None);
@@ -856,14 +935,57 @@ impl Qwen3 {
                       table_arr: &'a Array,
                       cols: i32|
          -> MlxResult<crate::plan::NodeId> {
-            let cols_c = b.push(emb_g, Op::ConstI32 { value: cols }, &format!("{nm}.cols"), &[], None);
-            let ids_col = b.push(emb_g, Op::Reshape { shape: vec![1, l, 1] }, &format!("{nm}.ids_col"), &[(tok, 0)], None);
-            let scaled = b.push(emb_g, Bin(BinKind::Mul), &format!("{nm}.ids_scaled"), &[(ids_col, 0), (cols_c, 0)], None);
-            let col_idx = b.push(emb_g, Op::ArangeI32 { start: 0, stop: cols }, &format!("{nm}.cols_idx"), &[], None);
-            let flat_idx = b.push(emb_g, Bin(BinKind::Add), &format!("{nm}.flat_idx"), &[(scaled, 0), (col_idx, 0)], None);
+            let cols_c = b.push(
+                emb_g,
+                Op::ConstI32 { value: cols },
+                &format!("{nm}.cols"),
+                &[],
+                None,
+            );
+            let ids_col = b.push(
+                emb_g,
+                Op::Reshape {
+                    shape: vec![1, l, 1],
+                },
+                &format!("{nm}.ids_col"),
+                &[(tok, 0)],
+                None,
+            );
+            let scaled = b.push(
+                emb_g,
+                Bin(BinKind::Mul),
+                &format!("{nm}.ids_scaled"),
+                &[(ids_col, 0), (cols_c, 0)],
+                None,
+            );
+            let col_idx = b.push(
+                emb_g,
+                Op::ArangeI32 {
+                    start: 0,
+                    stop: cols,
+                },
+                &format!("{nm}.cols_idx"),
+                &[],
+                None,
+            );
+            let flat_idx = b.push(
+                emb_g,
+                Bin(BinKind::Add),
+                &format!("{nm}.flat_idx"),
+                &[(scaled, 0), (col_idx, 0)],
+                None,
+            );
             let tn = pin(b, pool, table_arr, &format!("{nm}.table"));
-            let count: usize = (0..table_arr.ndim()).map(|dd| table_arr.dim(dd as i32) as usize).product();
-            let flat = b.push(emb_g, Op::Reshape { shape: vec![count] }, &format!("{nm}.flat"), &[(tn, 0)], None);
+            let count: usize = (0..table_arr.ndim())
+                .map(|dd| table_arr.dim(dd as i32) as usize)
+                .product();
+            let flat = b.push(
+                emb_g,
+                Op::Reshape { shape: vec![count] },
+                &format!("{nm}.flat"),
+                &[(tn, 0)],
+                None,
+            );
             Ok(b.push(emb_g, Op::Take, nm, &[(flat, 0), (flat_idx, 0)], None))
         };
         let h: crate::plan::NodeId = match &self.embed {
@@ -873,11 +995,24 @@ impl Qwen3 {
                 let wq = gather(&mut b, &mut pool_weights, "embed.w", &q.w, packed_row)?;
                 let ws = gather(&mut b, &mut pool_weights, "embed.s", &q.scales, scale_row)?;
                 let wb = gather(&mut b, &mut pool_weights, "embed.b", &q.biases, scale_row)?;
-                b.push(emb_g, Op::Dequantize { group_size: cfg.group_size, bits: cfg.bits }, "embed.deq", &[(wq, 0), (ws, 0), (wb, 0)], None)
+                b.push(
+                    emb_g,
+                    Op::Dequantize {
+                        group_size: cfg.group_size,
+                        bits: cfg.bits,
+                    },
+                    "embed.deq",
+                    &[(wq, 0), (ws, 0), (wb, 0)],
+                    None,
+                )
             }
-            Weight::Plain(w) => {
-                gather(&mut b, &mut pool_weights, "embed.plain", w, cfg.hidden_size as i32)?
-            }
+            Weight::Plain(w) => gather(
+                &mut b,
+                &mut pool_weights,
+                "embed.plain",
+                w,
+                cfg.hidden_size as i32,
+            )?,
         };
         let mut h = h;
 
@@ -894,11 +1029,27 @@ impl Qwen3 {
                 let arr = buf.as_ref().expect("decode cache buffer");
                 pin(b, pool, arr, nm)
             };
-            let kb_in = cache_in(&mut b, &mut pool_weights, &format!("{g}.kbuf"), &cache.layers[li].k);
-            let vb_in = cache_in(&mut b, &mut pool_weights, &format!("{g}.vbuf"), &cache.layers[li].v);
+            let kb_in = cache_in(
+                &mut b,
+                &mut pool_weights,
+                &format!("{g}.kbuf"),
+                &cache.layers[li].k,
+            );
+            let vb_in = cache_in(
+                &mut b,
+                &mut pool_weights,
+                &format!("{g}.vbuf"),
+                &cache.layers[li].v,
+            );
 
             let ln1_w = pin(&mut b, &mut pool_weights, &layer.ln1, &format!("{g}.ln1.w"));
-            let ln1 = b.push(&g, Op::RmsNorm { eps: cfg.rms_eps }, &format!("{g}.ln1"), &[(h, 0), (ln1_w, 0)], None);
+            let ln1 = b.push(
+                &g,
+                Op::RmsNorm { eps: cfg.rms_eps },
+                &format!("{g}.ln1"),
+                &[(h, 0), (ln1_w, 0)],
+                None,
+            );
             let linear = |b: &mut crate::plan::PlanBuilder,
                           pool: &mut Vec<&'a Array>,
                           nm: &str,
@@ -910,52 +1061,189 @@ impl Qwen3 {
                         let wn = pin(b, pool, &q.w, &format!("{nm}.q8"));
                         let sn = pin(b, pool, &q.scales, &format!("{nm}.q8_scales"));
                         let bn = pin(b, pool, &q.biases, &format!("{nm}.q8_biases"));
-                        Ok(b.push(&g, Op::QuantizedMatmul { group_size: cfg.group_size, bits: cfg.bits, transpose: true }, nm, &[x, (wn, 0), (sn, 0), (bn, 0)], None))
+                        Ok(b.push(
+                            &g,
+                            Op::QuantizedMatmul {
+                                group_size: cfg.group_size,
+                                bits: cfg.bits,
+                                transpose: true,
+                            },
+                            nm,
+                            &[x, (wn, 0), (sn, 0), (bn, 0)],
+                            None,
+                        ))
                     }
                     Weight::Plain(w) => {
                         let wn = pin(b, pool, w, &format!("{nm}.w"));
-                        let wt = b.push(&g, Op::Transpose { axes: vec![1, 0] }, &format!("{nm}.w_t"), &[(wn, 0)], None);
+                        let wt = b.push(
+                            &g,
+                            Op::Transpose { axes: vec![1, 0] },
+                            &format!("{nm}.w_t"),
+                            &[(wn, 0)],
+                            None,
+                        );
                         Ok(b.push(&g, Op::Matmul, nm, &[x, (wt, 0)], None))
                     }
                 }
             };
-            let q = linear(&mut b, &mut pool_weights, &format!("{g}.q"), &layer.q, (ln1, 0))?;
-            let k = linear(&mut b, &mut pool_weights, &format!("{g}.k"), &layer.k, (ln1, 0))?;
-            let v = linear(&mut b, &mut pool_weights, &format!("{g}.v"), &layer.v, (ln1, 0))?;
+            let q = linear(
+                &mut b,
+                &mut pool_weights,
+                &format!("{g}.q"),
+                &layer.q,
+                (ln1, 0),
+            )?;
+            let k = linear(
+                &mut b,
+                &mut pool_weights,
+                &format!("{g}.k"),
+                &layer.k,
+                (ln1, 0),
+            )?;
+            let v = linear(
+                &mut b,
+                &mut pool_weights,
+                &format!("{g}.v"),
+                &layer.v,
+                (ln1, 0),
+            )?;
 
-            let reshape = |b: &mut crate::plan::PlanBuilder, nm: &str, src: crate::plan::NodeId, heads: usize| {
-                b.push(&g, Op::Reshape { shape: vec![1, l, heads, d] }, nm, &[(src, 0)], None)
+            let reshape = |b: &mut crate::plan::PlanBuilder,
+                           nm: &str,
+                           src: crate::plan::NodeId,
+                           heads: usize| {
+                b.push(
+                    &g,
+                    Op::Reshape {
+                        shape: vec![1, l, heads, d],
+                    },
+                    nm,
+                    &[(src, 0)],
+                    None,
+                )
             };
             let qh = reshape(&mut b, &format!("{g}.q_h"), q, n_h);
             let kh = reshape(&mut b, &format!("{g}.k_h"), k, n_kv);
             let vh = reshape(&mut b, &format!("{g}.v_h"), v, n_kv);
-            let qn_w = pin(&mut b, &mut pool_weights, &layer.q_norm, &format!("{g}.q_norm.w"));
-            let qn = b.push(&g, Op::RmsNorm { eps: cfg.rms_eps }, &format!("{g}.q_norm"), &[(qh, 0), (qn_w, 0)], None);
-            let kn_w = pin(&mut b, &mut pool_weights, &layer.k_norm, &format!("{g}.k_norm.w"));
-            let kn = b.push(&g, Op::RmsNorm { eps: cfg.rms_eps }, &format!("{g}.k_norm"), &[(kh, 0), (kn_w, 0)], None);
-            let transpose = |b: &mut crate::plan::PlanBuilder, nm: &str, src: crate::plan::NodeId| {
-                b.push(&g, Op::Transpose { axes: vec![0, 2, 1, 3] }, nm, &[(src, 0)], None)
-            };
+            let qn_w = pin(
+                &mut b,
+                &mut pool_weights,
+                &layer.q_norm,
+                &format!("{g}.q_norm.w"),
+            );
+            let qn = b.push(
+                &g,
+                Op::RmsNorm { eps: cfg.rms_eps },
+                &format!("{g}.q_norm"),
+                &[(qh, 0), (qn_w, 0)],
+                None,
+            );
+            let kn_w = pin(
+                &mut b,
+                &mut pool_weights,
+                &layer.k_norm,
+                &format!("{g}.k_norm.w"),
+            );
+            let kn = b.push(
+                &g,
+                Op::RmsNorm { eps: cfg.rms_eps },
+                &format!("{g}.k_norm"),
+                &[(kh, 0), (kn_w, 0)],
+                None,
+            );
+            let transpose =
+                |b: &mut crate::plan::PlanBuilder, nm: &str, src: crate::plan::NodeId| {
+                    b.push(
+                        &g,
+                        Op::Transpose {
+                            axes: vec![0, 2, 1, 3],
+                        },
+                        nm,
+                        &[(src, 0)],
+                        None,
+                    )
+                };
             let qt = transpose(&mut b, &format!("{g}.q_t"), qn);
             let kt = transpose(&mut b, &format!("{g}.k_t"), kn);
             let vt = transpose(&mut b, &format!("{g}.v_t"), vh);
-            let qr = b.push(&g, Op::Rope { dims: d as i32, base: cfg.rope_theta, offset: offset as i32 }, &format!("{g}.rope_q"), &[(qt, 0)], None);
-            let kr = b.push(&g, Op::Rope { dims: d as i32, base: cfg.rope_theta, offset: offset as i32 }, &format!("{g}.rope_k"), &[(kt, 0)], None);
+            let qr = b.push(
+                &g,
+                Op::Rope {
+                    dims: d as i32,
+                    base: cfg.rope_theta,
+                    offset: offset as i32,
+                },
+                &format!("{g}.rope_q"),
+                &[(qt, 0)],
+                None,
+            );
+            let kr = b.push(
+                &g,
+                Op::Rope {
+                    dims: d as i32,
+                    base: cfg.rope_theta,
+                    offset: offset as i32,
+                },
+                &format!("{g}.rope_k"),
+                &[(kt, 0)],
+                None,
+            );
 
             // Cache write: buf[..., off:off+1, :] = new (functional).
             let bh = n_kv as i32;
             let dd = d as i32;
-            let kc = b.push(&g, Op::SliceUpdate { start: vec![0, 0, offset as i32, 0], stop: vec![1, bh, (offset + l) as i32, dd], strides: vec![1, 1, 1, 1] }, &format!("{g}.k_write"), &[(kb_in, 0), (kr, 0)], None);
-            let vc = b.push(&g, Op::SliceUpdate { start: vec![0, 0, offset as i32, 0], stop: vec![1, bh, (offset + l) as i32, dd], strides: vec![1, 1, 1, 1] }, &format!("{g}.v_write"), &[(vb_in, 0), (vt, 0)], None);
+            let kc = b.push(
+                &g,
+                Op::SliceUpdate {
+                    start: vec![0, 0, offset as i32, 0],
+                    stop: vec![1, bh, (offset + l) as i32, dd],
+                    strides: vec![1, 1, 1, 1],
+                },
+                &format!("{g}.k_write"),
+                &[(kb_in, 0), (kr, 0)],
+                None,
+            );
+            let vc = b.push(
+                &g,
+                Op::SliceUpdate {
+                    start: vec![0, 0, offset as i32, 0],
+                    stop: vec![1, bh, (offset + l) as i32, dd],
+                    strides: vec![1, 1, 1, 1],
+                },
+                &format!("{g}.v_write"),
+                &[(vb_in, 0), (vt, 0)],
+                None,
+            );
             new_k.push(kc);
             new_v.push(vc);
             // Read view: [.., :total, :] — identity when total fills the alloc
             // (mirrors KvCache::update exactly).
-            let k_alloc = cache.layers[li].k.as_ref().map(|a| a.dim(2) as usize).unwrap_or(0);
-            let v_alloc = cache.layers[li].v.as_ref().map(|a| a.dim(2) as usize).unwrap_or(0);
-            let view = |b: &mut crate::plan::PlanBuilder, nm: &str, src: crate::plan::NodeId, alloc: usize| {
+            let k_alloc = cache.layers[li]
+                .k
+                .as_ref()
+                .map(|a| a.dim(2) as usize)
+                .unwrap_or(0);
+            let v_alloc = cache.layers[li]
+                .v
+                .as_ref()
+                .map(|a| a.dim(2) as usize)
+                .unwrap_or(0);
+            let view = |b: &mut crate::plan::PlanBuilder,
+                        nm: &str,
+                        src: crate::plan::NodeId,
+                        alloc: usize| {
                 if total < alloc {
-                    b.push(&g, Op::Slice { start: vec![0, 0, 0, 0], stop: vec![1, bh, total as i32, dd], strides: vec![1, 1, 1, 1] }, nm, &[(src, 0)], None)
+                    b.push(
+                        &g,
+                        Op::Slice {
+                            start: vec![0, 0, 0, 0],
+                            stop: vec![1, bh, total as i32, dd],
+                            strides: vec![1, 1, 1, 1],
+                        },
+                        nm,
+                        &[(src, 0)],
+                        None,
+                    )
                 } else {
                     src
                 }
@@ -963,26 +1251,105 @@ impl Qwen3 {
             let kc_view = view(&mut b, &format!("{g}.kv"), kc, k_alloc);
             let vc_view = view(&mut b, &format!("{g}.vv"), vc, v_alloc);
 
-            let att = b.push(&g, Op::Sdp { scale, causal: l > 1 }, &format!("{g}.sdp"), &[(qr, 0), (kc_view, 0), (vc_view, 0)], None);
+            let att = b.push(
+                &g,
+                Op::Sdp {
+                    scale,
+                    causal: l > 1,
+                },
+                &format!("{g}.sdp"),
+                &[(qr, 0), (kc_view, 0), (vc_view, 0)],
+                None,
+            );
             let att_t = transpose(&mut b, &format!("{g}.att_t"), att);
-            let att_r = b.push(&g, Op::Reshape { shape: vec![1, l, n_h * d] }, &format!("{g}.att_r"), &[(att_t, 0)], None);
-            let o = linear(&mut b, &mut pool_weights, &format!("{g}.o"), &layer.o, (att_r, 0))?;
+            let att_r = b.push(
+                &g,
+                Op::Reshape {
+                    shape: vec![1, l, n_h * d],
+                },
+                &format!("{g}.att_r"),
+                &[(att_t, 0)],
+                None,
+            );
+            let o = linear(
+                &mut b,
+                &mut pool_weights,
+                &format!("{g}.o"),
+                &layer.o,
+                (att_r, 0),
+            )?;
             let ln2_w = pin(&mut b, &mut pool_weights, &layer.ln2, &format!("{g}.ln2.w"));
-            let fused = b.push(&g, Op::RmsNormResidual { eps: cfg.rms_eps }, &format!("{g}.res1_ln2"), &[(h, 0), (o, 0), (ln2_w, 0)], None);
+            let fused = b.push(
+                &g,
+                Op::RmsNormResidual { eps: cfg.rms_eps },
+                &format!("{g}.res1_ln2"),
+                &[(h, 0), (o, 0), (ln2_w, 0)],
+                None,
+            );
             let h1 = (fused, 0);
             let ln2 = (fused, 1);
 
-            let gate = linear(&mut b, &mut pool_weights, &format!("{g}.gate"), &layer.gate, ln2)?;
-            let up = linear(&mut b, &mut pool_weights, &format!("{g}.up"), &layer.up, ln2)?;
-            let sig = b.push(&g, Op::Unary { kind: UnaryKind::Sigmoid }, &format!("{g}.sig"), &[(gate, 0)], None);
-            let silu = b.push(&g, Bin(BinKind::Mul), &format!("{g}.silu"), &[(gate, 0), (sig, 0)], None);
-            let ff_in = b.push(&g, Bin(BinKind::Mul), &format!("{g}.ff_in"), &[(silu, 0), (up, 0)], None);
-            let ff = linear(&mut b, &mut pool_weights, &format!("{g}.down"), &layer.down, (ff_in, 0))?;
-            h = b.push(&g, Bin(BinKind::Add), &format!("{g}.res2"), &[h1, (ff, 0)], None);
+            let gate = linear(
+                &mut b,
+                &mut pool_weights,
+                &format!("{g}.gate"),
+                &layer.gate,
+                ln2,
+            )?;
+            let up = linear(
+                &mut b,
+                &mut pool_weights,
+                &format!("{g}.up"),
+                &layer.up,
+                ln2,
+            )?;
+            let sig = b.push(
+                &g,
+                Op::Unary {
+                    kind: UnaryKind::Sigmoid,
+                },
+                &format!("{g}.sig"),
+                &[(gate, 0)],
+                None,
+            );
+            let silu = b.push(
+                &g,
+                Bin(BinKind::Mul),
+                &format!("{g}.silu"),
+                &[(gate, 0), (sig, 0)],
+                None,
+            );
+            let ff_in = b.push(
+                &g,
+                Bin(BinKind::Mul),
+                &format!("{g}.ff_in"),
+                &[(silu, 0), (up, 0)],
+                None,
+            );
+            let ff = linear(
+                &mut b,
+                &mut pool_weights,
+                &format!("{g}.down"),
+                &layer.down,
+                (ff_in, 0),
+            )?;
+            h = b.push(
+                &g,
+                Bin(BinKind::Add),
+                &format!("{g}.res2"),
+                &[h1, (ff, 0)],
+                None,
+            );
         }
 
         let norm_w = pin(&mut b, &mut pool_weights, &self.norm, "q.final_norm.w");
-        let t = b.push("q.norm", Op::RmsNorm { eps: cfg.rms_eps }, "q.final_norm", &[(h, 0), (norm_w, 0)], None);
+        let t = b.push(
+            "q.norm",
+            Op::RmsNorm { eps: cfg.rms_eps },
+            "q.final_norm",
+            &[(h, 0), (norm_w, 0)],
+            None,
+        );
         // The tail output: logits when the head is wanted (decode), the
         // final-norm hidden otherwise (KV-only prefill chunks — R5).
         let tail = if with_head {
@@ -991,11 +1358,27 @@ impl Qwen3 {
                     let wn = pin(&mut b, &mut pool_weights, &q.w, "q.lm_head.q8");
                     let sn = pin(&mut b, &mut pool_weights, &q.scales, "q.lm_head.q8_scales");
                     let bn = pin(&mut b, &mut pool_weights, &q.biases, "q.lm_head.q8_biases");
-                    b.push("q.head", Op::QuantizedMatmul { group_size: cfg.group_size, bits: cfg.bits, transpose: true }, "q.lm_head", &[(t, 0), (wn, 0), (sn, 0), (bn, 0)], None)
+                    b.push(
+                        "q.head",
+                        Op::QuantizedMatmul {
+                            group_size: cfg.group_size,
+                            bits: cfg.bits,
+                            transpose: true,
+                        },
+                        "q.lm_head",
+                        &[(t, 0), (wn, 0), (sn, 0), (bn, 0)],
+                        None,
+                    )
                 }
                 Weight::Plain(w) => {
                     let wn = pin(&mut b, &mut pool_weights, w, "q.lm_head.w");
-                    let wt = b.push("q.head", Op::Transpose { axes: vec![1, 0] }, "q.lm_head.w_t", &[(wn, 0)], None);
+                    let wt = b.push(
+                        "q.head",
+                        Op::Transpose { axes: vec![1, 0] },
+                        "q.lm_head.w_t",
+                        &[(wn, 0)],
+                        None,
+                    );
                     b.push("q.head", Op::Matmul, "q.lm_head", &[(t, 0), (wt, 0)], None)
                 }
             }
@@ -1052,7 +1435,9 @@ impl Qwen3 {
                     &self.table,
                     nm,
                     &g,
-                    Op::Reshape { shape: vec![1, l, heads, d] },
+                    Op::Reshape {
+                        shape: vec![1, l, heads, d],
+                    },
                     &[arr],
                     s,
                 )
@@ -1070,7 +1455,9 @@ impl Qwen3 {
                     &self.table,
                     nm,
                     &g,
-                    Op::Transpose { axes: vec![0, 2, 1, 3] },
+                    Op::Transpose {
+                        axes: vec![0, 2, 1, 3],
+                    },
                     &[arr],
                     s,
                 )
@@ -1086,7 +1473,11 @@ impl Qwen3 {
                 &self.table,
                 &format!("{g}.rope_q"),
                 &g,
-                Op::Rope { dims: d as i32, base: cfg.rope_theta, offset: off },
+                Op::Rope {
+                    dims: d as i32,
+                    base: cfg.rope_theta,
+                    offset: off,
+                },
                 &[&qt],
                 s,
             )?;
@@ -1094,7 +1485,11 @@ impl Qwen3 {
                 &self.table,
                 &format!("{g}.rope_k"),
                 &g,
-                Op::Rope { dims: d as i32, base: cfg.rope_theta, offset: off },
+                Op::Rope {
+                    dims: d as i32,
+                    base: cfg.rope_theta,
+                    offset: off,
+                },
                 &[&kt],
                 s,
             )?;
@@ -1107,7 +1502,10 @@ impl Qwen3 {
                 &self.table,
                 &format!("{g}.sdp"),
                 &g,
-                Op::Sdp { scale, causal: l > 1 },
+                Op::Sdp {
+                    scale,
+                    causal: l > 1,
+                },
                 &[&qr, &kc, &vc],
                 s,
             )?;
@@ -1117,7 +1515,9 @@ impl Qwen3 {
                 &self.table,
                 &format!("{g}.att_r"),
                 &g,
-                Op::Reshape { shape: vec![1, l, n_h * d] },
+                Op::Reshape {
+                    shape: vec![1, l, n_h * d],
+                },
                 &[&att_t],
                 s,
             )?;
@@ -1155,7 +1555,9 @@ impl Qwen3 {
                 &self.table,
                 &format!("{g}.sig"),
                 &g,
-                Op::Unary { kind: UnaryKind::Sigmoid },
+                Op::Unary {
+                    kind: UnaryKind::Sigmoid,
+                },
                 &[&gate],
                 s,
             )?;
@@ -1237,29 +1639,21 @@ impl Qwen3 {
         }
         let mut cache = KvCache::new(self.cfg.layers);
         self.generate_greedy_cached_cancellable(
-            prompt_ids,
-            max_tokens,
-            stop,
-            s,
-            &mut cache,
-            cancelled,
+            prompt_ids, max_tokens, stop, s, &mut cache, cancelled,
         )
     }
 
     /// Continue from an exact, already computed prefix. Caller owns isolation
     /// and must align cache.offset with the supplied prompt's token prefix.
     pub(crate) fn generate_greedy_cached(
-        &self, prompt_ids: &[i32], max_tokens: usize, stop: Option<&[i32]>,
-        s: Stream, cache: &mut KvCache,
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: Stream,
+        cache: &mut KvCache,
     ) -> MlxResult<Vec<i32>> {
-        self.generate_greedy_cached_cancellable(
-            prompt_ids,
-            max_tokens,
-            stop,
-            s,
-            cache,
-            None,
-        )
+        self.generate_greedy_cached_cancellable(prompt_ids, max_tokens, stop, s, cache, None)
     }
 
     pub(crate) fn generate_greedy_cached_cancellable(
@@ -1282,7 +1676,13 @@ impl Qwen3 {
         // 600-step trace). Padding is never read, so this changes
         // allocation only, never numerics; the one growth lands inside the
         // prefill phase, where its latency belongs.
-        cache.reserve(&self.table, self.cfg.kv_heads, self.cfg.head_dim, prompt_ids.len() + max_tokens, s)?;
+        cache.reserve(
+            &self.table,
+            self.cfg.kv_heads,
+            self.cfg.head_dim,
+            prompt_ids.len() + max_tokens,
+            s,
+        )?;
         let mut out: Vec<i32> = Vec::with_capacity(prompt_ids.len() + max_tokens);
         out.extend_from_slice(prompt_ids);
 
@@ -1378,7 +1778,13 @@ impl Qwen3 {
         // prompt + the generation cap, so no growth ever lands mid-round.
         let total = prompt_ids.len() + max_tokens;
         cache.reserve(&self.table, self.cfg.kv_heads, self.cfg.head_dim, total, s)?;
-        dcache.reserve(&draft.table, draft.cfg.kv_heads, draft.cfg.head_dim, total, s)?;
+        dcache.reserve(
+            &draft.table,
+            draft.cfg.kv_heads,
+            draft.cfg.head_dim,
+            total,
+            s,
+        )?;
         let mut out: Vec<i32> = Vec::with_capacity(total);
         out.extend_from_slice(prompt_ids);
 

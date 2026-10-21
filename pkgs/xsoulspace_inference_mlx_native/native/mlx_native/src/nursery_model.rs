@@ -373,6 +373,12 @@ impl NurseryModel {
     /// A merged weight set is a DIFFERENT model — every cached prefix
     /// computed under the base is stale. Callers that cache must key on the
     /// adapter digest (`LoraAdapter::digest`).
+    ///
+    /// The adapter's on-disk format is DETECTED (`LoraAdapter::load_auto`):
+    /// both the PEFT layout and the mlx-lm layout the Python tuner actually
+    /// writes are accepted, and a file in neither layout is REFUSED rather
+    /// than read as one of them. C-10 was exactly this: the surface could
+    /// only read the format the lane did not train.
     pub fn load_with_adapter(
         model_dir: &Path,
         adapter_path: &Path,
@@ -380,7 +386,7 @@ impl NurseryModel {
     ) -> Result<Self, String> {
         let mut model = Self::load(model_dir)?;
         let s = mlx::gpu().map_err(|e| format!("gpu init failed: mlx status {}", e.0))?;
-        let adapter = crate::lora::LoraAdapter::load(adapter_path, scale, s)?;
+        let adapter = crate::lora::LoraAdapter::load_auto(adapter_path, scale, s)?;
         let applied = model.apply_adapter(&adapter, s)?;
         if applied == 0 {
             return Err("adapter applied to zero weights".to_string());

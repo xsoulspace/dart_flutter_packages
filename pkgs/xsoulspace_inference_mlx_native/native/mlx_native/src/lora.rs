@@ -20,6 +20,26 @@
 //!
 //! PEFT naming: `base_model.model.<module>.lora_A.weight` /
 //! `...lora_B.weight`; the base weight is `<module>.weight`.
+//!
+//! The MLX-LM naming is ALSO accepted (`<module>.lora_a` / `<module>.lora_b`),
+//! because the adapter this lane actually trains comes from the Python
+//! mlx-lm tuner, and the two formats are not interchangeable on disk:
+//!
+//!   format   | a / lora_a        | b / lora_b       | delta
+//!   ---------+-------------------+------------------+-------------------
+//!   PEFT     | [r, in]           | [out, r]         | `scale * (B @ A)`
+//!   mlx-lm   | [in, r]           | [r, out]         | `scale * (B^T @ A^T)`
+//!
+//! Both compute the same `W + scale * B @ A` in the `[out, in]` orientation;
+//! only the on-disk transposition differs. The loader below TRANSPOSES the
+//! mlx-lm pair into the PEFT orientation once, at load, so every downstream
+//! consumer (merge, the adapter set, the cache key) sees one shape.
+//!
+//! Why this matters (a measured gap, not a hypothetical): the 2026-10-21
+//! adapter capability arm trained its adapters with the mlx-lm tuner, which
+//! writes the mlx-lm format. Before this loader, the Rust surface could not
+//! read that artifact at all — so the measured capability was a PYTHON-path
+//! number with no native consumer.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -100,6 +120,90 @@ impl LoraAdapter {
     pub fn validate(&self, params: &HashMap<String, Array>) -> Result<(), String> {
         let targets: Vec<String> = self.pairs.iter().map(|p| p.target.clone()).collect();
         validate_targets(&targets, params)
+    }
+
+    /// Load an adapter in the MLX-LM on-disk format.
+    ///
+    /// The mlx-lm tuner writes `<module>.lora_a` `[in, r]` and
+    /// `<module>.lora_b` `[r, out]`; the PEFT orientation this crate uses is
+    /// `a [r, in]` / `b [out, r]`. The pair is transposed ONCE here, at
+    /// load, so every downstream consumer sees the PEFT shape.
+    ///
+    /// The module name is used verbatim as the base-weight prefix, so the
+    /// adapter targets `model.layers.20.mlp.down_proj.weight` — the same
+    /// name the base model uses (see `validate`, which hard-errors when a
+    /// target is absent rather than skipping it).
+    pub fn load_mlx_lm(path: &Path, scale: f32, s: Stream) -> Result<Self, String> {
+        let bytes = std::fs::read(path).map_err(|e| format!("read adapter: {e}"))?;
+        let digest = crate::nursery::sha256_hex(&bytes);
+        let file = SafetensorsFile::open(path).map_err(|e| format!("open adapter: {}", e.0))?;
+
+        let mut a_map: HashMap<String, Array> = HashMap::new();
+        let mut b_map: HashMap<String, Array> = HashMap::new();
+        for name in file.names() {
+            let Some((module, which)) = split_mlx_lm_name(&name) else {
+                continue;
+            };
+            let arr = file
+                .take_any(&name)
+                .map_err(|e| format!("adapter tensor {name}: {}", e.0))?;
+            let arr = arr
+                .astype(Dtype::Float32, s)
+                .map_err(|e| format!("adapter tensor {name}: {}", e.0))?;
+            arr.eval()
+                .map_err(|e| format!("adapter tensor {name}: {}", e.0))?;
+            match which {
+                'A' => a_map.insert(module, arr),
+                _ => b_map.insert(module, arr),
+            };
+        }
+
+        let mut pairs = Vec::new();
+        for (module, a) in a_map {
+            let Some(b) = b_map.remove(&module) else {
+                return Err(format!("adapter has lora_a for {module} but no lora_b"));
+            };
+            // mlx-lm: a [in, r], b [r, out]  ->  PEFT: a [r, in], b [out, r]
+            let a_t = a
+                .transpose_axes(&[1, 0], s)
+                .map_err(|e| format!("transpose lora_a {module}: {}", e.0))?;
+            let b_t = b
+                .transpose_axes(&[1, 0], s)
+                .map_err(|e| format!("transpose lora_b {module}: {}", e.0))?;
+            pairs.push(LoraPair {
+                target: format!("{module}.weight"),
+                a: a_t,
+                b: b_t,
+                scale,
+            });
+        }
+        if pairs.is_empty() {
+            return Err("adapter contains no lora_a/lora_b pairs".to_string());
+        }
+        pairs.sort_by(|x, y| x.target.cmp(&y.target));
+        Ok(Self { pairs, digest })
+    }
+
+    /// Load an adapter, DETECTING its on-disk format from the tensor names.
+    ///
+    /// The two formats are not interchangeable on disk (see the module docs),
+    /// and the adapter this lane actually trains comes from the Python mlx-lm
+    /// tuner. A loader that understood only one of them would fail LOUDLY on
+    /// the other, which is acceptable — but a loader that guessed the wrong
+    /// orientation, or that read a file and produced zero pairs, would be a
+    /// wrong answer rather than an error. So the format is DETECTED, never
+    /// assumed, and an unrecognised file is REFUSED with the names it found.
+    ///
+    /// A refusal is a valid outcome here: "I will not guess" is the contract.
+    /// What is NOT valid is silently reading a PEFT file as mlx-lm (or the
+    /// reverse) and merging a transposed delta into the base.
+    pub fn load_auto(path: &Path, scale: f32, s: Stream) -> Result<Self, String> {
+        let file = SafetensorsFile::open(path).map_err(|e| format!("open adapter: {}", e.0))?;
+        let names = file.names();
+        match detect_format_from_names(names.iter().map(|n| n.as_str()))? {
+            AdapterFormat::MlxLm => Self::load_mlx_lm(path, scale, s),
+            AdapterFormat::Peft => Self::load(path, scale, s),
+        }
     }
 
     /// Merge every pair into `params` in place.
@@ -196,9 +300,78 @@ fn split_peft_name(name: &str) -> Option<(String, char)> {
     Some((module, which))
 }
 
+/// `<module>.lora_a` -> (`<module>`, 'A'); `<module>.lora_b` -> (`<module>`, 'B').
+///
+/// The mlx-lm tuner's on-disk naming (no `.weight` suffix, lowercase a/b).
+fn split_mlx_lm_name(name: &str) -> Option<(String, char)> {
+    if let Some(m) = name.strip_suffix(".lora_a") {
+        Some((m.to_string(), 'A'))
+    } else if let Some(m) = name.strip_suffix(".lora_b") {
+        Some((m.to_string(), 'B'))
+    } else {
+        None
+    }
+}
+
+/// Which on-disk LoRA layout a file uses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AdapterFormat {
+    /// mlx-lm tuner layout: `<module>.lora_a` `[in, r]` / `<module>.lora_b` `[r, out]`.
+    MlxLm,
+    /// PEFT layout: `<module>.lora_A.weight` `[r, in]` / `<module>.lora_B.weight` `[out, r]`.
+    Peft,
+}
+
+/// Detect the layout from tensor NAMES. Pure: no file read, no GPU.
+///
+/// The refusal is the point. A file that has no recognisable LoRA tensors, or
+/// that has BOTH layouts in it, is not silently given one of them.
+pub fn detect_format_from_names<'a, I: IntoIterator<Item = &'a str>>(
+    names: I,
+) -> Result<AdapterFormat, String> {
+    let (mut mlx_lm, mut peft) = (0usize, 0usize);
+    for name in names {
+        if split_mlx_lm_name(name).is_some() {
+            mlx_lm += 1;
+        }
+        if split_peft_name(name).is_some() {
+            peft += 1;
+        }
+    }
+    match (mlx_lm > 0, peft > 0) {
+        (true, false) => Ok(AdapterFormat::MlxLm),
+        (false, true) => Ok(AdapterFormat::Peft),
+        (true, true) => Err(format!(
+            "adapter mixes mlx-lm and PEFT tensor names ({} lora_a/lora_b, \
+             {} lora_A/lora_B.weight); refusing to guess the format",
+            mlx_lm, peft
+        )),
+        (false, false) => Err(
+            "adapter contains no LoRA tensors; expected mlx-lm `*.lora_a`/`*.lora_b` \
+             or PEFT `*.lora_A.weight`/`*.lora_B.weight`"
+                .to_string(),
+        ),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A live Metal stream for a TEST binary.
+    ///
+    /// The kernel library is pinned inside `mlx::gpu()` (see
+    /// `pin_metallib_colocated`), so the ORDER of the tests cannot decide
+    /// whether a stream is created against a foreign MLX build — which is
+    /// what aborted these two tests in the lib test binary while they passed
+    /// in their own integration-test binary. No GPU means no stream, and no
+    /// stream means these assertions are vacuous: they skip.
+    fn gpu_stream() -> Option<Stream> {
+        match crate::mlx::gpu() {
+            Ok(s) => Some(s),
+            Err(_) => None,
+        }
+    }
 
     #[test]
     fn peft_names_resolve_to_base_weights() {
@@ -217,21 +390,119 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "needs a live Metal stream; run with --ignored on a GPU host"]
     fn zero_adapter_is_identity() {
         // A zero B makes the delta zero, so the merge must return the base
         // unchanged. This is the "adapter off == base" law.
-        let s = match crate::mlx::gpu() {
-            Ok(s) => s,
-            Err(_) => return,
+        let Some(s) = gpu_stream() else {
+            return;
         };
         let base = Array::full_f32(2.0, &[4, 3], s).unwrap();
         let a = Array::full_f32(1.0, &[2, 3], s).unwrap();
         let b = Array::full_f32(0.0, &[4, 2], s).unwrap();
         let merged = merge(&base, &a, &b, 1.0, s).unwrap();
         merged.eval().unwrap();
-        let v = merged.item_f32().unwrap();
-        assert!((v - 2.0).abs() < 1e-6, "zero adapter changed the base: {v}");
+        // The merged array is [4, 3] — 12 elements — so `item_f32` (which
+        // only reads a SIZE-1 array) cannot be used here; read the whole
+        // vector and check every element. (This test was `#[ignore]`d until
+        // the metallib pin made it runnable, so the defect was never hit.)
+        let vals = merged.to_f32_vec(s).unwrap();
+        assert_eq!(vals.len(), 12, "the merged shape changed");
+        for v in vals {
+            assert!((v - 2.0).abs() < 1e-6, "zero adapter changed the base: {v}");
+        }
+    }
+
+    #[test]
+    fn the_format_is_detected_not_assumed() {
+        assert_eq!(
+            detect_format_from_names(["model.layers.0.mlp.down_proj.lora_a"]),
+            Ok(AdapterFormat::MlxLm)
+        );
+        assert_eq!(
+            detect_format_from_names(["model.layers.0.mlp.down_proj.lora_A.weight"]),
+            Ok(AdapterFormat::Peft)
+        );
+        // No LoRA tensors at all -> a REFUSAL, never a guess.
+        assert!(detect_format_from_names(["model.embed_tokens.weight"]).is_err());
+        // Both layouts in one file -> a REFUSAL, never a guess.
+        assert!(detect_format_from_names([
+            "model.layers.0.mlp.down_proj.lora_a",
+            "model.layers.0.mlp.down_proj.lora_A.weight"
+        ])
+        .is_err());
+    }
+
+    #[test]
+    fn mlx_lm_names_resolve_to_base_weights() {
+        assert_eq!(
+            split_mlx_lm_name("model.layers.20.mlp.down_proj.lora_a"),
+            Some(("model.layers.20.mlp.down_proj".to_string(), 'A'))
+        );
+        assert_eq!(
+            split_mlx_lm_name("model.layers.20.mlp.down_proj.lora_b"),
+            Some(("model.layers.20.mlp.down_proj".to_string(), 'B'))
+        );
+        // A PEFT name must NOT match the mlx-lm splitter.
+        assert_eq!(
+            split_mlx_lm_name("model.layers.20.mlp.down_proj.lora_A.weight"),
+            None
+        );
+        assert_eq!(
+            split_mlx_lm_name("model.layers.20.mlp.down_proj.weight"),
+            None
+        );
+    }
+
+    /// The format bridge's contract: the SAME adapter, written in the two
+    /// on-disk formats, must merge to the SAME weights.
+    ///
+    /// mlx-lm writes `lora_a [in, r]` + `lora_b [r, out]` and merges as
+    /// `W + scale * (B^T @ A^T)`; PEFT writes `lora_A [r, in]` +
+    /// `lora_B [out, r]` and merges as `W + scale * (B @ A)`. The loader
+    /// transposes the mlx-lm pair once, so both must land on the same
+    /// result. This is the test that makes the 2026-10-21 Python-trained
+    /// adapter usable by the native surface at all.
+    #[test]
+    fn mlx_lm_and_peft_formats_merge_identically() {
+        let Some(s) = gpu_stream() else {
+            return;
+        };
+        const IN: usize = 3;
+        const OUT: usize = 4;
+        const R: usize = 2;
+        // A deterministic, non-symmetric pair so a wrong transpose shows up.
+        let a_mlx: Vec<f32> = (0..(IN * R)).map(|i| (i as f32) * 0.25 + 0.5).collect();
+        let b_mlx: Vec<f32> = (0..(R * OUT)).map(|i| (i as f32) * -0.5 + 1.0).collect();
+        let base: Vec<f32> = (0..(OUT * IN)).map(|i| (i as f32) * 0.1).collect();
+
+        let base_arr = Array::from_data_f32(&base, &[OUT, IN]).unwrap();
+        let a_mlx_arr = Array::from_data_f32(&a_mlx, &[IN, R]).unwrap();
+        let b_mlx_arr = Array::from_data_f32(&b_mlx, &[R, OUT]).unwrap();
+        // the mlx-lm merge, as the python side computes it
+        let mlx_merged = {
+            let at = a_mlx_arr.transpose_axes(&[1, 0], s).unwrap();
+            let bt = b_mlx_arr.transpose_axes(&[1, 0], s).unwrap();
+            let delta = bt.matmul(&at, s).unwrap();
+            let scaled = delta.mul(&Array::scalar_f32(2.0), s).unwrap();
+            base_arr.add(&scaled, s).unwrap()
+        };
+        // the PEFT orientation, as the loader produces it
+        let a_peft = a_mlx_arr.transpose_axes(&[1, 0], s).unwrap();
+        let b_peft = b_mlx_arr.transpose_axes(&[1, 0], s).unwrap();
+        let peft_merged = merge(&base_arr, &a_peft, &b_peft, 2.0, s).unwrap();
+        mlx_merged.eval().unwrap();
+        peft_merged.eval().unwrap();
+        let m = mlx_merged.to_f32_vec(s).unwrap();
+        let p = peft_merged.to_f32_vec(s).unwrap();
+        assert_eq!(m.len(), p.len(), "shape mismatch");
+        let mut max_diff = 0.0f32;
+        for (x, y) in m.iter().zip(p.iter()) {
+            max_diff = max_diff.max((x - y).abs());
+        }
+        assert!(
+            max_diff < 1e-6,
+            "the two formats merged differently: max diff {max_diff}"
+        );
     }
 
     #[test]

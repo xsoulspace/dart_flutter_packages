@@ -17,6 +17,7 @@ pub mod bindings;
 pub mod bpe;
 pub mod lfm2;
 pub mod lora;
+pub mod lora_set;
 pub mod mlx;
 pub mod model;
 pub mod nursery;
@@ -24,7 +25,10 @@ pub mod nursery_model;
 pub mod plan;
 pub mod power;
 pub mod qwen;
+pub mod qwen_batch;
+pub mod qwen_mtp;
 mod qwen_prefix;
+pub mod qwen_rank;
 
 #[cfg(test)]
 pub fn gelu_ref(x: &mlx::Array, s: mlx::Stream) -> mlx::MlxResult<mlx::Array> {
@@ -166,7 +170,15 @@ fn ok_json(value: &serde_json::Value) -> *mut c_char {
 /// candidate is therefore probed for a kernel MLX itself demands before
 /// it is pinned; a miss falls through to the next candidate, and only a
 /// set with no probed match degrades to the first existing file.
-fn pin_metallib_colocated() {
+///
+/// `pub(crate)` so `mlx::gpu()` can call it: a stream must never be created
+/// before the kernel library is pinned, or MLX resolves a foreign build and
+/// aborts in `default_stream` (`stream.cpp:176`). The FFI init path pinned
+/// it, but a TEST binary never goes through that init — so the two GPU unit
+/// tests in `lora.rs` aborted in the lib test binary while passing in their
+/// own integration-test binary (which pins first). Pinning inside `gpu()`
+/// makes the order irrelevant: whoever creates the first stream pins first.
+pub(crate) fn pin_metallib_colocated() {
     static PINNED: std::sync::OnceLock<()> = std::sync::OnceLock::new();
     if PINNED.get().is_some() {
         return;
@@ -178,6 +190,14 @@ fn pin_metallib_colocated() {
     if let Ok(env) = std::env::var("LAYA_METALLIB") {
         candidates.push(PathBuf::from(env));
     }
+    // The metallib that MATCHES the mlx-c this crate linked against: the
+    // build root `build.rs` took its static libs from. The kernel ABI is a
+    // property of that build, so this is the correct file even when a
+    // different (also valid) MLX build sits in the cache or beside the dylib.
+    let build_root = std::env::var("LAYA_MLX_BUILD_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("build"));
+    candidates.push(build_root.join("mlx-install/lib/mlx.metallib"));
     if let Ok(home) = std::env::var("HOME") {
         candidates.push(PathBuf::from(home).join(".cache/xsoulspace/laya/native/mlx.metallib"));
     }
