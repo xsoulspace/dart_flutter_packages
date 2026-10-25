@@ -11,6 +11,67 @@ const String errorCodeAudioInputMissing = 'audio_input_missing';
 const String errorCodeAudioInputInvalid = 'audio_input_invalid';
 const String errorCodeTtsTextEmpty = 'tts_text_empty';
 const String errorCodeAudioOutputUnavailable = 'audio_output_unavailable';
+const String errorCodeInferenceSeedInvalid = 'inference_seed_invalid';
+
+/// The exclusive upper bound of a valid inference seed: `2^63`.
+///
+/// The seed carrier is a signed 64-bit Dart `int`, so `2^63` is the
+/// natural exclusive bound: every value below it is representable, and
+/// `2^63` itself is not.
+BigInt get inferenceSeedUpperBound => BigInt.one << 63;
+
+/// Whether [seed] is a seed the inference contract accepts.
+///
+/// A null seed is VALID: the carrier reads null as "no seed requested",
+/// not as an invalid seed. Zero is a real seed and is valid.
+bool isValidInferenceSeed(num? seed) => inferenceSeedError(seed) == null;
+
+/// The reason [seed] is not acceptable, or null when it is.
+///
+/// The accepted range is `0 <= seed < 2^63` (9223372036854775808). The
+/// reason names that bound, so a caller learns the contract rather than
+/// just "invalid".
+///
+/// The parameter is a `num?` and not an `int?` on purpose: a value that
+/// arrives as a JSON number outside the signed 64-bit range is a real
+/// possibility on platforms where `int` is double-backed, and such a value
+/// must be rejected by the same bound rather than silently accepted.
+String? inferenceSeedError(num? seed) {
+  if (seed == null) {
+    return null;
+  }
+
+  final BigInt value;
+  if (seed is int) {
+    value = BigInt.from(seed);
+  } else if (seed is double && seed.isFinite && seed == seed.roundToDouble()) {
+    value = BigInt.from(seed);
+  } else {
+    return 'Inference seed must be an integer';
+  }
+
+  if (value < BigInt.zero || value >= inferenceSeedUpperBound) {
+    return 'Inference seed must satisfy 0 <= seed < $inferenceSeedUpperBound'
+        ' (2^63)';
+  }
+  return null;
+}
+
+/// Validates the seed an inference request carries.
+///
+/// Returns the first problem with the seed, or success when the seed is
+/// acceptable — including when no seed was requested at all.
+InferenceResult<void> validateInferenceSeed(num? seed) {
+  final error = inferenceSeedError(seed);
+  if (error == null) {
+    return InferenceResult<void>.ok(null);
+  }
+  return InferenceResult<void>.fail(
+    code: errorCodeInferenceSeedInvalid,
+    message: error,
+    details: <String, dynamic>{'seed': seed},
+  );
+}
 
 InferenceResult<Map<String, dynamic>> parseStrictJsonObject(String raw) {
   //TODO(arenukvern): move to safeguard -
@@ -72,6 +133,14 @@ InferenceResult<void> validateRequiredKeys({
 }
 
 InferenceResult<void> validateInferenceRequest(InferenceRequest request) {
+  // The seed is checked before the task: a request that carries an
+  // out-of-range seed is wrong whatever it asks for, and this is the
+  // first problem to report.
+  final seedValidation = validateInferenceSeed(request.seed);
+  if (!seedValidation.success) {
+    return seedValidation;
+  }
+
   switch (request.task) {
     case .text:
 

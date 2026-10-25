@@ -12,6 +12,14 @@ export 'chat_message.dart';
 export 'generation_options.dart';
 export 'model_catalog.dart';
 
+/// The response-meta key under which a provider echoes the request seed.
+///
+/// A provider that maps the seed to its own wire parameter and a provider
+/// that cannot honor it both report the seed here, so a caller can always
+/// see what was requested and what was actually sent. The key names the
+/// value; it grants no determinism.
+const String inferenceSeedMetaKey = 'inference_seed';
+
 /// The idea is that inference task should be as atomic as possible
 /// so if structural output is needed it should be pointed as such
 /// or relevant config for API passed.
@@ -95,6 +103,10 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     /// Whether the provider should return its reasoning trace (ADR 0059 —
     /// alongside the thinking switch and the explicit effort).
     bool? includeReasoning,
+
+    /// The optional request seed (carrier only — the provider maps it or
+    /// reports that it cannot honor it; nothing here claims determinism).
+    int? seed,
   }) => InferenceRequest._(
     _buildRequestMap(
       prompt: prompt,
@@ -113,6 +125,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
       thinking: thinking,
       reasoningEffort: reasoningEffort,
       includeReasoning: includeReasoning,
+      seed: seed,
     ),
   );
   factory InferenceRequest.structured({
@@ -132,6 +145,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     bool? thinking,
     String? reasoningEffort,
     bool? includeReasoning,
+    int? seed,
   }) => InferenceRequest._(
     _buildRequestMap(
       prompt: prompt,
@@ -150,6 +164,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
       thinking: thinking,
       reasoningEffort: reasoningEffort,
       includeReasoning: includeReasoning,
+      seed: seed,
     ),
   );
 
@@ -208,6 +223,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     required bool? thinking,
     required String? reasoningEffort,
     required bool? includeReasoning,
+    required int? seed,
   }) => <String, dynamic>{
     'task': task.name,
     'prompt': prompt,
@@ -228,6 +244,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     'thinking': ?thinking,
     'reasoning_effort': ?reasoningEffort,
     'include_reasoning': ?includeReasoning,
+    'seed': ?seed,
   };
 
   String get prompt => jsonDecodeString(value['prompt']);
@@ -276,6 +293,13 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     final bool include => include,
     _ => null,
   };
+
+  /// The requested seed, or null when none was requested. Zero is a real
+  /// seed and reads back as zero — the carrier never claims determinism.
+  int? get seed => switch (value['seed']) {
+    final int seed => seed,
+    _ => null,
+  };
   List<ChatMessage> get messages => <ChatMessage>[
     for (final json in jsonDecodeListAs<Map<String, dynamic>>(
       value['messages'],
@@ -292,6 +316,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     thinking: thinking,
     reasoningEffort: reasoningEffort,
     includeReasoning: includeReasoning,
+    seed: seed,
   );
 
   /// Derives a request with the given fields replaced (ADR 0059 — set-if-
@@ -313,6 +338,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     bool? thinking,
     String? reasoningEffort,
     bool? includeReasoning,
+    int? seed,
   }) => InferenceRequest._(
     _buildRequestMap(
       prompt: prompt ?? this.prompt,
@@ -331,6 +357,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
       thinking: thinking ?? this.thinking,
       reasoningEffort: reasoningEffort ?? this.reasoningEffort,
       includeReasoning: includeReasoning ?? this.includeReasoning,
+      seed: seed ?? this.seed,
     ),
   );
 }

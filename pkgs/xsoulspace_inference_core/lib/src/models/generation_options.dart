@@ -18,6 +18,7 @@ class GenerationOptions {
     this.thinking,
     this.reasoningEffort,
     this.includeReasoning,
+    this.seed,
   });
 
   factory GenerationOptions.fromJson(Map<String, dynamic> json) =>
@@ -43,6 +44,10 @@ class GenerationOptions {
           final bool include => include,
           _ => null,
         },
+        seed: switch (json['seed']) {
+          final int seed => seed,
+          _ => null,
+        },
       );
 
   /// Upper bound on generated tokens. Providers with a required limit
@@ -65,6 +70,15 @@ class GenerationOptions {
   /// answer. Null leaves the provider default; false asks for no trace.
   final bool? includeReasoning;
 
+  /// The optional request seed.
+  ///
+  /// A carrier, not a promise: the value travels with the request and the
+  /// provider either maps it to its own seed parameter or reports an
+  /// explicit warning that it cannot honor it. Nothing here claims
+  /// deterministic output. Zero is a real seed and is carried as such;
+  /// null means "no seed requested".
+  final int? seed;
+
   GenerationOptions copyWith({
     int? maxTokens,
     double? temperature,
@@ -72,6 +86,7 @@ class GenerationOptions {
     bool? thinking,
     String? reasoningEffort,
     bool? includeReasoning,
+    int? seed,
   }) => GenerationOptions(
     maxTokens: maxTokens ?? this.maxTokens,
     temperature: temperature ?? this.temperature,
@@ -79,6 +94,7 @@ class GenerationOptions {
     thinking: thinking ?? this.thinking,
     reasoningEffort: reasoningEffort ?? this.reasoningEffort,
     includeReasoning: includeReasoning ?? this.includeReasoning,
+    seed: seed ?? this.seed,
   );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -88,5 +104,6 @@ class GenerationOptions {
     'thinking': ?thinking,
     'reasoning_effort': ?reasoningEffort,
     'include_reasoning': ?includeReasoning,
+    'seed': ?seed,
   };
 }

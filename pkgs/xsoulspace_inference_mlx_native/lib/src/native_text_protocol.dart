@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 /// Native chat templates consume the same function signatures as wire APIs.
@@ -24,6 +26,157 @@ List<ChatMessage> nativeTextMessages(InferenceRequest request) =>
         systemPrompt: request.systemPrompt,
         fragments: request.contextFragments,
       ).map(ChatMessage.fromJson).toList();
+
+/// The request's output schema as standard JSON Schema.
+///
+/// The core request carries the kind-tagged schema bundle; the native
+/// prompt needs standard JSON Schema, so the shared conversion is used
+/// (never a hand-rolled serializer). A schema that is already plain JSON
+/// Schema is passed through unchanged.
+Map<String, dynamic> nativeTextJsonSchema(Map<String, dynamic> outputSchema) {
+  if (outputSchema.isEmpty) return const <String, dynamic>{};
+  final root = outputSchema['root'];
+  if (root is Map && root['kind'] is String) {
+    return bundleToJsonSchema(SchemaBundle.fromJson(outputSchema));
+  }
+  return outputSchema;
+}
+
+/// The structured-output contract rendered into the native prompt.
+///
+/// The native engines have NO server-side and NO token-level grammar
+/// enforcement: the schema is spelled out in the prompt (the same contract
+/// as the wire providers' prompt-rendered schema) and the answer is parsed
+/// back afterwards. The text is the core prompt builder's own wording, so
+/// the two paths say the same thing.
+String nativeTextStructuredOutputInstruction(Map<String, dynamic> jsonSchema) {
+  if (jsonSchema.isEmpty) return '';
+  final builder = PromptBuilder('');
+  builder.writeStructuredOutputPrompt(jsonSchema);
+  return builder.toString().trim();
+}
+
+/// The messages with the structured-output contract attached.
+///
+/// The contract rides on the leading system message when there is one, and
+/// opens the conversation otherwise — the chat templates lift a leading
+/// system turn, so the schema is always in front of the answer.
+List<ChatMessage> nativeTextStructuredMessages(
+  List<ChatMessage> messages,
+  Map<String, dynamic> jsonSchema,
+) {
+  if (jsonSchema.isEmpty) return messages;
+  final instruction = nativeTextStructuredOutputInstruction(jsonSchema);
+  if (messages.isNotEmpty && messages.first.role == ChatRole.system) {
+    return <ChatMessage>[
+      ChatMessage.system('${messages.first.content}\n\n$instruction'),
+      ...messages.skip(1),
+    ];
+  }
+  return <ChatMessage>[ChatMessage.system(instruction), ...messages];
+}
+
+/// Decodes the model's answer as the requested structured output.
+///
+/// Tolerant by contract: a markdown fence and surrounding prose are
+/// tolerated — the outermost balanced JSON object wins. A refusal is
+/// honest: a missing or non-object payload fails with a named code and
+/// the raw text as the evidence, never a success with an empty map.
+InferenceResult<Map<String, dynamic>> nativeTextParseStructuredOutput({
+  required String raw,
+  String? preferred,
+}) {
+  var candidate = preferred == null ? null : _outermostJson(preferred);
+  candidate ??= _outermostJson(raw);
+  if (candidate == null) {
+    return InferenceResult<Map<String, dynamic>>.fail(
+      code: 'structured_output_unparseable',
+      message: 'The native answer carries no JSON object',
+      details: <String, dynamic>{'raw_output': raw},
+    );
+  }
+  try {
+    final decoded = jsonDecode(candidate);
+    if (decoded is! Map<String, dynamic>) {
+      return InferenceResult<Map<String, dynamic>>.fail(
+        code: 'structured_output_not_object',
+        message: 'The native answer is JSON, but not a JSON object',
+        details: <String, dynamic>{
+          'raw_output': raw,
+          'json_type': decoded.runtimeType.toString(),
+        },
+      );
+    }
+    return InferenceResult<Map<String, dynamic>>.ok(decoded);
+    // ignore: avoid_catches_without_on_clauses
+  } catch (error) {
+    return InferenceResult<Map<String, dynamic>>.fail(
+      code: 'structured_output_unparseable',
+      message: 'The native answer is not valid JSON',
+      details: <String, dynamic>{'raw_output': raw, 'error': error.toString()},
+    );
+  }
+}
+
+/// The first decodable outermost JSON value in [raw].
+///
+/// Prose, markdown fences and a stray brace before the payload are
+/// tolerated: every candidate start is tried and the first one that
+/// decodes wins. A JSON object is preferred over a JSON array — the
+/// structured-output contract is an object.
+String? _outermostJson(String raw) {
+  String? anyValue;
+  for (var start = 0; start < raw.length; start++) {
+    final opener = raw[start];
+    if (opener != '{' && opener != '[') continue;
+    final end = _balancedEnd(raw, start);
+    if (end == null) continue;
+    final candidate = raw.substring(start, end + 1);
+    Object? decoded;
+    try {
+      decoded = jsonDecode(candidate);
+    } on FormatException {
+      continue;
+    }
+    if (decoded is Map<String, dynamic>) return candidate;
+    anyValue ??= candidate;
+  }
+  return anyValue;
+}
+
+/// The end offset of the JSON value opening at [start], or null when the
+/// value never closes.
+int? _balancedEnd(String raw, int start) {
+  var depth = 0;
+  var inString = false;
+  var escaped = false;
+  for (var i = start; i < raw.length; i++) {
+    final character = raw[i];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (character == r'\') {
+        escaped = true;
+      } else if (character == '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (character == '"') {
+      inString = true;
+      continue;
+    }
+    if (character == '{' || character == '[') {
+      depth++;
+      continue;
+    }
+    if (character == '}' || character == ']') {
+      depth--;
+      if (depth == 0) return i;
+    }
+  }
+  return null;
+}
 
 final class NativeTextToolOutput {
   const NativeTextToolOutput({

@@ -234,6 +234,11 @@ class OpenRouterInferenceClient
       'messages': messages,
       if (request.maxTokens != null) 'max_tokens': request.maxTokens,
       if (request.temperature != null) 'temperature': request.temperature,
+      // OpenRouter's chat completions API is OpenAI-compatible and accepts
+      // the top-level integer `seed`: the seed is mapped to the wire, never
+      // dropped (ADR 0059 — map or refuse). The upstream model may still
+      // ignore it; that is the provider's business, not a silent drop here.
+      'seed': ?request.seed,
       'reasoning_effort': ?reasoningEffort,
       'include_reasoning': ?request.includeReasoning,
       if (request.stopSequences.isNotEmpty)
@@ -387,7 +392,7 @@ class OpenRouterInferenceClient
       }
       diagnosticResponse = decoded;
 
-      final parsed = _parseChatCompletion(decoded);
+      final parsed = _parseChatCompletion(decoded, seed: request.seed);
       if (parsed == null) {
         return InferenceResult<InferenceResponse>.fail(
           code: 'output_empty',
@@ -746,7 +751,10 @@ class OpenRouterInferenceClient
   /// Tool calls are returned as structured records on
   /// [InferenceResponse.toolCalls] — no tag round-trip. The harness routes
   /// them to the world's tool execution system directly.
-  InferenceResponse? _parseChatCompletion(Map<String, dynamic> decoded) {
+  InferenceResponse? _parseChatCompletion(
+    Map<String, dynamic> decoded, {
+    int? seed,
+  }) {
     final choices = decoded['choices'];
     if (choices is! List) return null;
     final first = (choices).firstOrNull;
@@ -808,6 +816,9 @@ class OpenRouterInferenceClient
       toolCalls: parsedCalls,
       meta: <String, dynamic>{
         'provider': id,
+        // HONOURED: the seed was sent on the wire (body `seed`), so the
+        // response records it — no warning.
+        inferenceSeedMetaKey: ?seed,
         'usage_reported': decoded.containsKey('usage'),
         'usage_field_presence': {
           if (decoded['usage'] case final Map usage) ...{

@@ -178,6 +178,9 @@ class AnthropicInferenceClient implements InferenceClient {
         {'role': 'user', 'content': _buildUserContent(request)},
     ];
 
+    // The Messages API has NO seed parameter: the request seed is NOT sent.
+    // It is echoed in the response meta and reported as an honest warning
+    // (ADR 0059 — map or refuse, never silently drop).
     final body = <String, dynamic>{
       'model': model,
       'max_tokens': maxTokens,
@@ -236,7 +239,7 @@ class AnthropicInferenceClient implements InferenceClient {
         );
       }
 
-      final parsed = _parseMessage(decoded);
+      final parsed = _parseMessage(decoded, seed: request.seed);
       if (parsed == null) {
         return InferenceResult<InferenceResponse>.fail(
           code: 'output_empty',
@@ -313,7 +316,7 @@ class AnthropicInferenceClient implements InferenceClient {
   /// Concatenates `text` content blocks and extracts native `tool_use`
   /// blocks as structured [ToolCall] records; the harness routes them to the
   /// world's tool execution system directly.
-  InferenceResponse? _parseMessage(Map<String, dynamic> decoded) {
+  InferenceResponse? _parseMessage(Map<String, dynamic> decoded, {int? seed}) {
     final content = decoded['content'];
     if (content is! List) return null;
 
@@ -351,14 +354,25 @@ class AnthropicInferenceClient implements InferenceClient {
       }
     }
 
+    // NOT HONOURED: the Messages API has no seed parameter, so the seed never
+    // reached the provider. It is echoed in the meta and reported as a
+    // warning — the caller is told the provider could not honor it.
+    final seedWarning = seed == null
+        ? null
+        : '$id has no seed parameter; the provider cannot honor the '
+            'request seed $seed';
     return InferenceResponse(
       structuredOutput: output,
       rawOutput: contentStr,
       task: InferenceTask.text,
       toolCalls: parsedCalls,
+      warnings: seedWarning == null
+          ? const <String>[]
+          : <String>[seedWarning],
       meta: <String, dynamic>{
         'provider': id,
         'stop_reason': ?decoded['stop_reason'],
+        inferenceSeedMetaKey: ?seed,
         if (decoded['usage'] is Map<String, dynamic>)
           'usage': decoded['usage'] as Map<String, dynamic>,
       },

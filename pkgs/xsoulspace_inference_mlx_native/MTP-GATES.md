@@ -838,3 +838,62 @@ need them. L-G4 and L-G5 are cost gates: they decide what the acceleration
 program rests on, and they decide nothing about whether the adapter is worth
 training. The cost, the arms, and the pre-registered order are in
 [`EXPERIMENT-PLAN.md`](EXPERIMENT-PLAN.md) Part B.
+
+## The DeepInfer draft-head architecture (observation, recorded 2026-10-21; reopens nothing)
+
+The DeepInfer transfer section above records that DeepInfer's MTP does not
+reopen this lane. It does not record the **architecture** of DeepInfer's draft
+head, and that architecture is relevant to how a future arm would have to be
+**shaped**. The four differences below are observations about a foreign
+codebase, read from its source; they are not measurements of ours, not
+thresholds, and not evidence for any verdict above.
+
+**What this does NOT change.** Line J stays closed on physics. The gates
+above — J-G1..J-G5, K-G1..K-G4, K'-G1..K'-G3, L-G1..L-G7 — are unchanged.
+This section is evidence **for a future arm's shape**, not a threshold and not
+a reopening. Nothing here is a gate, and no threshold may be moved by it.
+
+1. **Draft init is a NOISE token, not the previous proposal.** In
+   `deepinfer/model_executor/models/mtp/dflash.py`, `_embed_draft_init_tokens`
+   fills the draft rows with `noise_token_id`
+   (`cfg.dflash_cfg.dspark_noise_token_id`) and only position 0 receives the
+   golden token. This structurally avoids the failure our Line J measured (a
+   wrong previous proposal poisoning the next step). **LIMIT:** their head is
+   pretrained; the init trick is an architectural idea we have not tested, and
+   it does not by itself make acceptance high.
+
+2. **The previous token enters as a LOW-RANK MARKOV EMBEDDING, not raw token
+   identity.** `markov_w1` (a `VocabParallelEmbedding` over the vocabulary) and
+   `markov_w2` (a `ReplicatedLinear` to the vocabulary, `use_fp32_output=True`),
+   with rank `cfg.dflash_cfg.dspark_markov_rank`. **LIMIT:** unmeasured here; a
+   low-rank embedding of the previous token is a different inductive bias from
+   our depth-collapse mechanism and would need its own arm.
+
+3. **A ConfidenceHead predicts per-step acceptance, and the scheduler
+   allocates draft budget DYNAMICALLY per request.** In
+   `deepinfer/model_executor/models/mtp/dflash.py`, `ConfidenceHead` projects
+   `n_embed + markov_rank` to 1 with a per-step temperature
+   (`DEEPINFER_DFLASH_CONFIDENCE_HEAD_TEMPERATURE`, a comma-separated list
+   whose length must equal `DEEPINFER_USE_NEXTN_DECODE`). In
+   `csrc/engine/mtp_varlen.hpp`, `MTPVarlen::schedule` sorts requests by
+   predicted acceptance descending, greedily allocates draft slots, and picks
+   the total batch size maximizing expected throughput — i.e. it is **NOT** a
+   fixed count K. **LIMIT:** DeepInfer's head is pretrained on a much larger
+   trunk; a from-scratch confidence head on a 0.6B trunk is a different
+   experiment, and this is a per-request **budget policy**, not a per-prompt
+   accuracy fix.
+
+4. **The head reads MULTI-LAYER target-layer features, not only the last
+   hidden state.** `cfg.dflash_cfg.dspark_target_layer_ids` selects the target
+   layers; `DFlash.projection` maps `hidden_size * num_target_feature_layers`
+   to `hidden_size`. **LIMIT:** our trunk's layer set and feature widths
+   differ; "read more layers" is a hypothesis, not a measured gain.
+
+**The one measured claim that touches this.** Our own measured numbers
+(acceptance 0.1393 / 0.0146 / 0.0000 by depth, and the 0.124 decode-consistent
+arm-C figure) are from
+`bench/nursery/experiments/RESULTS-mtp-2026-10-21.md` and are **not** changed
+by anything in this section. Any future arm that uses a noise init, a markov
+embedding, a confidence head, or multi-layer features must be **REGISTERED as
+a new arm with its own frozen threshold BEFORE it runs**, exactly as Parts 1–4
+did — a threshold written after seeing data is a knob.

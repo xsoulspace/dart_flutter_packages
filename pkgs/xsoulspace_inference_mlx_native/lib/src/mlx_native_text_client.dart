@@ -33,14 +33,13 @@ typedef _Generate =
       required List<int> eosIds,
     });
 
-typedef _Render =
-    String Function({
-      required String system,
-      required String user,
-      required List<ChatMessage> messages,
-      required List<Object?>? tools,
-      required bool thinking,
-    });
+typedef _Render = String Function({
+  required String system,
+  required String user,
+  required List<ChatMessage> messages,
+  required List<Object?>? tools,
+  required bool thinking,
+});
 
 /// A native text engine (Qwen3 or LFM2.5) bound as an [InferenceClient]
 /// — the unified interface every provider in the monorepo answers to
@@ -53,17 +52,27 @@ typedef _Render =
 /// serving shape (the bench reproduces them with its own flags).
 ///
 /// Capability honesty, mirroring `MlxLocalTextClient`: `id` names the
-/// cast; only [InferenceTask.text] is supported; the engines decode
-/// greedily, so a non-zero request temperature lands in
-/// [InferenceResult.warnings] instead of being silently pretended; tool
-/// rendering is a template fact — both casts render a [ToolRegistry]
-/// into their fixture-gated template (ADR 0058 tools rung), and the
-/// Qwen's delimited JSON answer is normalized into typed tool calls with
-/// its raw source retained. Unqualified checkpoint formats refuse explicitly.
-/// A request-level `thinking` overrides the cast's constructor
-/// default on Qwen3 and draws an honest warning on LFM2.5 (no switch);
-/// non-empty `request.messages` render as the full conversation; otherwise
-/// only the projected context cut is reconstructed through the core codec.
+/// cast; [InferenceTask.text] and [InferenceTask.implicitlyStructuredText]
+/// are supported; the engines decode greedily, so a non-zero request
+/// temperature lands in [InferenceResult.warnings] instead of being
+/// silently pretended; a request seed is echoed in the response meta and
+/// reported in the same warnings (the greedy draw is deterministic by
+/// construction, not seed-derived); tool rendering is a template fact —
+/// both casts render a [ToolRegistry] into their fixture-gated template
+/// (ADR 0058 tools rung), and the Qwen's delimited JSON answer is
+/// normalized into typed tool calls with its raw source retained.
+/// Unqualified checkpoint formats refuse explicitly. A request-level
+/// `thinking` overrides the cast's constructor default on Qwen3 and draws
+/// an honest warning on LFM2.5 (no switch); non-empty `request.messages`
+/// render as the full conversation; otherwise only the projected context
+/// cut is reconstructed through the core codec.
+///
+/// Structured output is PROMPT-RENDERED: the request's `outputSchema` is
+/// spelled out in the prompt and the answer is parsed back as JSON. There
+/// is no server-side and no token-level grammar enforcement here, so
+/// [InferenceTask.nativelyStructuredText] is NOT claimed — a model that
+/// ignores the prompt yields the named `structured_output_unparseable`
+/// refusal, never a success with an empty map.
 ///
 /// Loading is a construction detail, not a lifecycle requirement: the
 /// eager factories ([loadQwen]/[loadLfm2], a passed-in engine) hold a
@@ -406,6 +415,11 @@ final class MlxNativeTextClient implements InferenceClient {
   @override
   Set<InferenceTask> get supportedTasks => const <InferenceTask>{
     InferenceTask.text,
+    // The structured rung is PROMPT-RENDERED: the schema is spelled out
+    // in the prompt and the answer is parsed back. There is no server-side
+    // and no token-level grammar enforcement, so the natively-structured
+    // rung is NOT claimed.
+    InferenceTask.implicitlyStructuredText,
   };
 
   /// Eager clients hold a loaded engine from construction; lazy clients
@@ -452,12 +466,15 @@ final class MlxNativeTextClient implements InferenceClient {
     required ToolRegistry? toolRegistry,
     required _Generate generate,
   }) async {
-    if (request.task != InferenceTask.text) {
+    if (!supportedTasks.contains(request.task)) {
       return InferenceResult.fail(
         code: 'unsupported_task',
         message:
-            '$id supports InferenceTask.text only '
-            '(requested ${request.task.name})',
+            '$id supports InferenceTask.text and '
+            'InferenceTask.implicitlyStructuredText only '
+            '(requested ${request.task.name}); the native engines have no '
+            'server-side grammar enforcement, so nativelyStructuredText is '
+            'not claimed',
       );
     }
     if (_disposed) {
@@ -497,6 +514,17 @@ final class MlxNativeTextClient implements InferenceClient {
         'mlx_native decodes greedily; temperature $temperature ignored',
       );
     }
+    final seed = request.seed;
+    if (seed != null) {
+      // NOT HONOURED as a draw: the native engines decode greedily
+      // (argmax), so the answer is already reproducible and the seed
+      // cannot move it. It is echoed in the meta and reported as a
+      // warning (ADR 0059 — map or refuse, never silently drop).
+      warnings.add(
+        'mlx_native decodes greedily; seed $seed recorded but the draw is '
+        'deterministic-by-construction, not seed-derived',
+      );
+    }
     final requestThinking = request.thinking;
     final effectiveThinking = requestThinking ?? thinking;
     if (requestThinking != null && requestThinking && !hasThinkingSwitch) {
@@ -505,7 +533,35 @@ final class MlxNativeTextClient implements InferenceClient {
         'honored as a plain generation',
       );
     }
-    final messages = nativeTextMessages(request);
+    // The native engines have no grammar enforcement, so a requested
+    // schema is spelled out in the prompt and the answer is parsed back
+    // (the same contract as the wire providers' prompt-rendered schema).
+    var jsonSchema = const <String, dynamic>{};
+    if (request.task == InferenceTask.implicitlyStructuredText &&
+        request.outputSchema.isEmpty) {
+      return InferenceResult.fail(
+        code: 'request_schema_empty',
+        message:
+            'InferenceTask.implicitlyStructuredText requires a non-empty '
+            'outputSchema',
+      );
+    }
+    if (request.outputSchema.isNotEmpty) {
+      try {
+        jsonSchema = nativeTextJsonSchema(request.outputSchema);
+      } on Object catch (error) {
+        return InferenceResult.fail(
+          code: 'structured_output_schema_invalid',
+          message:
+              'The output schema cannot be rendered as JSON Schema: '
+              '$error',
+        );
+      }
+    }
+    final messages = nativeTextStructuredMessages(
+      nativeTextMessages(request),
+      jsonSchema,
+    );
     if (!hasThinkingSwitch &&
         messages.any((message) => message.role == ChatRole.tool)) {
       warnings.add(
@@ -563,9 +619,27 @@ final class MlxNativeTextClient implements InferenceClient {
         completionTokens: completion.ids.length - completion.promptIds.length,
       );
     }
+    var structuredOutput = const <String, dynamic>{};
+    if (jsonSchema.isNotEmpty) {
+      // The raw text is the evidence; the presentation text is the
+      // normalized cut (tool spans removed). Either may carry the answer.
+      final parsed = nativeTextParseStructuredOutput(
+        raw: rawOutput,
+        preferred: normalized.data!.presentationText,
+      );
+      if (!parsed.success) {
+        return InferenceResult.fail(
+          code: parsed.error!.code,
+          message: parsed.error!.message,
+          details: parsed.error!.details,
+        );
+      }
+      structuredOutput = parsed.data!;
+    }
     return InferenceResult.ok(
       InferenceResponse(
-        task: InferenceTask.text,
+        task: request.task,
+        structuredOutput: structuredOutput,
         rawOutput: rawOutput,
         presentationText: normalized.data!.presentationText,
         toolCalls: normalized.data!.calls,
@@ -580,6 +654,7 @@ final class MlxNativeTextClient implements InferenceClient {
           'tool_calls_normalized': true,
           'tool_call_sources': normalized.data!.sources,
           'finish_reason': 'stop',
+          inferenceSeedMetaKey: ?seed,
         },
       ),
       warnings: warnings,

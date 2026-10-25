@@ -20,6 +20,14 @@ advertises the adapter's supported wire values; consumers must refuse an absent
 capability rather than silently substitute defaults. Model-specific eligibility
 still belongs to the provider. Null retains existing behavior.
 
+`InferenceRequest.seed` and `GenerationOptions.seed` carry an optional
+integer seed end to end: both request factories, the request map, the JSON
+codec, `copyWith`, and the flat options view. The carrier states no
+determinism — a provider either maps the seed to its own wire parameter or
+reports an explicit warning that it cannot honor it. The public
+`inferenceSeedMetaKey` names where a provider reports the seed it was
+given. Zero is a real seed; an absent seed stays absent on the wire map.
+
 `ToolStreamingInferenceClient` is an optional stream with a caller-owned tool
 registry. Text deltas are provisional; only a successful completed result can
 publish typed calls for the caller's ordinary validation/execution path.

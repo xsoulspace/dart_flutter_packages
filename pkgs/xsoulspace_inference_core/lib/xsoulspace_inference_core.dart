@@ -21,6 +21,7 @@ export 'src/models/inference_models.dart';
 export 'src/models/model_catalog.dart';
 export 'src/models/prompt_builder.dart';
 export 'src/models/situation_messages_codec.dart';
+export 'src/seeded_rng.dart';
 export 'src/structured_output/structured_output.dart';
 export 'src/tools/tool_call_syntax.dart';
 export 'src/tools/tool_contracts.dart';

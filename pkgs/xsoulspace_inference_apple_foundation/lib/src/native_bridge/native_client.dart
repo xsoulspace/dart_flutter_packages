@@ -258,6 +258,11 @@ class AppleFoundationNativeClient
         fragments.map((fragment) => fragment.toString()).join('\n\n'),
       );
     }
+    // The native bridge request has NO seed field (prompt, instructions,
+    // schema, tools, end_after_tool) and the Apple Foundation Models
+    // framework exposes none either: the request seed is NOT sent. It is
+    // echoed in the response meta and reported as an honest warning
+    // (ADR 0059 — map or refuse, never silently drop).
     return jsonEncode(<String, dynamic>{
       'prompt': prompt.toString(),
       'instructions': systemPrompt.isEmpty ? null : systemPrompt,
@@ -510,7 +515,7 @@ class AppleFoundationNativeClient
       // unknown id) so no callback can land after teardown.
       try {
         final response = await done.future.timeout(const Duration(seconds: 1));
-        return _toResult(response);
+        return _toResult(response, seed: request.seed);
       } on TimeoutException {
         _cancelGeneration(accepted);
         return InferenceResult<InferenceResponse>.fail(
@@ -524,7 +529,7 @@ class AppleFoundationNativeClient
     _activeGeneration = accepted;
     try {
       final response = await done.future.timeout(inferTimeout);
-      return _toResult(response);
+      return _toResult(response, seed: request.seed);
     } on TimeoutException {
       // Callback-after-delete fix: CANCEL the pending Swift call and release
       // the done completer BEFORE any teardown. The bridge gates every
@@ -570,7 +575,10 @@ class AppleFoundationNativeClient
     return null;
   }
 
-  InferenceResult<InferenceResponse> _toResult(Map<String, dynamic> response) {
+  InferenceResult<InferenceResponse> _toResult(
+    Map<String, dynamic> response, {
+    int? seed,
+  }) {
     if (response['ok'] == true) {
       final rawOutput = response['output'] as String? ?? '';
       if (rawOutput.trim().isEmpty) {
@@ -584,11 +592,21 @@ class AppleFoundationNativeClient
       // it so structuredOutput honors the requested schema instead of the
       // lossy {'text': raw} wrapper.
       final structured = _tryDecodeStructured(rawOutput);
+      // NOT HONOURED: the native bridge has no seed field, so the seed never
+      // reached the provider. It is echoed in the meta and reported as a
+      // warning — the caller is told the provider could not honor it.
+      final seedWarning = seed == null
+          ? null
+          : '$id has no seed field in the native bridge; the provider '
+              'cannot honor the request seed $seed';
       return InferenceResult<InferenceResponse>.ok(
         InferenceResponse(
           structuredOutput: structured ?? {'text': rawOutput},
           rawOutput: rawOutput,
-          meta: <String, dynamic>{'provider': id},
+          warnings: seedWarning == null
+              ? const <String>[]
+              : <String>[seedWarning],
+          meta: <String, dynamic>{'provider': id, inferenceSeedMetaKey: ?seed},
         ),
         meta: <String, dynamic>{'provider': id},
       );
@@ -781,7 +799,7 @@ class AppleFoundationNativeClient
       resultFuture: () async {
         try {
           final response = await done.future.timeout(inferTimeout);
-          return _toResult(response);
+          return _toResult(response, seed: request.seed);
         } on TimeoutException {
           // Cancel the Swift side BEFORE releasing the callables (see infer).
           _cancelGeneration(accepted);

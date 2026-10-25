@@ -478,6 +478,10 @@ final class OpenAiResponsesClient
       'store': false,
       'stream': true,
       if (effort != null) 'reasoning': {'effort': effort},
+      // The Responses API has a top-level integer `seed` (deterministic
+      // sampling): the request seed is mapped to the wire, never dropped
+      // (ADR 0059 — map or refuse). The response echoes it in the meta.
+      'seed': ?request.seed,
       'input': input,
       if (instructions.isNotEmpty) 'instructions': instructions.join('\n\n'),
       if (definitions.isNotEmpty)
@@ -1091,6 +1095,9 @@ final class OpenAiResponsesClient
                     'usage': completed['usage'],
                     'responses_output': output,
                     'tool_call_ids': callIds.toList(),
+                    // HONOURED: the seed was sent on the wire (body `seed`),
+                    // so the response records it — no warning.
+                    inferenceSeedMetaKey: ?request.seed,
                   },
                 ),
               ),

@@ -1,5 +1,12 @@
 ## Unreleased
 
+- Add an optional integer seed carrier to the request and options contracts:
+  both `InferenceRequest` factories, the request map and JSON codec,
+  `copyWith`, `GenerationOptions`, and the public `inferenceSeedMetaKey`.
+  The carrier states no determinism — a provider maps the seed to its own
+  wire parameter or reports an explicit warning; zero is a real seed and an
+  absent seed stays absent on the wire map.
+
 - Add opt-in declarative session/cache composition and provider affinity; retain ordinary request defaults.
 
 - Add optional safe transport fingerprints and provider-assisted cache comparison
