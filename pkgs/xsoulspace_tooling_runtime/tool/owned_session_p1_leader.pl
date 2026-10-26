@@ -117,10 +117,6 @@ for (my $i = 0; $i < 1000; $i++) {
   last if child_has_execd();
   select(undef, undef, undef, 0.001);
 }
-for (my $i = 0; $i < 100; $i++) {
-  last if child_stdin_closed();
-  select(undef, undef, undef, 0.001);
-}
 if (!$stdin_refused && child_stdin_closed()) {
   refuse_admitted_stdin();
 }
