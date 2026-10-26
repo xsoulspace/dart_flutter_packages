@@ -950,11 +950,11 @@ Future<List<int>> _stopOwnedProcessGroup(
       if (!owned.ready && !owned.rootExited) {
         if (owned.process.kill(value)) signaled.add(owned.process.pid);
       } else if (!owned.rootExited && snapshot.isNotEmpty) {
+        // Cleared `ps` with a live supervisor is not group death (ADR 0066).
+        // Record the last snapshot for callers without group-wide control signals.
         signaled.addAll(snapshot);
         owned.deferSigkillEscalation = true;
-        if (await _sendOwnedControl(owned, command)) {
-          return true;
-        }
+        return true;
       }
       return signaled.isNotEmpty;
     }
