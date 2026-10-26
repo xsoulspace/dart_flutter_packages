@@ -134,7 +134,7 @@ void _handleSessionControlLine(
 Future<void> _maybeSettleAfterTargetExit(_OwnedProcessGroup owned) async {
   if (owned.reportedWaitStatus == null ||
       owned.settleRequested ||
-      owned.deadlineArmed) {
+      owned._deadlineBlocksSettle) {
     return;
   }
   final members = await _ownedGroupMembers(owned);
@@ -158,7 +158,7 @@ Future<bool> _onlyLeaderRemainsLive(
 
 Future<void> _watchSessionSettle(_OwnedProcessGroup owned) async {
   while (!owned.settleRequested) {
-    if (owned.deadlineArmed) {
+    if (owned._deadlineBlocksSettle) {
       await Future<void>.delayed(const Duration(milliseconds: 20));
       continue;
     }

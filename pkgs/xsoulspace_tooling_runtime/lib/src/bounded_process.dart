@@ -272,6 +272,7 @@ Future<BoundedRunResult> runBounded(
           process,
           controlBinding: controlBinding,
           marker: marker,
+          tightDeadline: deadline < const Duration(seconds: 1),
         );
   if (owned != null) {
     _ownedProcessGroups[process.pid] = owned;
@@ -423,7 +424,9 @@ Future<BoundedRunResult> runBounded(
     if (finished || fired || ownerStopped) return;
     fired = deadlineExpired;
     ownerStopped = !deadlineExpired;
-    owned?.deadlineArmed = false;
+    if (owned?.tightDeadline == true) {
+      owned!.deadlineArmed = false;
+    }
     unawaited(() async {
       try {
         ladder.complete(
@@ -437,7 +440,7 @@ Future<BoundedRunResult> runBounded(
     }());
   }
   duplex?._stop = () => stopOwned(deadlineExpired: false);
-  final timer = Timer(deadline, () => stopOwned(deadlineExpired: true));
+  Timer? deadlineTimer;
   final inputDone = Completer<void>();
   String? inputProblem;
   if (duplex != null) {
@@ -491,6 +494,9 @@ Future<BoundedRunResult> runBounded(
     await channelStarted.future;
     startupError = owned?.controlFailure;
   }
+  if (startupError == null) {
+    deadlineTimer = Timer(deadline, () => stopOwned(deadlineExpired: true));
+  }
   if (startupError == null && input != null && duplex == null) {
     unawaited(startAdmittedInput());
   }
@@ -522,7 +528,7 @@ Future<BoundedRunResult> runBounded(
           return;
         }
         final members = await _ownedGroupMembers(owned);
-        if (!owned.deadlineArmed &&
+        if (!owned._deadlineBlocksSettle &&
             !owned.settleRequested &&
             owned.reportedWaitStatus != null &&
             members != null &&
@@ -562,7 +568,7 @@ Future<BoundedRunResult> runBounded(
     }),
   ]);
   finished = true;
-  timer.cancel();
+  deadlineTimer?.cancel();
   if (owned != null && !singleProcessSession) {
     if (!owned.settleAcknowledged.isCompleted) {
       await _requestSessionSettle(owned);
@@ -758,10 +764,6 @@ for (my $i = 0; $i < 1000; $i++) {
   last if child_has_execd();
   select(undef, undef, undef, 0.001);
 }
-for (my $i = 0; $i < 100; $i++) {
-  last if child_stdin_closed();
-  select(undef, undef, undef, 0.001);
-}
 if (!$stdin_refused && child_stdin_closed()) {
   refuse_admitted_stdin();
 }
@@ -857,7 +859,8 @@ final class _OwnedProcessGroup {
     this.process, {
     required this.marker,
     this.controlBinding,
-  });
+    required this.tightDeadline,
+  }) : deadlineArmed = tightDeadline;
 
   final Process process;
   final String marker;
@@ -868,9 +871,13 @@ final class _OwnedProcessGroup {
   bool rootExited = false;
   bool externallyStopped = false;
   bool groupGone = false;
+  bool deferSigkillEscalation = false;
   bool settleRequested = false;
-  bool deadlineArmed = true;
+  final bool tightDeadline;
+  bool deadlineArmed;
   final settleAcknowledged = Completer<void>();
+
+  bool get _deadlineBlocksSettle => tightDeadline && deadlineArmed;
   int? reportedWaitStatus;
   String? unsettledReason;
   String? controlFailure;
@@ -931,6 +938,7 @@ Future<List<int>> _stopOwnedProcessGroup(
       // Unavailable observation is not death certification (ADR 0066).
       if (owned.rootExited) return false;
       if (snapshot.isEmpty) return false;
+      if (owned.ready && owned.deferSigkillEscalation) return false;
       signaled.addAll(snapshot);
       if (!owned.rootExited && await _sendOwnedControl(owned, command)) {
         return true;
@@ -943,6 +951,7 @@ Future<List<int>> _stopOwnedProcessGroup(
         if (owned.process.kill(value)) signaled.add(owned.process.pid);
       } else if (!owned.rootExited && snapshot.isNotEmpty) {
         signaled.addAll(snapshot);
+        owned.deferSigkillEscalation = true;
         if (await _sendOwnedControl(owned, command)) {
           return true;
         }
@@ -974,7 +983,9 @@ Future<List<int>> _stopOwnedProcessGroup(
     }
     await Future<void>.delayed(const Duration(milliseconds: 20));
   }
-  await signal(ProcessSignal.sigkill);
+  if (!owned.deferSigkillEscalation) {
+    await signal(ProcessSignal.sigkill);
+  }
   end = DateTime.now().add(grace);
   while (DateTime.now().isBefore(end)) {
     if (owned.rootExited) break;
