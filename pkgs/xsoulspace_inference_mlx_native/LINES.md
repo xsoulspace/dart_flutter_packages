@@ -499,18 +499,33 @@ hazard. Everything else stays in Python.** Applied here:
    Per-task stays the default; shared is a long-shared-prefix product
    only.
 5. **A third, dissimilar task arm** (L-G7) — RUN 2026-10-26, PASS (above).
-6. **A native-surface capability number.** The capability is still measured
-   on the **python runtime-adapter path**; the Rust engine can load and merge
-   the artifact (C-10 closed) but has never produced the scored completions.
-7. **A determinism proof for the seed contract.** ADR 0071 specifies the
-   counter-based RNG (seed + position + stream) and it is **not implemented**;
-   no test asserts seed determinism, and the local path's seed reporting was
-   being closed concurrently at the time of reading.
-8. **A cross-validated L-G6 detail.** The two L-G6 implementations agree on
-   the verdict and disagree on the sum-vs-mean pattern (native: 293/293 rows
-   differ on perm, 0 on veto; Python: the opposite). The corpora are the same
-   file, so the difference is in the prompt rendering or the generation cap —
-   **not yet localized**.
+6. **A native-surface capability number — STILL OWED, now scoped.** The
+   capability is still measured on the **python runtime-adapter path**; the
+   merge surface refuses quantized weights (correctly, K-G4) and `Qwen3`
+   has no runtime adapter application. Two options named in
+   `bench/nursery/experiments/RESULTS-tier-c-repairs-2026-10-26.md` §4
+   (bf16-base merge arm with a base confound, vs runtime-LoRA on the 4-bit
+   base with no confound) — buy one deliberately.
+7. **The seed contract's enforcement — the client-side test now EXISTS**
+   (2026-10-26): `test/mlx_native_seed_e2e_test.dart` asserts reproducibility
+   through `MlxNativeTextClient`, the per-call meta echo, and the honesty
+   warning. The counter-based sampler remains a core-side carrier (the
+   native path decodes greedily; a seeded sampler is a feature, not a
+   repair).
+8. **The L-G6 cross-engine detail — LOCALIZED (2026-10-26): TWO native
+   scorer bugs.** The stable logsumexp in `qwen_rank::position_logprobs`
+   never added the max back (every native "logprob" carried `+max logit`;
+   the eos "probability" was unnormalized and exceeded 1 on every row —
+   the recorded 293/293 `eos_dominant_rows`), and `eos_dominates` compared
+   a probability against a logprob (true always). Both fixed;
+   `eos_dominant_rows` is now 0 and the corrected engines agree EXACTLY on
+   perm (native 0.4403 == python 0.4403 == generation). veto retains a
+   residual cross-engine delta (native 0.3128 vs python 0.2291 mean),
+   recorded in
+   `bench/nursery/experiments/RESULTS-tier-c-repairs-2026-10-26.md`; the
+   FAIL verdict is invariant across every measurement of this line. The
+   engine itself was never wrong — the 64-token parity gate held
+   throughout; the scoring layer above it was.
 9. **A CI gate.** This repository has no GitHub Actions workflow at all, so
    every number here is produced by a person, on a machine, on an evening.
 

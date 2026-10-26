@@ -92,19 +92,22 @@ before an arm that can only refine it* — and by measured cost.
 **Tier C — record repairs, all CPU/Tier-0 (owed before the affected numbers
 are gate inputs again).**
 
-6. **Localize the L-G6 cross-implementation disagreement** — both engines agree
-   on the FAIL verdict but disagree on the sum-vs-mean pattern (native: 293/293
-   rows differ on perm, 0 on veto; Python: the opposite). Suspects: prompt
-   rendering, generation cap. Until localized, neither implementation is a
-   clean gate input for a *re*-run.
-7. **Prove arm determinism** (the C-3 void) — run one training arm twice,
-   distinct timestamps, compare artifacts. One run.
-8. **Native-surface capability number** — the Rust engine can load and merge
-   the trained artifact (C-13 closed) but has never produced the scored
-   completions; the +0.31/+0.47 is still a python-path number.
-9. **Seed determinism end-to-end** — ADR 0071's counter-based sampler is
-   implemented in core with golden tests, but no test asserts a seeded local
-   decode reproduces through `MlxNativeTextClient`.
+6. **L-G6 cross-implementation disagreement — LOCALIZED 2026-10-26: two
+   native scorer bugs, fixed** (the stable-lse missing max add-back; the
+   probability-vs-logprob eos comparison). Corrected: native perm 0.4403 ==
+   python exactly; veto residual 0.3128 vs 0.2291 recorded; the FAIL
+   verdict invariant. `RESULTS-tier-c-repairs-2026-10-26.md` §3.
+7. **Arm determinism — PROVEN 2026-10-26: NOT run-deterministic.** Two
+   identical noise-arm runs: different adapter sha256s; score band
+   perm 0.5597/0.4505, veto 0.2819/0.2247 (±0.05–0.11). L-G2's MISS is
+   stable (band max 0.56 << 0.7737); within-run-paired gates are immune.
+   Same file §1.
+8. **Native-surface capability number — STILL OWED, scoped.** Two options
+   (bf16-base merge arm vs runtime-LoRA on the 4-bit base) named in
+   `RESULTS-tier-c-repairs-2026-10-26.md` §4.
+9. **Seed determinism E2E — CLOSED 2026-10-26**: `test/mlx_native_seed_e2e_test.dart`
+   pins reproducibility, the per-call meta echo, and the honesty warning
+   through the real client.
 
 **Then, not before:** RUNG-1 of the nursery (PERM-GATE-1 — the decision head
 into laya's real slot; it stands without the MoE thesis), and any MTP-shaped

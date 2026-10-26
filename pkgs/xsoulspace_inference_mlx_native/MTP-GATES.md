@@ -817,6 +817,17 @@ before any training arm.
 zero-training path exists, which then has to be costed (L-G4, L-G5) and
 productionised before it is a product.
 
+> **Post-run status (2026-10-26, corrected scorer).** The native
+> implementation's recorded numbers were produced with a broken scorer
+> (the stable logsumexp's missing max add-back, and a probability-vs-
+> logprob comparison in the eos diagnostic). Both fixed; the corrected
+> native run agrees with the python scorer EXACTLY on perm (0.4403 ==
+> 0.4403 == generation) and reads veto 0.3128 mean vs python 0.2291 — a
+> residual recorded in
+> `bench/nursery/experiments/RESULTS-tier-c-repairs-2026-10-26.md`. **The
+> FAIL verdict above is unchanged and strengthened** (every corrected
+> number is far below the frozen thresholds); the threshold did not move.
+
 ## L-G7 — the third, dissimilar task
 
 **Question.** Does the shared-answer-space rule hold when the tasks are
