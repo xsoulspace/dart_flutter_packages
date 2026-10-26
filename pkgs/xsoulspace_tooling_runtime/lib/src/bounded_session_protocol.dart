@@ -132,7 +132,11 @@ void _handleSessionControlLine(
 }
 
 Future<void> _maybeSettleAfterTargetExit(_OwnedProcessGroup owned) async {
-  if (owned.reportedWaitStatus == null || owned.settleRequested) return;
+  if (owned.reportedWaitStatus == null ||
+      owned.settleRequested ||
+      owned.deadlineArmed) {
+    return;
+  }
   final members = await _ownedGroupMembers(owned);
   if (members == null) return;
   if (!await _onlyLeaderRemainsLive(members, owned)) return;
@@ -154,6 +158,10 @@ Future<bool> _onlyLeaderRemainsLive(
 
 Future<void> _watchSessionSettle(_OwnedProcessGroup owned) async {
   while (!owned.settleRequested) {
+    if (owned.deadlineArmed) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      continue;
+    }
     final members = await _ownedGroupMembers(owned);
     if (members == null) {
       await Future<void>.delayed(const Duration(milliseconds: 20));

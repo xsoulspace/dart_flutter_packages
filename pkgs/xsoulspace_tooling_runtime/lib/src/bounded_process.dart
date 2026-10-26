@@ -423,6 +423,7 @@ Future<BoundedRunResult> runBounded(
     if (finished || fired || ownerStopped) return;
     fired = deadlineExpired;
     ownerStopped = !deadlineExpired;
+    owned?.deadlineArmed = false;
     unawaited(() async {
       try {
         ladder.complete(
@@ -521,7 +522,8 @@ Future<BoundedRunResult> runBounded(
           return;
         }
         final members = await _ownedGroupMembers(owned);
-        if (!owned.settleRequested &&
+        if (!owned.deadlineArmed &&
+            !owned.settleRequested &&
             owned.reportedWaitStatus != null &&
             members != null &&
             await _onlyLeaderRemainsLive(members, owned)) {
@@ -867,6 +869,7 @@ final class _OwnedProcessGroup {
   bool externallyStopped = false;
   bool groupGone = false;
   bool settleRequested = false;
+  bool deadlineArmed = true;
   final settleAcknowledged = Completer<void>();
   int? reportedWaitStatus;
   String? unsettledReason;
@@ -938,7 +941,16 @@ Future<List<int>> _stopOwnedProcessGroup(
       // Cleared observation with a live supervisor is not group death (ADR 0066).
       if (!owned.ready && !owned.rootExited) {
         if (owned.process.kill(value)) signaled.add(owned.process.pid);
+      } else if (!owned.rootExited && snapshot.isNotEmpty) {
+        signaled.addAll(snapshot);
+        if (await _sendOwnedControl(owned, command)) {
+          return true;
+        }
       }
+      return signaled.isNotEmpty;
+    }
+    if (value == ProcessSignal.sigkill &&
+        await _onlyLeaderRemainsLive(members, owned)) {
       return signaled.isNotEmpty;
     }
     signaled.addAll(members);
@@ -974,7 +986,8 @@ Future<List<int>> _stopOwnedProcessGroup(
     final members = await _ownedGroupMembers(owned);
     final snapshot = Set<int>.from(owned.observedMembers);
     final refuseRootKill = members == null && snapshot.isEmpty ||
-        (members != null && members.isEmpty && owned.ready);
+        (members != null && members.isEmpty && owned.ready) ||
+        (members == null && owned.ready);
     if (!refuseRootKill && owned.process.kill(ProcessSignal.sigkill)) {
       signaled.add(owned.process.pid);
     }
