@@ -546,17 +546,22 @@ and the two controls that can close the LoRA line on their own. It is frozen
 written after seeing data is a knob. No arm below has run. No
 threshold here may move after one does.
 
-> **Post-run status (2026-10-26, updated after the noise arm).** Since this
-> Part was frozen: **L-G1 (few-shot) and L-G6 (ranking) ran and FAILED on
-> both tasks**, **L-G3 is satisfied** (every cell re-scored at coverage
-> 1.0000), and **L-G2 (noise adapter) ran on 2026-10-26 and MISSED on both
-> tasks** (0.5392 vs a 0.7737 threshold; 0.2511 vs 0.6533; the pre-registered
-> reading fired: the gain is not explained by format alone). So the LoRA
-> line is CONFIRMED with the format explanation measured out, and **L-G7 is
-> the only unrun gate** (L-G5 is a bench, not a closing gate). Evidence:
-> `bench/nursery/experiments/RESULTS-noise-2026-10-26.md`; ledger:
-> [`LINES.md`](LINES.md) Row M; classification and the current order:
-> [`VERDICTS.md`](VERDICTS.md). No threshold below has moved.
+> **Post-run status (2026-10-26, final: every gate in this Part has run).**
+> Since this Part was frozen: **L-G1 (few-shot) and L-G6 (ranking) ran and
+> FAILED on both tasks**, **L-G3 is satisfied** (every cell re-scored at
+> coverage 1.0000), **L-G2 (noise adapter) ran and MISSED on both tasks**
+> (0.5392 vs a 0.7737 threshold; 0.2511 vs 0.6533 — the gain is not explained
+> by format alone), and **L-G7 (third task) ran and PASSED** (shared 1.0000 =
+> untagged 1.0000 on the dissimilar pair, leak 0, completions 204/204
+> identical; the pre-registered first case fires: per-task by default, shared
+> defensible across a semantically dissimilar group). The LoRA line is
+> CONFIRMED load-bearing with the format explanation measured out and the
+> shared-answer-space rule measured at both ends. L-G4 measured (lever real,
+> fused forward absent); L-G5 remains a bench. Evidence:
+> `bench/nursery/experiments/RESULTS-noise-2026-10-26.md` and
+> `RESULTS-third-2026-10-26.md`; ledger: [`LINES.md`](LINES.md) Row M;
+> classification and what is next: [`VERDICTS.md`](VERDICTS.md). No threshold
+> below has moved.
 
 Line naming: **Line L** = the acceleration program. Its ledger row is
 **Row M** in [`LINES.md`](LINES.md); its cost and order are in

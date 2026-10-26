@@ -10,9 +10,10 @@ lines: **which verdicts are final, which numbers are void, which closures are
 environment-conditional, and what is actually next.**
 
 This file is **a reading of the record at a named time** — 2026-10-26 (last
-touch: the L-G2 noise arm, branch `ag-c` after `03720365`) — not a claim about
-the tree today. If a row here and its evidence disagree, the evidence wins and
-this file is wrong; fix it here.
+touch: the L-G7 third-task arm, which completed the Part-4 gate set; branch
+`ag-c`, same day as `03720365`/`0727e53d`) — not a claim about the tree
+today. If a row here and its evidence disagree, the evidence wins and this
+file is wrong; fix it here.
 
 Reading order: **this file → [`LINES.md`](LINES.md) rows →
 [`MTP-GATES.md`](MTP-GATES.md) gates → `bench/nursery/experiments/RESULTS-*`
@@ -58,10 +59,16 @@ before an arm that can only refine it* — and by measured cost.
    base's accuracy to 4 dp; on perm it lands below trivial. The format
    explanation of the adapter's gain is measured out. Evidence:
    `bench/nursery/experiments/RESULTS-noise-2026-10-26.md`.
-3. **L-G7 third task** (~1.5 h; corpus generated, 900 rows, disjoint,
-   majority 0.25) — settles the shared-answer-space rule (per-task always vs
-   conditional-default). Leak > 0 on a dissimilar pair also voids the
-   upper-bound reading of the 6 % perm/veto leak.
+3. **L-G7 third task — RUN 2026-10-26, PASS.** On perm+third (the
+   single-variable swap of K''-G2's pair): shared 1.0000 = untagged 1.0000 on
+   the third cell (bar 0.95), leak 0, completions **204/204
+   character-identical** — the union option list is free where the tasks
+   share nothing, while still costing −0.089 on the same run's perm cell
+   (leak-free). Pre-registered first case fires: *per-task by default;
+   shared is defensible across a semantically dissimilar group.* Evidence:
+   `bench/nursery/experiments/RESULTS-third-2026-10-26.md`. **With this,
+   every Part-4 gate has run**; the remaining work is Tier A (the fused
+   batch), L-G5 (cost bench) and Tier C (record repairs).
 4. **L-G5 prompt-shape cost bench** (inference-only) — the product number for
    shared vs per-task option list (bytes, prefill wall, KV, cache hit rate).
 5. **Rank with the adapter** (inference-only, minutes; never measured) —
@@ -153,7 +160,7 @@ arm on new hardware (must be a new registered arm; see CONDITIONAL).
 | `LAYA_COMPILE` as default | first traced call 6.6 s; break-even ~150+ decisions per shape; steady 1.79× AC | daemon-class long-lived workloads on one shape | `LINES.md` R6 record; `r1_compile_ab_probe` |
 | q8 (LAYA_Q8) as default | calibration green ONLY at alternate-layers g32 (63/63 @ 0.0164); no B=1 latency win (compute-bound) | products that need resident-weight bytes; a score/noul sensitivity pass per new checkpoint | R3b closure record |
 | Perf gates asserting | battery throttles 4–10×; l0 flapped twice on mid-run unplug | AC (the gate law itself: battery = POWER-CONTAMINATED banner + pass; unknown keeps asserting) | `POWER.md`; ADR 0061 |
-| Shared answer space across tasks | cost −7–9 points + 6 % foreign-label leak — but perm+veto are BOTH permission requests, so the leak is an **upper bound** | L-G7: a third, semantically dissimilar task (leak 0 AND ≤0.05 loss ⇒ legal for dissimilar groups; leak > 0 ⇒ per-task always) | K''-G2; `MTP-GATES.md` L-G7 |
+| Shared answer space across CLOSE tasks (perm+veto) | cost −7–9 points + 6 % foreign-label leak — and L-G7 (2026-10-26) measured the distant end: leak 0, completions identical, so the upper-bound reading STANDS and the rule is now measured at both ends: per-task for close groups, shared defensible for dissimilar ones | a third close pair that does not leak (new arm) — the close-pair leak itself stands | K''-G2; `MTP-GATES.md` L-G7; `RESULTS-third-2026-10-26.md` |
 | Fused-batch numbers as gate inputs | the fused forward does not exist; bit-level divergence (0.0625 body / 0.0239 projection) is measured and reported, never hidden | decision-level invariance + no short-row defect on the left-padded path (Tier A) | `MTP-GATES.md` L-G4 post-run note |
 | Speculative/MTP native ports as shippable decoders | token-exact but 0.42×/0.36× on this device | same conditions as their parent rows | `qwen_spec_bench`/`qwen_mtp_bench` records |
 
@@ -164,7 +171,6 @@ arm on new hardware (must be a new registered arm; see CONDITIONAL).
 | item | gate | cost | pre-registered expectation |
 | ---- | ---- | ---- | -------------------------- |
 | Fused batched decode (the four-part change) | decision invariance + no short-row | engineering, no training | 5.39× projected at batch 8; flips ranking economics |
-| L-G7 third task | shared ≥ untagged − 0.05 AND leak 0 | ~1.5 h (corpus ready) | three-case reading frozen in `MTP-GATES.md` |
 | L-G5 prompt-shape cost | shared ≤ 10 % prefill wall AND 0 added bytes | inference-only | cost gate, independent of accuracy |
 | ranked(adapter) | compare vs generation accuracy + prefill-bound cost | minutes | unnamed by any gate yet — would need a frozen threshold before it counts |
 | Constrained decoding / logit masking | probe: base outside-label-set rate | minutes | predicted dead on arrival — the base already emits 0 illegal labels (L-G6) |
@@ -182,6 +188,8 @@ arm on new hardware (must be a new registered arm; see CONDITIONAL).
 | ------ | ------ | -------- |
 | LoRA adapter capability (one adapter, both tasks, untagged) | +0.31 perm / +0.47 veto over matched trivial; coverage 1.0; strict scoring; reproduced 131/150 on re-score | `LINES.md` Row K/Row M |
 | The gain is NOT format (L-G2, 2026-10-26) | noise adapter (random labels, all else equal) 0.5392 / 0.2511 vs thresholds 0.7737 / 0.6533 — MISS both; veto collapses to one majority label = +0.000 over trivial; TIER-0 == TIER-1 to 4 dp | `RESULTS-noise-2026-10-26`; `adapter-noise-2026-10-26/gates.json` |
+| The shared-answer-space rule, measured at both ends (L-G7, 2026-10-26) | distant pair (perm+taxonomy): shared 1.0000 = untagged 1.0000, leak 0, completions 204/204 identical; close pair (perm+veto, K''-G2): −7–9 points + 6 % leak. Rule: per-task by default; shared defensible across a dissimilar group | `RESULTS-third-2026-10-26`; `adapter-third-2026-10-26/gates.json` |
+| The third task is learnable and the base cannot do it | adapters 1.0000 (concentration 0.284 = corpus balance); base 0.2402 below trivial, concentration 0.990, 2/204 answers outside every listed label (the lane's first) | `RESULTS-third-2026-10-26` |
 | Attribution: multi-task data load-bearing; tag not; option list = refinement (+7–9 pts, prevents the leak) | permsolo p<0.001 both directions; tag p=0.185/1.000; shared still transfers | K''-G1/G2 |
 | LoRA mechanical surface | byte-reversible swap; digest cache key; quantized base refused; mlx-lm↔PEFT auto-detect; artifact merges in-suite (27+8+1 tests) | `lora_set.rs`, `lora.rs`, `tests/mlx_lm_artifact_merge.rs` |
 | Prefix-cache weight identity | engine-owned digest; stale hit impossible; test-locked | Row L |

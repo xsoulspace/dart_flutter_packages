@@ -55,19 +55,22 @@ and what it costs).
 > and the pre-registered order are Part B below. The ledger row is **Row M —
 > the acceleration program** in [`LINES.md`](LINES.md).
 >
-> **Post-run status (2026-10-26, updated after the noise arm).** Of those six
-> arms: **L-G1 and L-G6 ran and FAILED on both tasks** (the LoRA line is
-> CONFIRMED, not closed — a PASS would have ended it); L-G4's amortization
-> probe ran (the lever is worth buying at a projected 5.39× @ batch 8, but
-> the fused forward does not exist); L-G3 is satisfied (coverage 1.0000 on
-> every cell); and **L-G2 ran on 2026-10-26 and MISSED on both tasks**
-> (0.5392/0.2511 vs thresholds 0.7737/0.6533 — the format explanation of the
-> adapter's gain is measured out; ≈ 7 min training on AC, not the ≈ 18 min
-> budgeted). **L-G7 (~1.5 h) is now the only unrun gate** — Part B.5's steps
-> 1 and 3 have fired; step 4 is live (L-G5 remains a bench, not a closer).
-> Evidence: `bench/nursery/experiments/RESULTS-noise-2026-10-26.md`;
-> ledger: [`LINES.md`](LINES.md) Row M; classification and the current
-> order: [`VERDICTS.md`](VERDICTS.md).
+> **Post-run status (2026-10-26, final: every Part-B gate has run).** L-G1
+> and L-G6 ran and FAILED on both tasks (the LoRA line is CONFIRMED, not
+> closed — a PASS would have ended it); L-G4's amortization probe ran (the
+> lever is worth buying at a projected 5.39× @ batch 8, but the fused forward
+> does not exist); L-G3 is satisfied (coverage 1.0000 on every cell); L-G2
+> ran and MISSED on both tasks (0.5392/0.2511 vs thresholds 0.7737/0.6533 —
+> the format explanation is measured out; ≈ 7 min training on AC); **L-G7
+> ran and PASSED** on the dissimilar pair perm+third (shared 1.0000 =
+> untagged 1.0000 on the third cell, leak 0, completions 204/204 identical —
+> per-task by default, shared defensible across a semantically dissimilar
+> group; the shared list still cost −0.089 on the same run's perm cell).
+> L-G5 remains a bench. What is next is engineering, not gating: the fused
+> batch (Tier A in [`VERDICTS.md`](VERDICTS.md)), the L-G5 cost bench, and
+> the Tier-C record repairs. Evidence:
+> `bench/nursery/experiments/RESULTS-noise-2026-10-26.md` and
+> `RESULTS-third-2026-10-26.md`; ledger: [`LINES.md`](LINES.md) Row M.
 
 ---
 

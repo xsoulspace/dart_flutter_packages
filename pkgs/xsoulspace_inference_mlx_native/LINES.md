@@ -397,10 +397,17 @@ working, not failing.
   accuracy to four decimals; on perm it lands BELOW trivial. The format
   explanation of the adapter's gain is measured out, not argued away. Full
   numbers: `bench/nursery/experiments/RESULTS-noise-2026-10-26.md`.
-- **L-G7 (third task): NOT EVALUABLE** — the corpus is generated
-  (`third_task_dataset.py`: 900 rows, exactly balanced, majority 0.25, disjoint
-  from both existing corpora) but the arm was not run. **It is now the only
-  unrun gate in the program.**
+- **L-G7 (third task): RUN 2026-10-26 — PASS, both conditions hold.** On the
+  dissimilar pair (perm + instrument-taxonomy; 900-row generated corpus,
+  disjoint labels and vocabulary, majority 0.25): shared 1.0000 vs untagged
+  1.0000 on the third cell (bar was 0.95), leak **0**, and the two arms'
+  completions are **204/204 character-identical** — the union option list
+  costs nothing where the tasks share nothing. The pre-registered first case
+  fires: *per-task by default; shared is defensible across a semantically
+  dissimilar group* (the shared list still cost −0.089 on the perm cell of
+  the same run, leak-free). Full numbers:
+  `bench/nursery/experiments/RESULTS-third-2026-10-26.md`. **Every Part-4
+  gate has now run.**
 
 **So the LoRA line is CONFIRMED as load-bearing**, against the two cheapest
 zero-training alternatives (prompting, constrained ranking), both of which
@@ -459,11 +466,17 @@ hazard. Everything else stays in Python.** Applied here:
    cells are now at coverage 1.0000 (293 perm / 227 veto), and the L-gates
    are evaluable instead of refused. The `fewshot` and `ranked` arms are
    measured; L-G7 is not — and L-G2 joined the measured set on 2026-10-26
-   (MISS).
+   (MISS), L-G7 on 2026-10-26 (PASS, perm+third, 6 more cells at coverage
+   1.0).
 2. **The L-G2 noise-adapter control — RUN (2026-10-26), MISS on both
    tasks.** The prediction is now a measurement: the format-only adapter
    scores at base level (veto: one label, 227/227, accuracy identical to
    base to 4 dp). What the real adapter adds is not format.
+3. **The L-G7 third task — RUN (2026-10-26), PASS.** Shared answer space is
+   legal across the dissimilar group (identical completions, zero leak);
+   per-task stays the default on cost. The shared-list cost reappears on the
+   policy task of the same run (−0.089, leak-free) — the rule the gate
+   wrote, measured on both ends.
 3. **Any batched-decode measurement at all** (L-G4) — now MEASURED (§ above):
    the lever is worth 5.39× projected, the fused forward does not exist, and
    the bit-level precondition is the wrong bar.
