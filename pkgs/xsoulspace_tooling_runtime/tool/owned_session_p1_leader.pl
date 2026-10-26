@@ -89,12 +89,40 @@ if ($child == 0) {
 my $main_status = 0;
 my $main_reported = 0;
 my $exit_sent = 0;
+my $stdin_refused = 0;
+sub refuse_admitted_stdin {
+  return if $stdin_refused;
+  close(STDIN);
+  $stdin_refused = 1;
+}
+sub child_stdin_closed {
+  return 0 if $main_reported;
+  return !-e "/proc/$child/fd/0";
+}
+sub child_has_execd {
+  return 0 unless open my $fh, '<', "/proc/$child/cmdline";
+  my $cmd = do { local $/; <$fh> };
+  close($fh);
+  return defined $cmd && length($cmd) > 0;
+}
 close($write_error);
 my $error = '';
 while (sysread($read_error, my $buffer, 4096)) { $error .= $buffer; }
 close($read_error);
 if (length($error)) {
   emit_error($marker, 'exec', $error);
+}
+
+for (my $i = 0; $i < 1000; $i++) {
+  last if child_has_execd();
+  select(undef, undef, undef, 0.001);
+}
+for (my $i = 0; $i < 100; $i++) {
+  last if child_stdin_closed();
+  select(undef, undef, undef, 0.001);
+}
+if (!$stdin_refused && child_stdin_closed()) {
+  refuse_admitted_stdin();
 }
 
 print $sock "started\n";
@@ -109,6 +137,7 @@ sub report_main_exit {
   print $sock "exit:$main_status\n";
   $sock->flush();
   $exit_sent = 1;
+  refuse_admitted_stdin();
 }
 
 report_main_exit();
@@ -129,6 +158,9 @@ sub read_control_line {
 my $settled = 0;
 while (!$settled) {
   report_main_exit();
+  if (!$stdin_refused && child_stdin_closed()) {
+    refuse_admitted_stdin();
+  }
   my $line = read_control_line($sock, 0.2);
   last unless defined $line;
   next if $line eq '';

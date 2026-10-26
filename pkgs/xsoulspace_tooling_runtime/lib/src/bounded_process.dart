@@ -457,16 +457,28 @@ Future<BoundedRunResult> runBounded(
   Future<void> startAdmittedInput() async {
     if (input == null || duplex != null || inputDone.isCompleted) return;
     try {
-      process.stdin.add(input);
-      await process.stdin.flush();
-    } on Object catch (error) {
-      inputProblem ??= 'admitted stdin write/flush failed: $error';
-    } finally {
+      const chunkSize = 64 * 1024;
+      for (var offset = 0; offset < input.length; offset += chunkSize) {
+        if (fired || ownerStopped) {
+          inputProblem ??= 'admitted stdin did not settle after deadline';
+          return;
+        }
+        final end = offset + chunkSize > input.length
+            ? input.length
+            : offset + chunkSize;
+        process.stdin.add(input.sublist(offset, end));
+        await process.stdin.flush();
+      }
       try {
         await process.stdin.close();
       } on Object catch (error) {
         inputProblem ??= 'admitted stdin close failed: $error';
       }
+      if (inputProblem == null && !inputDone.isCompleted) {
+        inputDone.complete();
+      }
+    } on Object catch (error) {
+      inputProblem ??= 'admitted stdin write/flush failed: $error';
       if (!inputDone.isCompleted) inputDone.complete();
     }
   }
@@ -479,7 +491,7 @@ Future<BoundedRunResult> runBounded(
     startupError = owned?.controlFailure;
   }
   if (startupError == null && input != null && duplex == null) {
-    await startAdmittedInput();
+    unawaited(startAdmittedInput());
   }
   if (startupError == null && duplex != null) {
     try {
@@ -574,9 +586,11 @@ Future<BoundedRunResult> runBounded(
       if (await _pidAlive(pid) != false) pid,
   };
   String? settlementProblem;
-  if (!inputDone.isCompleted && !(fired || ownerStopped)) {
+  if (!inputDone.isCompleted) {
     inputProblem ??= 'admitted stdin did not settle after deadline';
-    settlementProblem = 'admitted stdin remained unsettled';
+    if (!(fired || ownerStopped)) {
+      settlementProblem = 'admitted stdin remained unsettled';
+    }
   }
   if (owned != null) {
     if (!fired && owned.settleAcknowledged.isCompleted) {
@@ -597,11 +611,11 @@ Future<BoundedRunResult> runBounded(
       if (await _pidAlive(process.pid) != false) {
         survivors.add(process.pid);
       }
-      settlementProblem =
+      settlementProblem ??=
           'inherited pipe remained open outside settled session';
     }
     if (owned.unsettledReason != null) {
-      settlementProblem = 'owned session ${owned.unsettledReason}';
+      settlementProblem ??= 'owned session ${owned.unsettledReason}';
     }
     _ownedProcessGroups.remove(process.pid);
   }
@@ -715,12 +729,39 @@ if ($child == 0) {
 my $main_status = 0;
 my $main_reported = 0;
 my $exit_sent = 0;
+my $stdin_refused = 0;
+sub refuse_admitted_stdin {
+  return if $stdin_refused;
+  close(STDIN);
+  $stdin_refused = 1;
+}
+sub child_stdin_closed {
+  return 0 if $main_reported;
+  return !-e "/proc/$child/fd/0";
+}
+sub child_has_execd {
+  return 0 unless open my $fh, '<', "/proc/$child/cmdline";
+  my $cmd = do { local $/; <$fh> };
+  close($fh);
+  return defined $cmd && length($cmd) > 0;
+}
 close($write_error);
 my $error = '';
 while (sysread($read_error, my $buffer, 4096)) { $error .= $buffer; }
 close($read_error);
 if (length($error)) {
   emit_error($marker, 'exec', $error);
+}
+for (my $i = 0; $i < 1000; $i++) {
+  last if child_has_execd();
+  select(undef, undef, undef, 0.001);
+}
+for (my $i = 0; $i < 100; $i++) {
+  last if child_stdin_closed();
+  select(undef, undef, undef, 0.001);
+}
+if (!$stdin_refused && child_stdin_closed()) {
+  refuse_admitted_stdin();
 }
 print $sock "started\n";
 $sock->flush();
@@ -733,6 +774,7 @@ sub report_main_exit {
   print $sock "exit:$main_status\n";
   $sock->flush();
   $exit_sent = 1;
+  refuse_admitted_stdin();
 }
 report_main_exit();
 $SIG{TERM} = 'IGNORE';
@@ -750,6 +792,9 @@ sub read_control_line {
 my $settled = 0;
 while (!$settled) {
   report_main_exit();
+  if (!$stdin_refused && child_stdin_closed()) {
+    refuse_admitted_stdin();
+  }
   my $line = read_control_line($sock, 0.2);
   last unless defined $line;
   next if $line eq '';
