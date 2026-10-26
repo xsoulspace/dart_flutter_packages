@@ -462,8 +462,14 @@ pub fn rank_labels_with(
         } else {
             sum / per_token.len() as f32
         };
+        // SAME UNITS: `p` is a probability, `per_token` entries are natural
+        // LOG-probabilities. The original `p > first` compared across units
+        // and fired on every row (any positive probability beats any
+        // negative logprob) — the recorded 293/293 eos_dominant pattern was
+        // this, not a model fact. Found in the same 2026-10-26 localization
+        // as the missing max add-back.
         let eos_dominates = match (eos_prob_first, per_token.first()) {
-            (Some(p), Some(&first)) => p > first,
+            (Some(p), Some(&first)) => p > first.exp(),
             _ => false,
         };
         score.tokens = tail;
@@ -546,17 +552,24 @@ pub(crate) fn position_logprobs(
     let maxv = lg.take_along_axis(&am3, 2, s)?;
     let shifted = lg.sub(&maxv, s)?;
     let ex = shifted.exp(s)?;
-    let lse = ex.sum_axes(&[2], false, s)?.log(s)?; // [1, m]
-                                                    // The target tokens' own logits.
+    let lse_shifted = ex.sum_axes(&[2], false, s)?.log(s)?; // [1, m]
+    // THE MAX MUST GO BACK: `lse_shifted` is logsumexp(logits) - max, the
+    // stable form's remainder. The 2026-10-26 localization (the L-G6
+    // cross-engine disagreement, V-r) found this line scored every native
+    // rank as logprob + sum(max logits) — an unnormalized eos "probability"
+    // above 1 on every row (the recorded 293/293 eos_dominant), and a
+    // ranking distortion that moved winners. maxv is [1, m, 1]; read it
+    // beside lse and subtract it too: lp = tgt - max - log(sum exp(t-max)).
+    let maxv_v = maxv.to_f32_vec(s)?;
     let tgt: Vec<i32> = targets.iter().map(|&t| t as i32).collect();
     let tgt_arr = Array::from_data_i32(&tgt, &[1, m, 1])?;
     let tg = lg.take_along_axis(&tgt_arr, 2, s)?; // [1, m, 1]
-    let lse_v = lse.to_f32_vec(s)?;
+    let lse_v = lse_shifted.to_f32_vec(s)?;
     let tg_v = tg.to_f32_vec(s)?;
-    if lse_v.len() < m || tg_v.len() < m {
+    if lse_v.len() < m || tg_v.len() < m || maxv_v.len() < m {
         return Err(MlxError(-992));
     }
-    let per_token: Vec<f32> = (0..m).map(|i| tg_v[i] - lse_v[i]).collect();
+    let per_token: Vec<f32> = (0..m).map(|i| tg_v[i] - maxv_v[i] - lse_v[i]).collect();
     // The EOS probability at the FIRST scored position: would the model stop
     // where the label starts?
     let eos_prob_first = match eos {
@@ -566,7 +579,7 @@ pub(crate) fn position_logprobs(
             if el.is_empty() {
                 None
             } else {
-                let p = (el[0] - lse_v[0]) as f64;
+                let p = (el[0] - maxv_v[0] - lse_v[0]) as f64;
                 Some(p.exp() as f32)
             }
         }
