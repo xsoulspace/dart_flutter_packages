@@ -601,7 +601,6 @@ final class _OwnedProcessGroup {
 
   /// Last successful `ps` observation of the owned group (empty included).
   final Set<int> observedMembers = <int>{};
-  DateTime? observedMembersAt;
 }
 
 /// The launch acknowledgement proves setsid returned the root PID. POSIX
@@ -620,10 +619,10 @@ Future<Set<int>?> _ownedGroupMembers(_OwnedProcessGroup owned) async {
     // Once the admitted group disappears, never reacquire a recycled ID.
     owned.groupGone = true;
   }
+  // Record the last successful observation (empty included).
   owned.observedMembers
     ..clear()
     ..addAll(members);
-  owned.observedMembersAt = DateTime.now();
   return members;
 }
 
@@ -635,12 +634,22 @@ Future<List<int>> _stopOwnedProcessGroup(
   Future<bool> signal(ProcessSignal value) async {
     final members = await _ownedGroupMembers(owned);
     if (members == null) {
-      // PGID equals the unreaped root pid; once the root has exited, refuse
-      // -pgid rather than risk a recycled id (see steward ps-fallback review).
+      // ADR 0066: refuse -pgid after the admitted root is reaped — a recycled
+      // id could be signaled. The stale-snapshot window is bounded only by the
+      // gap between root reap and the host observing rootExited in the exit
+      // callback, not by an arbitrary clock.
       if (owned.rootExited) return false;
       if (owned.observedMembers.isEmpty) return false;
       signaled.addAll(owned.observedMembers);
       Process.killPid(-owned.process.pid, value);
+      for (final pid in owned.observedMembers) {
+        try {
+          Process.killPid(pid, value);
+        } on Object {
+          // Best-effort: the group signal is primary; per-pid delivery
+          // covers races where ps lagged membership into the snapshot.
+        }
+      }
       return true;
     }
     if (members.isEmpty) {
@@ -675,7 +684,8 @@ Future<List<int>> _stopOwnedProcessGroup(
   return signaled.toList()..sort();
 }
 
-/// When set, replaces live `ps` enumeration (for unit tests).
+/// When set, replaces live owned-group `ps` enumeration and the pre-spawn
+/// `runBounded` observation probe for the whole isolate (`@visibleForTesting`).
 @visibleForTesting
 Future<List<(int, int, int, String)>?> Function()? boundedProcessGroupRowsOverride;
 
