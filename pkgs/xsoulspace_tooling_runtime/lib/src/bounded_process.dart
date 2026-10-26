@@ -872,6 +872,7 @@ final class _OwnedProcessGroup {
   bool externallyStopped = false;
   bool groupGone = false;
   bool deferSigkillEscalation = false;
+  bool clearedPsObservationStop = false;
   bool settleRequested = false;
   final bool tightDeadline;
   bool deadlineArmed;
@@ -938,8 +939,7 @@ Future<List<int>> _stopOwnedProcessGroup(
       // Unavailable observation is not death certification (ADR 0066).
       if (owned.rootExited) return false;
       if (snapshot.isEmpty) return false;
-      if (owned.ready && owned.deferSigkillEscalation) return false;
-      if (owned.ready && snapshot.isNotEmpty) return false;
+      if (owned.ready && owned.clearedPsObservationStop) return false;
       signaled.addAll(snapshot);
       if (!owned.rootExited && await _sendOwnedControl(owned, command)) {
         return true;
@@ -952,6 +952,7 @@ Future<List<int>> _stopOwnedProcessGroup(
         if (owned.process.kill(value)) signaled.add(owned.process.pid);
       } else if (!owned.rootExited && snapshot.isNotEmpty) {
         signaled.addAll(snapshot);
+        owned.clearedPsObservationStop = true;
         owned.deferSigkillEscalation = true;
         return true;
       }
@@ -982,7 +983,7 @@ Future<List<int>> _stopOwnedProcessGroup(
     }
     await Future<void>.delayed(const Duration(milliseconds: 20));
   }
-  if (!owned.deferSigkillEscalation) {
+  if (!owned.clearedPsObservationStop) {
     await signal(ProcessSignal.sigkill);
   }
   end = DateTime.now().add(grace);
@@ -995,7 +996,7 @@ Future<List<int>> _stopOwnedProcessGroup(
   if (!owned.rootExited) {
     final members = await _ownedGroupMembers(owned);
     final snapshot = Set<int>.from(owned.observedMembers);
-    final refuseRootKill = owned.deferSigkillEscalation ||
+    final refuseRootKill = owned.clearedPsObservationStop ||
         members == null && snapshot.isEmpty ||
         (members != null && members.isEmpty && owned.ready) ||
         (members == null && owned.ready);
