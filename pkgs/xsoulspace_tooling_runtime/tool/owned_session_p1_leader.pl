@@ -86,6 +86,9 @@ if ($child == 0) {
   close($write_error);
   exit(1);
 }
+my $main_status = 0;
+my $main_reported = 0;
+my $exit_sent = 0;
 close($write_error);
 my $error = '';
 while (sysread($read_error, my $buffer, 4096)) { $error .= $buffer; }
@@ -97,40 +100,38 @@ if (length($error)) {
 print $sock "started\n";
 $sock->flush();
 
-my $main_status = 0;
-my $main_reported = 0;
 sub report_main_exit {
-  return if $main_reported;
+  return if $exit_sent;
   my $reaped = waitpid($child, WNOHANG());
   return unless $reaped > 0;
   $main_status = $?;
+  $main_reported = 1;
   print $sock "exit:$main_status\n";
   $sock->flush();
-  $main_reported = 1;
+  $exit_sent = 1;
 }
 
-$SIG{CHLD} = sub {
-  while (my $pid = waitpid(-1, WNOHANG())) {
-    next if $pid <= 0;
-    if ($pid == $child) {
-      $main_status = $?;
-      unless ($main_reported) {
-        print $sock "exit:$main_status\n";
-        $sock->flush();
-        $main_reported = 1;
-      }
-    }
-  }
-};
 report_main_exit();
 
-$SIG{TERM} = sub {
-  kill 15, 0;
-  kill 18, 0;
-};
+$SIG{TERM} = 'IGNORE';
 
+sub read_control_line {
+  my ($handle, $seconds) = @_;
+  my $rin = '';
+  vec($rin, fileno($handle), 1) = 1;
+  my $ready = select($rin, undef, undef, $seconds);
+  return '' if !defined $ready || $ready <= 0;
+  local $/ = "\n";
+  my $line = <$handle>;
+  return undef unless defined $line;
+  return $line;
+}
 my $settled = 0;
-while (my $line = <$sock>) {
+while (!$settled) {
+  report_main_exit();
+  my $line = read_control_line($sock, 0.2);
+  last unless defined $line;
+  next if $line eq '';
   chomp $line;
   if ($line eq 'term') {
     run_graceful_hook(
@@ -151,7 +152,6 @@ while (my $line = <$sock>) {
     print $sock "settled\n";
     $sock->flush();
     $settled = 1;
-    last;
   }
 }
 

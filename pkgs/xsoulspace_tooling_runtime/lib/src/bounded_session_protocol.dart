@@ -135,14 +135,21 @@ Future<void> _maybeSettleAfterTargetExit(_OwnedProcessGroup owned) async {
   if (owned.reportedWaitStatus == null || owned.settleRequested) return;
   final members = await _ownedGroupMembers(owned);
   if (members == null) return;
-  final live = <int>{
-    for (final pid in members)
-      if (await _pidAlive(pid) != false) pid,
-  };
-  if (live.isEmpty ||
-      (live.length == 1 && live.single == owned.process.pid)) {
-    await _requestSessionSettle(owned);
+  if (!await _onlyLeaderRemainsLive(members, owned)) return;
+  await _requestSessionSettle(owned);
+}
+
+Future<bool> _onlyLeaderRemainsLive(
+  Set<int> members,
+  _OwnedProcessGroup owned,
+) async {
+  var liveLeader = false;
+  for (final pid in members) {
+    if (await _pidAlive(pid) == false) continue;
+    if (pid != owned.process.pid) return false;
+    liveLeader = true;
   }
+  return liveLeader;
 }
 
 Future<void> _watchSessionSettle(_OwnedProcessGroup owned) async {
@@ -152,9 +159,8 @@ Future<void> _watchSessionSettle(_OwnedProcessGroup owned) async {
       await Future<void>.delayed(const Duration(milliseconds: 20));
       continue;
     }
-    if (members.length == 1 &&
-        members.single == owned.process.pid &&
-        (owned.reportedWaitStatus != null || owned.settleRequested)) {
+    if (owned.reportedWaitStatus != null &&
+        await _onlyLeaderRemainsLive(members, owned)) {
       await _requestSessionSettle(owned);
       return;
     }
