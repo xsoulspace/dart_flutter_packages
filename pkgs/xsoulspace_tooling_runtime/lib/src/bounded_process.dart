@@ -704,6 +704,14 @@ int _byteSequenceIndex(List<int> bytes, List<int> needle) {
 
 final _ownedProcessGroups = <int, _OwnedProcessGroup>{};
 
+/// Non-zero while [_stopOwnedProcessGroup] is on the stack (`@visibleForTesting`).
+@visibleForTesting
+int ownedGroupStopInProgress = 0;
+
+/// Incremented at the start of each [_stopOwnedProcessGroupBody] (`@visibleForTesting`).
+@visibleForTesting
+int ownedGroupStopPass = 0;
+
 final class _OwnedProcessGroup {
   _OwnedProcessGroup(
     this.process, {
@@ -780,6 +788,19 @@ Future<List<int>> _stopOwnedProcessGroup(
   _OwnedProcessGroup owned, {
   required Duration grace,
 }) async {
+  ownedGroupStopInProgress++;
+  try {
+    return await _stopOwnedProcessGroupBody(owned, grace: grace);
+  } finally {
+    ownedGroupStopInProgress--;
+  }
+}
+
+Future<List<int>> _stopOwnedProcessGroupBody(
+  _OwnedProcessGroup owned, {
+  required Duration grace,
+}) async {
+  ownedGroupStopPass++;
   final signaled = <int>{};
   Future<bool> signal(ProcessSignal value) async {
     final snapshot = Set<int>.from(owned.observedMembers);
@@ -893,20 +914,12 @@ Future<List<(int, int, int, String)>?> _groupRows() async {
 }
 
 Future<List<(int, int, int, String)>?> _readGroupRowsFromPs() async {
-  final ProcessResult result;
-  try {
-    result = await Process.run(
-      'ps',
-      const ['-eo', 'pid=,ppid=,pgid=,stat='],
-    ).timeout(_groupObservationBudget);
-  } on TimeoutException {
-    return null;
-  } on Object {
-    return null;
-  }
-  if (result.exitCode != 0) return null;
+  final output = await _runPsObservation(
+    const ['-eo', 'pid=,ppid=,pgid=,stat='],
+  );
+  if (output == null) return null;
   final rows = <(int, int, int, String)>[];
-  for (final line in (result.stdout as String).split('\n')) {
+  for (final line in output.split('\n')) {
     final parts = line.trim().split(RegExp(r'\s+'));
     if (parts.length != 4 || parts[3].startsWith('Z')) continue;
     final values = [for (final value in parts.take(3)) int.tryParse(value)];
@@ -940,6 +953,15 @@ Future<List<int>> stopProcessTree(
     owned.externallyStopped = true;
     return _stopOwnedProcessGroup(owned, grace: grace);
   }
+  return const [];
+}
+
+/// Legacy `ps` tree stop for processes **not** admitted by [runBounded].
+@visibleForTesting
+Future<List<int>> stopUnownedPosixProcessTree(
+  int rootPid, {
+  Duration grace = const Duration(seconds: 5),
+}) async {
   final signaled = <int>{...await _processTree(rootPid)};
   _signalAll(signaled, ProcessSignal.sigterm);
   final graceEnd = DateTime.now().add(grace);
@@ -949,8 +971,6 @@ Future<List<int>> stopProcessTree(
     alive = await _stillAlive(signaled);
   }
   if (alive.isEmpty) return signaled.toList()..sort();
-  // The KILL rung: re-enumerate BEFORE the signal (children spawned
-  // under TERM are caught too), then verify death — no fire-and-forget.
   final beforeKill = <int>{...signaled, ...await _processTree(rootPid)};
   _signalAll(beforeKill, ProcessSignal.sigkill);
   final killEnd = DateTime.now().add(grace);
@@ -986,15 +1006,10 @@ Future<Set<int>> _processTree(int rootPid) async {
 /// excluded — a dead-but-unreaped pid is NOT alive. Null when `ps` is
 /// unavailable (Windows).
 Future<List<(int, int, String)>?> _psRows() async {
-  final ProcessResult result;
-  try {
-    result = await Process.run('ps', const ['-eo', 'pid=,ppid=,stat=']);
-  } on Object {
-    return null;
-  }
-  if (result.exitCode != 0) return null;
+  final output = await _runPsObservation(const ['-eo', 'pid=,ppid=,stat=']);
+  if (output == null) return null;
   final rows = <(int, int, String)>[];
-  for (final line in (result.stdout as String).split('\n')) {
+  for (final line in output.split('\n')) {
     final parts = line.trim().split(RegExp(r'\s+'));
     if (parts.length < 2) continue;
     final pid = int.tryParse(parts[0]);
@@ -1005,6 +1020,36 @@ Future<List<(int, int, String)>?> _psRows() async {
     rows.add((pid, ppid, stat));
   }
   return rows;
+}
+
+Future<String?> _runPsObservation(
+  List<String> args, {
+  Duration budget = _groupObservationBudget,
+}) async {
+  Process? process;
+  try {
+    process = await Process.start('ps', args);
+    final stdoutFuture = process.stdout.fold<List<int>>(
+      <int>[],
+      (previous, chunk) => [...previous, ...chunk],
+    );
+    final exitCode = await process.exitCode.timeout(
+      budget,
+      onTimeout: () {
+        process!.kill(ProcessSignal.sigkill);
+        return -999;
+      },
+    );
+    if (exitCode == -999 || exitCode != 0) {
+      process.kill(ProcessSignal.sigkill);
+      return null;
+    }
+    final buffer = await stdoutFuture;
+    return utf8.decode(buffer, allowMalformed: true);
+  } on Object {
+    process?.kill(ProcessSignal.sigkill);
+    return null;
+  }
 }
 
 void _signalAll(Iterable<int> pids, ProcessSignal signal) {
@@ -1035,10 +1080,17 @@ Future<Set<int>> _stillAlive(Iterable<int> pids) async {
 /// Retain ownership of reported survivors until observation proves settlement.
 /// This is a read-only wait, never another signal against a possibly reused
 /// identity. Unavailable observation cannot certify death.
-Future<void> awaitProcessSettlement(Iterable<int> ownedPids) async {
+Future<void> awaitProcessSettlement(
+  Iterable<int> ownedPids, {
+  Duration budget = const Duration(seconds: 30),
+}) async {
+  final end = DateTime.now().add(budget);
   var remaining = ownedPids.toSet();
-  while (remaining.isNotEmpty) {
-    remaining = await _stillAlive(remaining);
+  while (remaining.isNotEmpty && DateTime.now().isBefore(end)) {
+    final rows = await _psRows();
+    if (rows == null) return;
+    final live = rows.map((row) => row.$1).toSet();
+    remaining = remaining.intersection(live);
     if (remaining.isNotEmpty) {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     }
