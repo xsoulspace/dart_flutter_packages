@@ -22,13 +22,34 @@ separate from the pure materialization core of ADR 0065. No second executor,
 scheduler, journal, filesystem writer or model-provider dependency is introduced.
 
 POSIX execution establishes an acknowledged private session through an automatic
-trusted system Perl helper. A close-on-exec pipe distinguishes target spawn
-failure before notifying observers. The supervisor forwards main-target status;
-the host owns pipe drain and surviving group members after root exit. Private
-notices are removed; target argv, CWD, stdout and stderr retain their meanings.
-External cancellation uses the same retained owned group, never a guessed tree
-after the parent disappeared. Observed group disappearance is terminal: a
-recycled ID is never reacquired.
+trusted system helper (protocol **p1**, Perl reference in
+`pkgs/xsoulspace_tooling_runtime/tool/owned_session_p1_leader.pl`; contract in
+`doc/owned_session_p1.md`). A close-on-exec pipe distinguishes target spawn
+failure before notifying observers. The **owned** leader anchors the PGID,
+keeps its own stdin on `/dev/null`, and talks to the host over a **Unix-domain
+control socket** in a `0700` temp directory (authenticated with the launch
+marker nonce). Target stdin/stdout/stderr stay exact. The host never SIGKILLs
+the leader directly for group teardown: it sends `term` / `kill` commands on the
+channel; the leader runs `kill(0, SIGTERM)` then `kill(0, SIGCONT)` for `term`,
+and `kill(0, SIGKILL)` for `kill`. `Process.kill` on the leader is a last
+resort only. Channel EOF makes the leader kill its group and exit (host-death
+orphan guard). The host watches the group with bounded `ps` and sends `settle`
+when only the leader remains after the main target's `exit:<waitstatus>` notice.
+Missing observation is `unsettled:<reason>`, never silent certification. External
+cancellation uses `stopOwnedGroup` / the retained registration, never a guessed
+tree on a possibly recycled pid. Observed group disappearance is terminal: a
+recycled ID is never reacquired. There is no stale-snapshot per-pid fallback.
+
+**`singleProcessSession`** has no separate leader: the helper execs the target
+in the session-leader PID (unchanged handshake).
+
+### Implementation relocation (oka)
+
+Process mechanics (p1 leader, control channel, signal routing) will move to a new
+**oka** leaf package **`oka_process`** without changing the argv/socket contract
+documented in `doc/owned_session_p1.md`. This package retains **admission
+policy** — deadlines, `runBounded`, harness lifecycle exports, and
+`stopOwnedGroup` registration — until callers adopt `oka_process` directly.
 
 Missing helper or process observation refuses by name. Windows retains its
 existing root-only limitation. Descendants creating other groups/sessions and

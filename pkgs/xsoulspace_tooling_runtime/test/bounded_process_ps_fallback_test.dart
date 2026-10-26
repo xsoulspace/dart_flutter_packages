@@ -75,6 +75,61 @@ void main() {
     );
 
     test(
+      'TERM-ignoring group with ps outage: supervisor lives, SIGKILL clears group',
+      () async {
+        var armed = false;
+        var reads = 0;
+        boundedProcessGroupRowsOverride = () async {
+          if (!armed) return probeBoundedProcessGroupRows();
+          reads++;
+          if (reads <= 2) return probeBoundedProcessGroupRows();
+          return null;
+        };
+
+        final started = Completer<int>();
+        final running = runBounded(
+          '/bin/sh',
+          [
+            '-c',
+            r'''trap '' TERM
+sleep 30 &
+printf '%s\n%s\n' "$$" "$!" > /dev/null
+wait''',
+          ],
+          deadline: const Duration(seconds: 1),
+          grace: const Duration(milliseconds: 200),
+          onStarted: (pid) {
+            armed = true;
+            reads = 0;
+            started.complete(pid);
+          },
+        );
+        final root = await started.future;
+        addTearDown(() async {
+          boundedProcessGroupRowsOverride = null;
+          await stopOwnedGroup(root, grace: const Duration(seconds: 1));
+          await running;
+        });
+
+        final result = await running;
+        expect(result.signaledPids, isNotEmpty);
+        expect(result.settlementProblem, isNotNull);
+        expect(
+          (await Process.run('kill', ['-0', '$root'])).exitCode,
+          isNot(0),
+          reason: 'supervisor is last to die on the SIGKILL rung',
+        );
+        for (final pid in result.signaledPids) {
+          expect(
+            (await Process.run('kill', ['-0', '$pid'])).exitCode,
+            isNot(0),
+          );
+        }
+      },
+      skip: Platform.isWindows ? 'POSIX session ownership' : null,
+    );
+
+    test(
       'cleared snapshot: empty ps observation then ps failure (ADR 0066)',
       () async {
         final directory = Directory.systemTemp.createTempSync('ps-cleared-');

@@ -20,7 +20,6 @@ void main() {
           grace: const Duration(milliseconds: 300),
         );
         final child = int.parse(result.stdout.trim());
-        expect(result.exitCode, 0, reason: 'the root exited normally');
         expect(result.cause, BoundedProcessCause.killedOnDeadline);
         expect(result.ok, isFalse);
         // Group signalling includes children forked after the pre-signal
@@ -57,10 +56,8 @@ void main() {
         onStarted: started.complete,
       );
       final root = await started.future;
-      // Observe actual root death rather than treating a delay as settlement.
-      while ((await Process.run('kill', ['-0', '$root'])).exitCode == 0) {
-        await Future<void>.delayed(const Duration(milliseconds: 20));
-      }
+      // Target shell exited; the Perl supervisor stays until the group is empty.
+      expect((await Process.run('kill', ['-0', '$root'])).exitCode, 0);
       final stopped = await stopProcessTree(
         root,
         grace: const Duration(milliseconds: 300),
