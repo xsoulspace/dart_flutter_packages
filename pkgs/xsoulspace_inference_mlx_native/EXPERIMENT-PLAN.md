@@ -54,6 +54,16 @@ and what it costs).
 > The gates are L-G1..L-G7 (frozen before any of them runs); the cost, the arms
 > and the pre-registered order are Part B below. The ledger row is **Row M —
 > the acceleration program** in [`LINES.md`](LINES.md).
+>
+> **Post-run status (2026-10-26).** Of those six arms: **L-G1 and L-G6 ran and
+> FAILED on both tasks** (the LoRA line is CONFIRMED, not closed — a PASS
+> would have ended it); L-G4's amortization probe ran (the lever is worth
+> buying at a projected 5.39× @ batch 8, but the fused forward does not
+> exist); L-G3 is satisfied (coverage 1.0000 on every cell). **L-G2, L-G5 and
+> L-G7 have NOT run** — Part B.5's step 1 has fired, so the remaining cheap
+> closers are L-G2 (~18 min) and L-G7 (~1.5 h). Measured numbers:
+> [`LINES.md`](LINES.md) Row M; classification and the current order:
+> [`VERDICTS.md`](VERDICTS.md).
 
 ---
 

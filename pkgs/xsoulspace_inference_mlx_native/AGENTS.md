@@ -31,6 +31,13 @@ purpose: `bench/` is gitignored in this package, so a gate written under
 evidence paths, and the non-claims. `bench/` is gitignored, so the results
 themselves live there and are NOT versioned; the ledger is what binds them,
 and a clone must be able to see that a line is closed and why.
+[`VERDICTS.md`](VERDICTS.md) is the one-screen classification over those rows
+at a named time — **failed at all** vs **measured wrong** (void numbers: do
+not cite) vs **environment-conditional** (the reopen condition is named) vs
+**open** — and states the current path forward.
+[`RESULTS-HISTORY.md`](RESULTS-HISTORY.md) tabulates every recorded
+measurement with date, value, gate and class; cite it instead of re-deriving
+numbers from gitignored artifacts.
 [`EXPERIMENT-PLAN.md`](EXPERIMENT-PLAN.md) is what is next and what it costs
 (it changes no gate). [`PYTHON-BOUNDARY.md`](PYTHON-BOUNDARY.md) is the
 durable answer to "which Python may move to Rust, to accelerate model

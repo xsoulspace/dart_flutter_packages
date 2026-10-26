@@ -16,6 +16,16 @@ the pre-registered readings), then the `RESULTS-*` file named in the row for
 the full numbers. If a row's verdict and its evidence disagree, the evidence
 wins and this file is wrong — fix it here.
 
+**Classification and history.** [`VERDICTS.md`](VERDICTS.md) is the one-screen
+classification layer over these rows — what **failed at all** (F), what was
+**measured wrong** and is void (V-s superseded / V-r remeasure owed), what is
+closed only on this device/config with a **named reopen condition** (C), and
+what is **open** (O) — plus the current path forward.
+[`RESULTS-HISTORY.md`](RESULTS-HISTORY.md) tabulates every recorded
+measurement with its date, value, gate and class. Read VERDICTS first when the
+question is "where do we stand and what is next"; read this file for the
+row-level detail.
+
 **The discipline that produced it** (see `bench/nursery/META-LESSONS.md`): a
 threshold is written BEFORE the run; a failure gets a pre-registered reading;
 a number without its trivial baseline is not a number; a result that lives

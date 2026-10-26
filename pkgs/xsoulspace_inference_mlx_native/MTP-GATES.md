@@ -542,9 +542,18 @@ foreign-label leak. MTP (Line J) is closed on physics.
 
 Part 4 freezes the gates for what comes next — the **acceleration program**
 and the two controls that can close the LoRA line on their own. It is frozen
-**before any of these arms runs**, by the same law as Parts 1 and 2: a
-threshold written after seeing data is a knob. No arm below has run. No
+**before any of these arms runs**, by the same law as Parts 1–4: a threshold
+written after seeing data is a knob. No arm below has run. No
 threshold here may move after one does.
+
+> **Post-run status (2026-10-26).** Since this Part was frozen: **L-G1
+> (few-shot) and L-G6 (ranking) ran and FAILED on both tasks**, and **L-G3 is
+> satisfied** (every cell re-scored at coverage 1.0000) — so the LoRA line is
+> CONFIRMED, not closed, and the conditional training arms (L-G2, L-G7) are
+> live. **L-G2, L-G5 and L-G7 have NOT run**: a gate that was never run is not
+> a gate that passed. Measured numbers: [`LINES.md`](LINES.md) Row M;
+> classification and the current order: [`VERDICTS.md`](VERDICTS.md). No
+> threshold below has moved.
 
 Line naming: **Line L** = the acceleration program. Its ledger row is
 **Row M** in [`LINES.md`](LINES.md); its cost and order are in
