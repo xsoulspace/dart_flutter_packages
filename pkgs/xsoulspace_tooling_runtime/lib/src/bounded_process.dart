@@ -632,26 +632,15 @@ Future<List<int>> _stopOwnedProcessGroup(
 }) async {
   final signaled = <int>{};
   Future<bool> signal(ProcessSignal value) async {
+    final snapshot = Set<int>.from(owned.observedMembers);
     final members = await _ownedGroupMembers(owned);
     if (members == null) {
-      // ADR 0066: refuse -pgid after the admitted root is reaped — a recycled
-      // id could be signaled. The stale-snapshot window is bounded only by the
-      // gap between root reap and the host observing rootExited in the exit
-      // callback, not by an arbitrary clock. Per-pid delivery from the last
-      // enumerated snapshot is still allowed: identity was fixed before ps failed.
-      if (owned.observedMembers.isEmpty) return false;
-      signaled.addAll(owned.observedMembers);
-      if (!owned.rootExited) {
-        Process.killPid(-owned.process.pid, value);
-      }
-      for (final pid in owned.observedMembers) {
-        try {
-          Process.killPid(pid, value);
-        } on Object {
-          // Best-effort: the group signal is primary; per-pid delivery
-          // covers races where ps lagged membership into the snapshot.
-        }
-      }
+      // ADR 0066: ps-fallback is -pgid only while the unreaped root still
+      // owns the PGID. After reap, refuse rather than signal a recycled id.
+      if (owned.rootExited) return false;
+      if (snapshot.isEmpty) return false;
+      signaled.addAll(snapshot);
+      Process.killPid(-owned.process.pid, value);
       return true;
     }
     if (members.isEmpty) {
@@ -701,6 +690,23 @@ Future<List<(int, int, int, String)>?> probeBoundedProcessGroupRows() =>
 Set<int>? boundedProcessObservedMembersForRoot(int rootPid) =>
     _ownedProcessGroups[rootPid]?.observedMembers.toSet();
 
+/// Stops an admitted [runBounded] POSIX session registered at [rootPid].
+///
+/// Refuses (returns `[]` without signaling) when no owned registration exists
+/// — never guesses a process tree on a possibly recycled pid.
+Future<List<int>> stopOwnedGroup(
+  int rootPid, {
+  Duration grace = const Duration(seconds: 5),
+}) async {
+  final owned = _ownedProcessGroups[rootPid];
+  if (owned == null) return const [];
+  owned.externallyStopped = true;
+  return _stopOwnedProcessGroup(owned, grace: grace);
+}
+
+/// Wall-clock budget for each live `ps` enumeration.
+const _groupObservationBudget = Duration(seconds: 2);
+
 Future<List<(int, int, int, String)>?> _groupRows() async {
   final override = boundedProcessGroupRowsOverride;
   if (override != null) return override();
@@ -710,7 +716,12 @@ Future<List<(int, int, int, String)>?> _groupRows() async {
 Future<List<(int, int, int, String)>?> _readGroupRowsFromPs() async {
   final ProcessResult result;
   try {
-    result = await Process.run('ps', const ['-eo', 'pid=,ppid=,pgid=,stat=']);
+    result = await Process.run(
+      'ps',
+      const ['-eo', 'pid=,ppid=,pgid=,stat='],
+    ).timeout(_groupObservationBudget);
+  } on TimeoutException {
+    return null;
   } on Object {
     return null;
   }
