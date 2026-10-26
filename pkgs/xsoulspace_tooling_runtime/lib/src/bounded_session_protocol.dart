@@ -132,7 +132,8 @@ void _handleSessionControlLine(
 }
 
 Future<void> _maybeSettleAfterTargetExit(_OwnedProcessGroup owned) async {
-  if (owned.reportedWaitStatus == null ||
+  if (owned.externallyStopped ||
+      owned.reportedWaitStatus == null ||
       owned.settleRequested ||
       owned._deadlineBlocksSettle) {
     return;
@@ -158,6 +159,10 @@ Future<bool> _onlyLeaderRemainsLive(
 
 Future<void> _watchSessionSettle(_OwnedProcessGroup owned) async {
   while (!owned.settleRequested) {
+    if (owned.externallyStopped) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      continue;
+    }
     if (owned._deadlineBlocksSettle) {
       await Future<void>.delayed(const Duration(milliseconds: 20));
       continue;
@@ -177,7 +182,7 @@ Future<void> _watchSessionSettle(_OwnedProcessGroup owned) async {
 }
 
 Future<void> _requestSessionSettle(_OwnedProcessGroup owned) async {
-  if (owned.settleRequested) return;
+  if (owned.externallyStopped || owned.settleRequested) return;
   owned.settleRequested = true;
   await _sendOwnedControl(owned, 'settle');
 }

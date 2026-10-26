@@ -939,6 +939,7 @@ Future<List<int>> _stopOwnedProcessGroup(
       if (owned.rootExited) return false;
       if (snapshot.isEmpty) return false;
       if (owned.ready && owned.deferSigkillEscalation) return false;
+      if (owned.ready && snapshot.isNotEmpty) return false;
       signaled.addAll(snapshot);
       if (!owned.rootExited && await _sendOwnedControl(owned, command)) {
         return true;
@@ -950,8 +951,6 @@ Future<List<int>> _stopOwnedProcessGroup(
       if (!owned.ready && !owned.rootExited) {
         if (owned.process.kill(value)) signaled.add(owned.process.pid);
       } else if (!owned.rootExited && snapshot.isNotEmpty) {
-        // Cleared `ps` with a live supervisor is not group death (ADR 0066).
-        // Record the last snapshot for callers without group-wide control signals.
         signaled.addAll(snapshot);
         owned.deferSigkillEscalation = true;
         return true;
@@ -996,7 +995,8 @@ Future<List<int>> _stopOwnedProcessGroup(
   if (!owned.rootExited) {
     final members = await _ownedGroupMembers(owned);
     final snapshot = Set<int>.from(owned.observedMembers);
-    final refuseRootKill = members == null && snapshot.isEmpty ||
+    final refuseRootKill = owned.deferSigkillEscalation ||
+        members == null && snapshot.isEmpty ||
         (members != null && members.isEmpty && owned.ready) ||
         (members == null && owned.ready);
     if (!refuseRootKill && owned.process.kill(ProcessSignal.sigkill)) {
