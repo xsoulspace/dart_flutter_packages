@@ -9,9 +9,10 @@ This file answers one question a reader otherwise has to reconstruct from 2,000
 lines: **which verdicts are final, which numbers are void, which closures are
 environment-conditional, and what is actually next.**
 
-This file is **a reading of the record at a named time** — 2026-10-26, branch
-`ag-c` @ `fa2b66f1` — not a claim about the tree today. If a row here and its
-evidence disagree, the evidence wins and this file is wrong; fix it here.
+This file is **a reading of the record at a named time** — 2026-10-26 (last
+touch: the L-G2 noise arm, branch `ag-c` after `03720365`) — not a claim about
+the tree today. If a row here and its evidence disagree, the evidence wins and
+this file is wrong; fix it here.
 
 Reading order: **this file → [`LINES.md`](LINES.md) rows →
 [`MTP-GATES.md`](MTP-GATES.md) gates → `bench/nursery/experiments/RESULTS-*`
@@ -50,10 +51,13 @@ before an arm that can only refine it* — and by measured cost.
 
 **Tier B — the cheap closers and refiners (minutes to ~1.5 h).**
 
-2. **L-G2 noise adapter** (~18 min GPU) — the only unrun closing-relevant arm.
-   Reading is **predicted MISS** by L-G1+L-G6 evidence (the base already emits
-   the format; the adapter changed the decision, not the format). A gate never
-   run is not a gate that passed.
+2. **L-G2 noise adapter — RUN 2026-10-26, MISS on both tasks.** The
+   pre-registered prediction fired exactly: 0.5392 vs a 0.7737 threshold
+   (perm), 0.2511 vs 0.6533 (veto), coverage 1.0 both, TIER-0 == TIER-1 to
+   4 dp. On veto the noise adapter emits ONE label (227/227) and equals
+   base's accuracy to 4 dp; on perm it lands below trivial. The format
+   explanation of the adapter's gain is measured out. Evidence:
+   `bench/nursery/experiments/RESULTS-noise-2026-10-26.md`.
 3. **L-G7 third task** (~1.5 h; corpus generated, 900 rows, disjoint,
    majority 0.25) — settles the shared-answer-space rule (per-task always vs
    conditional-default). Leak > 0 on a dissimilar pair also voids the
@@ -160,7 +164,6 @@ arm on new hardware (must be a new registered arm; see CONDITIONAL).
 | item | gate | cost | pre-registered expectation |
 | ---- | ---- | ---- | -------------------------- |
 | Fused batched decode (the four-part change) | decision invariance + no short-row | engineering, no training | 5.39× projected at batch 8; flips ranking economics |
-| L-G2 noise adapter | noise ≥ untagged − 0.10 on either task = HIT | ~18 min GPU | predicted MISS (L-G1+L-G6 evidence) |
 | L-G7 third task | shared ≥ untagged − 0.05 AND leak 0 | ~1.5 h (corpus ready) | three-case reading frozen in `MTP-GATES.md` |
 | L-G5 prompt-shape cost | shared ≤ 10 % prefill wall AND 0 added bytes | inference-only | cost gate, independent of accuracy |
 | ranked(adapter) | compare vs generation accuracy + prefill-bound cost | minutes | unnamed by any gate yet — would need a frozen threshold before it counts |
@@ -178,6 +181,7 @@ arm on new hardware (must be a new registered arm; see CONDITIONAL).
 | result | number | evidence |
 | ------ | ------ | -------- |
 | LoRA adapter capability (one adapter, both tasks, untagged) | +0.31 perm / +0.47 veto over matched trivial; coverage 1.0; strict scoring; reproduced 131/150 on re-score | `LINES.md` Row K/Row M |
+| The gain is NOT format (L-G2, 2026-10-26) | noise adapter (random labels, all else equal) 0.5392 / 0.2511 vs thresholds 0.7737 / 0.6533 — MISS both; veto collapses to one majority label = +0.000 over trivial; TIER-0 == TIER-1 to 4 dp | `RESULTS-noise-2026-10-26`; `adapter-noise-2026-10-26/gates.json` |
 | Attribution: multi-task data load-bearing; tag not; option list = refinement (+7–9 pts, prevents the leak) | permsolo p<0.001 both directions; tag p=0.185/1.000; shared still transfers | K''-G1/G2 |
 | LoRA mechanical surface | byte-reversible swap; digest cache key; quantized base refused; mlx-lm↔PEFT auto-detect; artifact merges in-suite (27+8+1 tests) | `lora_set.rs`, `lora.rs`, `tests/mlx_lm_artifact_merge.rs` |
 | Prefix-cache weight identity | engine-owned digest; stale hit impossible; test-locked | Row L |

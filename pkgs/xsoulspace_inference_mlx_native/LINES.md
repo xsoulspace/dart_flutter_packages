@@ -391,12 +391,16 @@ working, not failing.
   teach it the **decision**.
 - **L-G6 (ranking): FAIL** on both tasks, in **two independent engines**
   (Python/mlx-lm 0.4403/0.2291; native Rust 0.4403/0.2819).
-- **L-G2 (noise adapter): NOT RUN** — an 18-minute training arm, and the box
-  was on battery at 13 % with 20 minutes left. **A gate that was never run is
-  not a gate that passed.**
+- **L-G2 (noise adapter): RUN 2026-10-26 — MISS on both tasks** (0.5392 vs a
+  0.7737 threshold; 0.2511 vs 0.6533; coverage 1.0 both). On veto the noise
+  adapter collapses to ONE label (`secret_path`, 227/227) and scores base's
+  accuracy to four decimals; on perm it lands BELOW trivial. The format
+  explanation of the adapter's gain is measured out, not argued away. Full
+  numbers: `bench/nursery/experiments/RESULTS-noise-2026-10-26.md`.
 - **L-G7 (third task): NOT EVALUABLE** — the corpus is generated
   (`third_task_dataset.py`: 900 rows, exactly balanced, majority 0.25, disjoint
-  from both existing corpora) but the arm was not run.
+  from both existing corpora) but the arm was not run. **It is now the only
+  unrun gate in the program.**
 
 **So the LoRA line is CONFIRMED as load-bearing**, against the two cheapest
 zero-training alternatives (prompting, constrained ranking), both of which
@@ -406,9 +410,12 @@ fall far short. That _strengthens_ the adapter line rather than closing it.
 failure.** `ranked(base)` equals `base`-by-generation on perm (0.4403 vs
 0.4403) and within 0.03 on veto: the base model already _ranks_ labels, it
 just ranks them the wrong way. **The adapter changes the ranking, not the
-output format** — which predicts that L-G2's noise adapter will MISS (the
-format prior it would learn is already present in the base). That is a
-**prediction from L-G1 and L-G6, not a substitute for the arm.**
+output format** — which predicted that L-G2's noise adapter would MISS (the
+format prior it would learn is already present in the base). **That
+prediction was made from L-G1 and L-G6 before the arm ran, and the arm
+CONFIRMED it on 2026-10-26** (MISS on both tasks; the veto collapse to a
+single majority label is the format capability in its pure form, worth
++0.000 over the majority baseline).
 
 **Ranking is currently MORE expensive than generation, not less** (native
 ratio 0.93 perm / 1.22 veto): the native path does one forward per label
@@ -451,10 +458,12 @@ hazard. Everything else stays in Python.** Applied here:
 1. **A coverage-complete score of every arm — DONE (2026-10-21).** All 14
    cells are now at coverage 1.0000 (293 perm / 227 veto), and the L-gates
    are evaluable instead of refused. The `fewshot` and `ranked` arms are
-   measured; L-G2 and L-G7 are not.
-2. **The L-G2 noise-adapter control** — never run. It is now the **only**
-   unrun closing-relevant arm, and its reading is _predicted_ (MISS) by the
-   measured evidence rather than established.
+   measured; L-G7 is not — and L-G2 joined the measured set on 2026-10-26
+   (MISS).
+2. **The L-G2 noise-adapter control — RUN (2026-10-26), MISS on both
+   tasks.** The prediction is now a measurement: the format-only adapter
+   scores at base level (veto: one label, 227/227, accuracy identical to
+   base to 4 dp). What the real adapter adds is not format.
 3. **Any batched-decode measurement at all** (L-G4) — now MEASURED (§ above):
    the lever is worth 5.39× projected, the fused forward does not exist, and
    the bit-level precondition is the wrong bar.
