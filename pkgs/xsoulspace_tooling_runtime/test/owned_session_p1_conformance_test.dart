@@ -1,4 +1,4 @@
-@TestOn('vm')
+@TestOn('vm && (linux || mac-os)')
 library;
 
 import 'dart:async';
@@ -16,7 +16,6 @@ void main() {
     late String fixturesDir;
 
     setUpAll(() async {
-      if (Platform.isWindows) return;
       for (final path in const ['/usr/bin/perl', '/bin/perl']) {
         if (File(path).existsSync()) {
           perl = path;
@@ -38,12 +37,6 @@ void main() {
         await Process.run('chmod', ['+x', '$fixturesDir/$name']);
       }
     });
-
-    test(
-      'Windows leader is not part of this POSIX conformance lane',
-      () {},
-      skip: Platform.isWindows ? false : 'POSIX-only contract',
-    );
 
     test(
       'owned bootstrap: ready line, marker auth, started',
@@ -87,7 +80,6 @@ void main() {
         await client.close();
         await leader.exitCode.timeout(const Duration(seconds: 5));
       },
-      skip: Platform.isWindows ? 'POSIX p1 leader' : null,
     );
 
     test(
@@ -120,7 +112,6 @@ void main() {
           contains('$marker:error:exec:'),
         );
       },
-      skip: Platform.isWindows ? 'POSIX p1 leader' : null,
     );
 
     test(
@@ -176,7 +167,6 @@ void main() {
         expect(await _expectKilledGroup(lines), 'killed-group');
         await client.close();
       },
-      skip: Platform.isWindows ? 'POSIX p1 leader' : null,
     );
 
     test(
@@ -222,7 +212,6 @@ void main() {
         expect(await _expectKilledGroup(lines), 'killed-group');
         await client.close();
       },
-      skip: Platform.isWindows ? 'POSIX p1 leader' : null,
     );
 
     test(
@@ -268,7 +257,6 @@ void main() {
         expect(await _expectKilledGroup(lines), 'killed-group');
         await client.close();
       },
-      skip: Platform.isWindows ? 'POSIX p1 leader' : null,
     );
 
     test(
@@ -313,7 +301,6 @@ void main() {
         expect(await _expectKilledGroup(lines), 'killed-group');
         await client.close();
       },
-      skip: Platform.isWindows ? 'POSIX p1 leader' : null,
     );
 
     test(
@@ -371,7 +358,6 @@ void main() {
           }
         });
       },
-      skip: Platform.isWindows ? 'POSIX p1 leader' : null,
     );
   });
 }

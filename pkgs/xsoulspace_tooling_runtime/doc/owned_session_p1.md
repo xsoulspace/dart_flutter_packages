@@ -109,11 +109,7 @@ Close-on-exec pipe detects target exec failure before `started`.
   `unsettled`, not silent death certification. No stale-snapshot per-pid
   `killPid` fallback.
 
-## Windows
-
-No POSIX `SIGTERM`. Graceful stop uses **CTRL_BREAK** or an explicit
-control-channel message; the reference Perl leader is POSIX-only. Conformance
-includes a skipped Windows case until `oka_process` supplies a Win32 leader.
+**Windows** is out of scope for this contract revision (macOS and Linux only).
 
 ## Graceful hook (optional)
 
