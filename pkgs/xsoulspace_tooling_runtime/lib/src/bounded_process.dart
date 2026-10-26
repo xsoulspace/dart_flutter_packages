@@ -599,8 +599,9 @@ final class _OwnedProcessGroup {
   bool externallyStopped = false;
   bool groupGone = false;
 
-  /// Last non-null membership snapshot from `ps` before observation failed.
+  /// Last successful `ps` observation of the owned group (empty included).
   final Set<int> observedMembers = <int>{};
+  DateTime? observedMembersAt;
 }
 
 /// The launch acknowledgement proves setsid returned the root PID. POSIX
@@ -619,11 +620,10 @@ Future<Set<int>?> _ownedGroupMembers(_OwnedProcessGroup owned) async {
     // Once the admitted group disappears, never reacquire a recycled ID.
     owned.groupGone = true;
   }
-  if (members != null && members.isNotEmpty) {
-    owned.observedMembers
-      ..clear()
-      ..addAll(members);
-  }
+  owned.observedMembers
+    ..clear()
+    ..addAll(members);
+  owned.observedMembersAt = DateTime.now();
   return members;
 }
 
@@ -635,6 +635,9 @@ Future<List<int>> _stopOwnedProcessGroup(
   Future<bool> signal(ProcessSignal value) async {
     final members = await _ownedGroupMembers(owned);
     if (members == null) {
+      // PGID equals the unreaped root pid; once the root has exited, refuse
+      // -pgid rather than risk a recycled id (see steward ps-fallback review).
+      if (owned.rootExited) return false;
       if (owned.observedMembers.isEmpty) return false;
       signaled.addAll(owned.observedMembers);
       Process.killPid(-owned.process.pid, value);
@@ -672,7 +675,27 @@ Future<List<int>> _stopOwnedProcessGroup(
   return signaled.toList()..sort();
 }
 
+/// When set, replaces live `ps` enumeration (for unit tests).
+@visibleForTesting
+Future<List<(int, int, int, String)>?> Function()? boundedProcessGroupRowsOverride;
+
+/// Live `ps` read without applying [boundedProcessGroupRowsOverride].
+@visibleForTesting
+Future<List<(int, int, int, String)>?> probeBoundedProcessGroupRows() =>
+    _readGroupRowsFromPs();
+
+/// Last successful `ps` observation for an admitted root (testing only).
+@visibleForTesting
+Set<int>? boundedProcessObservedMembersForRoot(int rootPid) =>
+    _ownedProcessGroups[rootPid]?.observedMembers.toSet();
+
 Future<List<(int, int, int, String)>?> _groupRows() async {
+  final override = boundedProcessGroupRowsOverride;
+  if (override != null) return override();
+  return _readGroupRowsFromPs();
+}
+
+Future<List<(int, int, int, String)>?> _readGroupRowsFromPs() async {
   final ProcessResult result;
   try {
     result = await Process.run('ps', const ['-eo', 'pid=,ppid=,pgid=,stat=']);
