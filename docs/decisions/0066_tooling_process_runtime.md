@@ -22,13 +22,45 @@ separate from the pure materialization core of ADR 0065. No second executor,
 scheduler, journal, filesystem writer or model-provider dependency is introduced.
 
 POSIX execution establishes an acknowledged private session through an automatic
-trusted system Perl helper. A close-on-exec pipe distinguishes target spawn
-failure before notifying observers. The supervisor forwards main-target status;
-the host owns pipe drain and surviving group members after root exit. Private
-notices are removed; target argv, CWD, stdout and stderr retain their meanings.
-External cancellation uses the same retained owned group, never a guessed tree
-after the parent disappeared. Observed group disappearance is terminal: a
-recycled ID is never reacquired.
+trusted system Perl helper (protocol **p1**). A close-on-exec pipe distinguishes
+target spawn failure before notifying observers. The **owned** leader anchors
+the PGID, keeps its own stdin on `/dev/null`, and talks to the host over a
+**Unix-domain control socket** in a `0700` temp directory (authenticated with
+the launch marker nonce). Target stdin/stdout/stderr stay exact. The host never
+SIGKILLs the leader directly for group teardown: it sends `term` / `kill`
+commands on the channel; the leader runs `kill(0, SIGTERM)` then `kill(0,
+SIGCONT)` for `term`, and `kill(0, SIGKILL)` for `kill`. `Process.kill` on the
+leader is a last resort only. Channel EOF makes the leader kill its group and
+exit (host-death orphan guard). The host watches the group with bounded `ps`
+and sends `settle` when only the leader remains after the main target's
+`exit:<waitstatus>` notice. Missing observation is `unsettled:<reason>`, never
+silent certification. External cancellation uses `stopOwnedGroup` / the retained
+registration, never a guessed tree on a possibly recycled pid. Observed group
+disappearance is terminal: a recycled ID is never reacquired.
+
+**`singleProcessSession`** has no separate leader: the helper execs the target
+in the session-leader PID (unchanged handshake).
+
+### Protocol p1 (Perl today; compiled helper later)
+
+Launcher argv (after `perl -e <script> --`):
+
+`--protocol 1 --mode owned|single --marker <nonce> --control <sockpath> -- <target> <argv…>`
+
+(`--control` omitted for `single`.)
+
+Stderr bootstrap (owned): `<marker>:ready:<sid>:p1:perl` then target stderr only.
+(`single` keeps `<marker>:ready:<sid>` and `<marker>:started`.)
+
+Channel lines from leader: `started`, `exit:<waitstatus>`, `term-forwarded`,
+`killed-group`, `settled`, `unsettled:<reason>`.
+
+Channel lines from host: `term`, `kill`, `settle`.
+
+Exec failure: `<marker>:error:<stage>:<detail>` on stderr — never exit 127 as
+the contract.
+
+Host refuses unknown `--protocol` values.
 
 Missing helper or process observation refuses by name. Windows retains its
 existing root-only limitation. Descendants creating other groups/sessions and
@@ -81,33 +113,8 @@ default. Input/output and root lifetime use one deadline; bounded host input is
 copied, flushed, closed, and failed writes/flush/close are named in
 `BoundedRunResult.inputProblem`. Input failure prevents `ok` even after exit zero.
 Unproven settlement retains scratch storage and prevents the outer host from
-deleting the candidate, promoting it, or clearing its quarantine from a model
-argument. The outer transaction owner retains that reconciliation obligation.
-
-The useful current Dart lane invokes `dartaotruntime` with the SDK's
-`gen_kernel_aot.dart.snapshot` and explicit VM platform, then executes the kernel
-through `dart --disable-dart-dev`. It supports actual stdin vectors and functional
-checks; compilation alone is not acceptance. The CLI `dart compile`, Flutter
-builds and arbitrary fork-capable shell/tool chains are not qualified by this
-adapter. `requiresProcessFork: true` refuses before launch.
-
-### Reuse and remaining release route
-
-The primary [Anthropic sandbox-runtime implementation](https://github.com/anthropics/sandbox-runtime/blob/main/src/sandbox/macos-sandbox-utils.ts)
-uses native Seatbelt with deny-default bootstrap rules and opt-in Mach/AppleEvents
-and Unix sockets. Its Node runtime, proxy server and broad optional IPC/service
-allowances are not needed for this offline no-fork adapter. Reuse the native OS
-mechanism and contract concepts without making users install Node or claiming
-that this smaller lane is the complete upstream runtime.
-
-`sandbox-exec` remains [deprecated](https://developer.apple.com/forums/thread/661939).
-Darwin SDK `sys/event.h` states NOTE_TRACK/NOTE_CHILD stopped being supported in
-macOS 10.5; the rejected tracker prototype was removed. Process-group snapshots
-cannot qualify reparented, detached, closed-stdio descendants. General
-fork-capable execution remains an explicit requirement, not a completed lane.
-A supported release route may compose Apple's
-[Virtualization framework](https://developer.apple.com/documentation/virtualization/creating-and-running-a-linux-virtual-machine)
-with app-managed guest images and
+treating the run as physically settled. A future macOS VM qualification path
+may use
 [read-only directory shares](https://developer.apple.com/documentation/virtualization/shared-directories),
 no host network device by default, and guest-machine termination as the physical
 settlement boundary. That requires image, signing/entitlement, startup-cost and
@@ -120,3 +127,16 @@ budget/EOF/error/deadline behavior, and unrelated-process preservation. They do
 not prove release readiness, arbitrary IPC equivalence, real-model coding or
 external-agent acceptance. The original generic process controls stay frozen.
 See [the qualification record](../../pkgs/xsoulspace_tooling_runtime/docs/evidence/2026-10-13/README.md).
+
+## Alternatives considered (session supervisor)
+
+- **util-linux `setsid`**: ships a session helper on Linux only, with no
+  close-on-exec spawn-failure pipe or stderr acknowledgement protocol; rejected
+  for portability and for breaking the existing exec-ack contract.
+- **FFI `posix_spawn` with `POSIX_SPAWN_SETSID`**: would replace the Perl
+  helper with in-process session setup but requires a large rewrite of spawn,
+  acknowledgement, and error surfaces; deferred.
+- **Compiled helper binary**: best long-term option (no Perl dependency, faster
+  startup) but needs per-architecture builds, packaging, and signing; protocol
+  **p1** is intentionally small so a compiled drop-in can replace Perl later
+  without changing host semantics.
