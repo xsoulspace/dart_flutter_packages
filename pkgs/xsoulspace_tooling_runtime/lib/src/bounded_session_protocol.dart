@@ -160,8 +160,7 @@ Future<bool> _onlyLeaderRemainsLive(
 Future<void> _watchSessionSettle(_OwnedProcessGroup owned) async {
   while (!owned.settleRequested) {
     if (owned.externallyStopped) {
-      await Future<void>.delayed(const Duration(milliseconds: 20));
-      continue;
+      return;
     }
     if (owned._deadlineBlocksSettle) {
       await Future<void>.delayed(const Duration(milliseconds: 20));
