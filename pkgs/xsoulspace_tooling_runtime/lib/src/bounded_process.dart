@@ -598,6 +598,9 @@ final class _OwnedProcessGroup {
   bool rootExited = false;
   bool externallyStopped = false;
   bool groupGone = false;
+
+  /// Last non-null membership snapshot from `ps` before observation failed.
+  final Set<int> observedMembers = <int>{};
 }
 
 /// The launch acknowledgement proves setsid returned the root PID. POSIX
@@ -616,6 +619,11 @@ Future<Set<int>?> _ownedGroupMembers(_OwnedProcessGroup owned) async {
     // Once the admitted group disappears, never reacquire a recycled ID.
     owned.groupGone = true;
   }
+  if (members != null && members.isNotEmpty) {
+    owned.observedMembers
+      ..clear()
+      ..addAll(members);
+  }
   return members;
 }
 
@@ -626,7 +634,12 @@ Future<List<int>> _stopOwnedProcessGroup(
   final signaled = <int>{};
   Future<bool> signal(ProcessSignal value) async {
     final members = await _ownedGroupMembers(owned);
-    if (members == null) return false;
+    if (members == null) {
+      if (owned.observedMembers.isEmpty) return false;
+      signaled.addAll(owned.observedMembers);
+      Process.killPid(-owned.process.pid, value);
+      return true;
+    }
     if (members.isEmpty) {
       // Before session establishment the only admitted process is the helper.
       // Its live child handle is retained; do not signal a recycled root PID.
