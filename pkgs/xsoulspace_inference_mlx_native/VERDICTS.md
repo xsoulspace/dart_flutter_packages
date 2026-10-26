@@ -37,18 +37,24 @@ Reading order: **this file → [`LINES.md`](LINES.md) rows →
 Ordered by the lane's own law — *an arm that can close or unlock the line runs
 before an arm that can only refine it* — and by measured cost.
 
-**Tier A — the one lever (engineering, no training).**
+**Tier A — DONE (2026-10-26): the fused batch is built, gated, and measured.**
 
-1. **Build the fused batched decode** — the four-part `qwen.rs` change (batch
-   dim from `tokens.dim(0)`, cache allocated with it, per-sequence offset or
-   pad+mask, expose the tied embedding). Gate: **decision-level invariance + no
-   short-row defect on the left-padded path** (the reformulated L-G4
-   precondition; the tolerance method already exists in
-   `test/laya_native_batch_isolation_test.dart`). Payoff if it holds: the
-   projected **5.39× at batch 8** becomes a measured number, **and the ranking
-   idea flips on cost** — ranking loses today only because labels cannot batch
-   (native 0.93–1.22× vs generation). If it fails, it is a device fact and the
-   batching lane closes the way MTP did.
+1. **The fused batched decode** — the four-part `qwen.rs` change landed
+   (`qwen_fused.rs`; left-pad + keep-mask; `lm_head` exposed;
+   `KvCache::expanded_to_batch`). The reformulated gate is GREEN
+   (`tests/qwen_fused_batch_gate.rs`): classification labels token-exact
+   across solo/B=8/B=16/shifted positions; co-batching invariance EXACT
+   (B=8 vs B=16 first-step drift 0.0); solo-join floor 0.071 (frozen
+   tolerance 0.15, every label held); the short-row defect class
+   reproduced by positive control at 0.60 — 8.5× separation. **Measured:
+   1.93× aggregate at B=8 (the ≥1.5 gate clears), 3.19× at B=16,
+   AC-baseline; the 5.39× projection retires** against fixed per-step
+   costs. Ranking economics flipped conditionally: fused rank **0.80× of
+   sequential at K=4** (prefix-once + cache fan-out), 1.03× at K=2. Full
+   numbers: `bench/nursery/experiments/RESULTS-fused-tier-a-2026-10-26.md`.
+   The fused path is engine-level; the product surface (QwenEngine /
+   serve_text) does not batch yet — wiring is a product decision with its
+   own gate.
 
 **Tier B — the cheap closers and refiners (minutes to ~1.5 h).**
 
@@ -69,8 +75,14 @@ before an arm that can only refine it* — and by measured cost.
    `bench/nursery/experiments/RESULTS-third-2026-10-26.md`. **With this,
    every Part-4 gate has run**; the remaining work is Tier A (the fused
    batch), L-G5 (cost bench) and Tier C (record repairs).
-4. **L-G5 prompt-shape cost bench** (inference-only) — the product number for
-   shared vs per-task option list (bytes, prefill wall, KV, cache hit rate).
+4. **L-G5 prompt-shape cost bench — RUN (2026-10-26), FAIL at the frozen
+   terms.** Shared adds +22 tokens/request and +55 % cold prefill wall
+   (c=1 and c=8); the ≤10 % and 0-bytes clauses fail. At a 2048+-token
+   shared-prefix window a warm prefix pool recovers everything: 100 % hit
+   rate, 32–43 ms vs ~1880 ms (57×), while per-task lists hit 0 % on every
+   task switch. Per-task stays the default; shared is a long-shared-prefix
+   product only. **With L-G7 the rule is fully measured:** accurate on the
+   distant pair, cold-costly everywhere, warm-cheap at product windows.
 5. **Rank with the adapter** (inference-only, minutes; never measured) —
    the record's own line is "the adapter changes the ranking, not the output
    format" (ranked(base) == base). ranked(adapter) turns decode-bound
@@ -161,7 +173,7 @@ arm on new hardware (must be a new registered arm; see CONDITIONAL).
 | q8 (LAYA_Q8) as default | calibration green ONLY at alternate-layers g32 (63/63 @ 0.0164); no B=1 latency win (compute-bound) | products that need resident-weight bytes; a score/noul sensitivity pass per new checkpoint | R3b closure record |
 | Perf gates asserting | battery throttles 4–10×; l0 flapped twice on mid-run unplug | AC (the gate law itself: battery = POWER-CONTAMINATED banner + pass; unknown keeps asserting) | `POWER.md`; ADR 0061 |
 | Shared answer space across CLOSE tasks (perm+veto) | cost −7–9 points + 6 % foreign-label leak — and L-G7 (2026-10-26) measured the distant end: leak 0, completions identical, so the upper-bound reading STANDS and the rule is now measured at both ends: per-task for close groups, shared defensible for dissimilar ones | a third close pair that does not leak (new arm) — the close-pair leak itself stands | K''-G2; `MTP-GATES.md` L-G7; `RESULTS-third-2026-10-26.md` |
-| Fused-batch numbers as gate inputs | the fused forward does not exist; bit-level divergence (0.0625 body / 0.0239 projection) is measured and reported, never hidden | decision-level invariance + no short-row defect on the left-padded path (Tier A) | `MTP-GATES.md` L-G4 post-run note |
+| Fused-batch numbers as PRODUCT numbers | the fused forward existed only in the bench; the gate is GREEN (labels exact, co-batching 0.0, floor 0.071 vs control 0.60) and the lever measured 1.93× @ B8 | a product surface that batches (QwenEngine / serve_text wiring) with its own acceptance gate | `RESULTS-fused-tier-a-2026-10-26.md`; `tests/qwen_fused_batch_gate.rs` |
 | Speculative/MTP native ports as shippable decoders | token-exact but 0.42×/0.36× on this device | same conditions as their parent rows | `qwen_spec_bench`/`qwen_mtp_bench` records |
 
 ---
@@ -170,8 +182,6 @@ arm on new hardware (must be a new registered arm; see CONDITIONAL).
 
 | item | gate | cost | pre-registered expectation |
 | ---- | ---- | ---- | -------------------------- |
-| Fused batched decode (the four-part change) | decision invariance + no short-row | engineering, no training | 5.39× projected at batch 8; flips ranking economics |
-| L-G5 prompt-shape cost | shared ≤ 10 % prefill wall AND 0 added bytes | inference-only | cost gate, independent of accuracy |
 | ranked(adapter) | compare vs generation accuracy + prefill-bound cost | minutes | unnamed by any gate yet — would need a frozen threshold before it counts |
 | Constrained decoding / logit masking | probe: base outside-label-set rate | minutes | predicted dead on arrival — the base already emits 0 illegal labels (L-G6) |
 | Seed determinism E2E test | seeded local decode reproduces via `MlxNativeTextClient` | small | contract exists (ADR 0071); enforcement does not |
@@ -193,7 +203,7 @@ arm on new hardware (must be a new registered arm; see CONDITIONAL).
 | Attribution: multi-task data load-bearing; tag not; option list = refinement (+7–9 pts, prevents the leak) | permsolo p<0.001 both directions; tag p=0.185/1.000; shared still transfers | K''-G1/G2 |
 | LoRA mechanical surface | byte-reversible swap; digest cache key; quantized base refused; mlx-lm↔PEFT auto-detect; artifact merges in-suite (27+8+1 tests) | `lora_set.rs`, `lora.rs`, `tests/mlx_lm_artifact_merge.rs` |
 | Prefix-cache weight identity | engine-owned digest; stale hit impossible; test-locked | Row L |
-| Batched-decode lever is worth buying | lockstep control flat 0.996–1.002 across 16×; projected 5.39× @ 8 | `RESULTS-acceleration-2026-10-21` §1 |
+| Batched-decode lever is bought and measured | fused 1.93× @ B8 / 3.19× @ B16 (AC), lockstep control flat 0.987–1.021; gate green (labels exact, co-batch 0.0, floor 0.071 vs defect 0.60); 5.39× projection retired | `RESULTS-fused-tier-a-2026-10-26` §measurement |
 | Batch-isolation tolerance method (the precedent) | pure batch-size floor 3.6e-4 vs heterogeneous defect 0.86; decision `==`, distribution 1e-3 | `laya_native_batch_isolation_test.dart` |
 | Seed contract carrier | ADR 0071; SplitMix64 counter-based RNG; honesty echo on 4 providers; core 159/159 green (2026-10-26) | ADR 0071; `seeded_rng.dart` |
 | Template + EOS is the dominant serving factor | decompression 0→8/10 (qwen) and 0→9/10 (lfm2) WITHIN the same model | 2×2 matrix, ADR 0057 era |

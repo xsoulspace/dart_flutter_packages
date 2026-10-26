@@ -416,6 +416,7 @@ pub fn rank_labels_with(
         .unwrap_or(0);
     cache.reserve(
         model.table(),
+        1, // batch
         model.cfg.kv_heads,
         model.cfg.head_dim,
         shared + max_tail + 1,
@@ -513,7 +514,7 @@ struct Plan {
 }
 
 /// The length of the longest common prefix of two token sequences.
-fn common_prefix_len(a: &[u32], b: &[u32]) -> usize {
+pub(crate) fn common_prefix_len(a: &[u32], b: &[u32]) -> usize {
     let n = a.len().min(b.len());
     let mut i = 0;
     while i < n && a[i] == b[i] {
@@ -528,7 +529,7 @@ fn common_prefix_len(a: &[u32], b: &[u32]) -> usize {
 /// `logits` is `[1, m, V]` — one row per scored position. The log-softmax is
 /// computed on the GPU (max-subtract, exp, sum, log) and read back as `m`
 /// floats; the readback forces the real logits (MLX IS LAZY).
-fn position_logprobs(
+pub(crate) fn position_logprobs(
     logits: &Array,
     targets: &[u32],
     eos: Option<u32>,

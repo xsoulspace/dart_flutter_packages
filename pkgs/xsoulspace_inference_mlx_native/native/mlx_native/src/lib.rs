@@ -26,8 +26,9 @@ pub mod plan;
 pub mod power;
 pub mod qwen;
 pub mod qwen_batch;
+pub mod qwen_fused;
 pub mod qwen_mtp;
-mod qwen_prefix;
+pub mod qwen_prefix;
 pub mod qwen_rank;
 
 #[cfg(test)]

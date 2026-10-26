@@ -57,7 +57,11 @@ fn qwen_profiling() -> bool {
 /// The declared step plan is the DEFAULT decode path (ADR 0055 P0, promoted
 /// after the bit-parity gate): `LAYA_QWEN_PLAN=0` reverts to the imperative
 /// walk for A/B — the same pattern as the RMSNorm kernel row.
-fn qwen_plan_mode() -> bool {
+pub fn qwen_plan_mode_pub() -> bool {
+    qwen_plan_mode()
+}
+
+pub fn qwen_plan_mode() -> bool {
     use std::sync::OnceLock;
     static ON: OnceLock<bool> = OnceLock::new();
     *ON.get_or_init(|| {
@@ -253,10 +257,12 @@ impl KvCache {
     /// spike fix): a mid-decode growth costs a measured ~+20 ms step, and
     /// callers that know their full window up front (generate_greedy does)
     /// should move that cost into the prefill phase. Allocation only —
-    /// padding is never read, so numerics are untouched.
+    /// padding is never read, so numerics are untouched. `batch` is the
+    /// fused batch's B (1 on every single-sequence path).
     pub fn reserve(
         &mut self,
         table: &BindingTable,
+        batch: usize,
         kv_heads: usize,
         head_dim: usize,
         total: usize,
@@ -267,7 +273,7 @@ impl KvCache {
         if n == 0 {
             return Ok(());
         }
-        let bhd = (1, kv_heads, head_dim);
+        let bhd = (batch, kv_heads, head_dim);
         for (li, slot) in self.layers.iter_mut().enumerate() {
             Qwen3::ensure_capacity(table, &format!("cache.k{li}"), &mut slot.k, prev, n, bhd, s)?;
             Qwen3::ensure_capacity(table, &format!("cache.v{li}"), &mut slot.v, prev, n, bhd, s)?;
@@ -282,6 +288,46 @@ impl KvCache {
                 .collect(),
             offset: 0,
         }
+    }
+
+    /// A fused batch's cache from this SINGLE-sequence cache: k identical
+    /// copies of every layer buffer along the batch axis (one concat per
+    /// layer, the arrays' contents untouched). The offset carries over.
+    /// The fused ranker uses this to prefill a shared prefix ONCE and fan
+    /// it out for the batched candidate forward.
+    pub fn expanded_to_batch(
+        &self,
+        k: usize,
+        table: &BindingTable,
+        s: Stream,
+    ) -> MlxResult<KvCache> {
+        if k == 0 || self.layers.is_empty() {
+            return Err(MlxError(-978));
+        }
+        let mut out = KvCache::new(self.layers.len());
+        out.offset = self.offset;
+        for (li, slot) in self.layers.iter().enumerate() {
+            let (Some(kb), Some(vb)) = (&slot.k, &slot.v) else {
+                return Err(MlxError(-978));
+            };
+            let fan = |name: &str, buf: &Array| -> MlxResult<Array> {
+                let mut ins: Vec<&Array> = Vec::with_capacity(k);
+                for _ in 0..k {
+                    ins.push(buf);
+                }
+                eval1(
+                    table,
+                    name,
+                    "q.cache",
+                    Op::Concatenate { axis: 0 },
+                    &ins,
+                    s,
+                )
+            };
+            out.layers[li].k = Some(fan(&format!("cache.k{li}.fan"), kb)?);
+            out.layers[li].v = Some(fan(&format!("cache.v{li}.fan"), vb)?);
+        }
+        Ok(out)
     }
 
     fn update_one(
@@ -586,9 +632,10 @@ impl Qwen3 {
         }
     }
 
-    /// Row gather from [rows, cols] by [1, L] ids → [1, L, cols] (flat take
+    /// Row gather from [rows, cols] by [B, L] ids → [B, L, cols] (flat take
     /// with broadcast-scaled indices; take_along_axis preserves the INDICES'
-    /// shape so it cannot express this gather narrowly).
+    /// shape so it cannot express this gather narrowly). B is the ids' own
+    /// dim 0 — 1 everywhere the single-sequence paths call this.
     fn gather_rows(
         &self,
         name: &str,
@@ -598,6 +645,7 @@ impl Qwen3 {
         cols: i32,
         s: Stream,
     ) -> MlxResult<Array> {
+        let b = ids.dim(0) as usize;
         let count: usize = (0..table_arr.ndim())
             .map(|d| table_arr.dim(d as i32) as usize)
             .product();
@@ -622,7 +670,7 @@ impl Qwen3 {
             &format!("{name}.ids_col"),
             "q.embed",
             Op::Reshape {
-                shape: vec![1, l, 1],
+                shape: vec![b, l, 1],
             },
             &[ids],
             s,
@@ -691,9 +739,9 @@ impl Qwen3 {
         s: Stream,
     ) -> MlxResult<Array> {
         if use_plan {
-            return self.forward_plan(tokens, cache, false, s);
+            return self.forward_plan(tokens, cache, false, None, s);
         }
-        self.forward_impl(tokens, cache, s)
+        self.forward_impl(tokens, cache, None, s)
     }
 
     /// One forward pass over `tokens` ([1, L] i32) with the cache. Returns
@@ -715,12 +763,45 @@ impl Qwen3 {
     ) -> MlxResult<Array> {
         if use_plan {
             // The declared plan runs the head too; its tail IS the logits.
-            return self.forward_plan(tokens, cache, true, s);
+            return self.forward_plan(tokens, cache, true, None, s);
         }
-        let t = self.forward_impl(tokens, cache, s)?;
+        let t = self.forward_impl(tokens, cache, None, s)?;
         // Tied embeddings: the lm_head IS the (quantized) embedding table,
         // applied as_linear.
         self.linear("q.lm_head", &self.embed, &t, s)
+    }
+
+    /// The fused-batch forward: tokens [B, L] (a left-padded prompt set or
+    /// B decode steps), `mask` a BOOL keep-mask — REQUIRED whenever the
+    /// batch is left-padded (pad positions must be un-attendable). B comes
+    /// from the tokens' dim 0; every reshape, the KV allocation and the
+    /// cache write are batch-generic (the four-part change, ADR 0054's
+    /// acceleration program). `with_head = false` returns the final-norm
+    /// hidden state (KV-only prefill), `true` returns logits [B, L, V].
+    pub fn forward_masked(
+        &self,
+        tokens: &Array,
+        cache: &mut KvCache,
+        mask: &Array,
+        with_head: bool,
+        s: Stream,
+    ) -> MlxResult<Array> {
+        if qwen_plan_mode() {
+            return self.forward_plan(tokens, cache, with_head, Some(mask), s);
+        }
+        let t = self.forward_impl(tokens, cache, Some(mask), s)?;
+        if with_head {
+            self.linear("q.lm_head", &self.embed, &t, s)
+        } else {
+            Ok(t)
+        }
+    }
+
+    /// The tied embedding projection, exposed so a batched ranker can
+    /// project any hidden state ([.., D] → [.., V]) on the same weights
+    /// (the fourth part of the fused-batch change).
+    pub fn lm_head(&self, hidden: &Array, s: Stream) -> MlxResult<Array> {
+        self.linear("q.lm_head", &self.embed, hidden, s)
     }
 
     /// The declared-plan path for any forward (decode l=1, prefill chunk
@@ -734,9 +815,11 @@ impl Qwen3 {
         tokens: &Array,
         cache: &mut KvCache,
         with_head: bool,
+        mask: Option<&Array>,
         s: Stream,
     ) -> MlxResult<Array> {
         let l = tokens.dim(1) as usize;
+        let bt = tokens.dim(0) as usize;
         let offset = cache.offset; // constant for this plan (RoPE + slice bounds)
         {
             let table = &self.table;
@@ -747,7 +830,7 @@ impl Qwen3 {
                     &mut slot.k,
                     offset,
                     l,
-                    (1, self.cfg.kv_heads, self.cfg.head_dim),
+                    (bt, self.cfg.kv_heads, self.cfg.head_dim),
                     s,
                 )?;
                 Self::ensure_capacity(
@@ -756,12 +839,12 @@ impl Qwen3 {
                     &mut slot.v,
                     offset,
                     l,
-                    (1, self.cfg.kv_heads, self.cfg.head_dim),
+                    (bt, self.cfg.kv_heads, self.cfg.head_dim),
                     s,
                 )?;
             }
         }
-        let plan = self.build_forward_plan(tokens, cache, offset, l, with_head)?;
+        let plan = self.build_forward_plan(tokens, cache, offset, l, with_head, mask)?;
         if let Some(path) = std::env::var_os("LAYA_QWEN_PLAN_DUMP") {
             let _ = std::fs::write(std::path::PathBuf::from(path), plan.plan.to_json());
         }
@@ -905,9 +988,12 @@ impl Qwen3 {
         offset: usize,
         l: usize,
         with_head: bool,
+        mask: Option<&'a Array>,
     ) -> MlxResult<StepPlan<'a>> {
         let cfg = &self.cfg;
         let (n_h, n_kv, d) = (cfg.heads, cfg.kv_heads, cfg.head_dim);
+        let bt = tokens.dim(0) as i32;
+        let bt_us = tokens.dim(0) as usize;
         let total = offset + l; // plan constant (RoPE + slice bounds)
         let scale = (d as f32).powf(-0.5);
         let mut b = crate::plan::PlanBuilder::default();
@@ -945,7 +1031,7 @@ impl Qwen3 {
             let ids_col = b.push(
                 emb_g,
                 Op::Reshape {
-                    shape: vec![1, l, 1],
+                    shape: vec![bt_us, l, 1],
                 },
                 &format!("{nm}.ids_col"),
                 &[(tok, 0)],
@@ -1115,7 +1201,7 @@ impl Qwen3 {
                 b.push(
                     &g,
                     Op::Reshape {
-                        shape: vec![1, l, heads, d],
+                        shape: vec![bt_us, l, heads, d],
                     },
                     nm,
                     &[(src, 0)],
@@ -1189,14 +1275,16 @@ impl Qwen3 {
                 None,
             );
 
-            // Cache write: buf[..., off:off+1, :] = new (functional).
+            // Cache write: buf[..., off:off+l, :] = new (functional). The
+            // batch dim comes from the tokens (1 on every single-sequence
+            // path).
             let bh = n_kv as i32;
             let dd = d as i32;
             let kc = b.push(
                 &g,
                 Op::SliceUpdate {
                     start: vec![0, 0, offset as i32, 0],
-                    stop: vec![1, bh, (offset + l) as i32, dd],
+                    stop: vec![bt, bh, (offset + l) as i32, dd],
                     strides: vec![1, 1, 1, 1],
                 },
                 &format!("{g}.k_write"),
@@ -1207,7 +1295,7 @@ impl Qwen3 {
                 &g,
                 Op::SliceUpdate {
                     start: vec![0, 0, offset as i32, 0],
-                    stop: vec![1, bh, (offset + l) as i32, dd],
+                    stop: vec![bt, bh, (offset + l) as i32, dd],
                     strides: vec![1, 1, 1, 1],
                 },
                 &format!("{g}.v_write"),
@@ -1237,7 +1325,7 @@ impl Qwen3 {
                         &g,
                         Op::Slice {
                             start: vec![0, 0, 0, 0],
-                            stop: vec![1, bh, total as i32, dd],
+                            stop: vec![bt, bh, total as i32, dd],
                             strides: vec![1, 1, 1, 1],
                         },
                         nm,
@@ -1251,21 +1339,45 @@ impl Qwen3 {
             let kc_view = view(&mut b, &format!("{g}.kv"), kc, k_alloc);
             let vc_view = view(&mut b, &format!("{g}.vv"), vc, v_alloc);
 
-            let att = b.push(
-                &g,
-                Op::Sdp {
-                    scale,
-                    causal: l > 1,
-                },
-                &format!("{g}.sdp"),
-                &[(qr, 0), (kc_view, 0), (vc_view, 0)],
-                None,
-            );
+            // A fused batch passes a BOOL keep-mask (pad positions are
+            // never attended); it replaces the causal mode, so a batched
+            // prefill's mask must already encode causality. Unmasked calls
+            // keep the kernel's native causal path for prefill.
+            let att = match mask {
+                Some(m) => {
+                    let mn = pin(
+                        &mut b,
+                        &mut pool_weights,
+                        m,
+                        &format!("{g}.mask"),
+                    );
+                    b.push(
+                        &g,
+                        Op::Sdp {
+                            scale,
+                            causal: false,
+                        },
+                        &format!("{g}.sdp"),
+                        &[(qr, 0), (kc_view, 0), (vc_view, 0), (mn, 0)],
+                        None,
+                    )
+                }
+                None => b.push(
+                    &g,
+                    Op::Sdp {
+                        scale,
+                        causal: l > 1,
+                    },
+                    &format!("{g}.sdp"),
+                    &[(qr, 0), (kc_view, 0), (vc_view, 0)],
+                    None,
+                ),
+            };
             let att_t = transpose(&mut b, &format!("{g}.att_t"), att);
             let att_r = b.push(
                 &g,
                 Op::Reshape {
-                    shape: vec![1, l, n_h * d],
+                    shape: vec![bt_us, l, n_h * d],
                 },
                 &format!("{g}.att_r"),
                 &[(att_t, 0)],
@@ -1403,8 +1515,15 @@ impl Qwen3 {
         })
     }
 
-    fn forward_impl(&self, tokens: &Array, cache: &mut KvCache, s: Stream) -> MlxResult<Array> {
+    fn forward_impl(
+        &self,
+        tokens: &Array,
+        cache: &mut KvCache,
+        mask: Option<&Array>,
+        s: Stream,
+    ) -> MlxResult<Array> {
         let l = tokens.dim(1) as usize;
+        let bt = tokens.dim(0) as usize;
         let seq_group = if l > 1 { "q.prefill" } else { "q.decode" };
         let cfg = &self.cfg;
         let (n_h, n_kv, d) = (cfg.heads, cfg.kv_heads, cfg.head_dim);
@@ -1436,7 +1555,7 @@ impl Qwen3 {
                     nm,
                     &g,
                     Op::Reshape {
-                        shape: vec![1, l, heads, d],
+                        shape: vec![bt, l, heads, d],
                     },
                     &[arr],
                     s,
@@ -1497,18 +1616,36 @@ impl Qwen3 {
 
             // Prefill (L>1) takes the kernel's native causal path — exactly
             // the "causal" mask string python passes; decode steps pass no
-            // mask (a single query attends to everything cached).
-            let att = eval1(
-                &self.table,
-                &format!("{g}.sdp"),
-                &g,
-                Op::Sdp {
-                    scale,
-                    causal: l > 1,
-                },
-                &[&qr, &kc, &vc],
-                s,
-            )?;
+            // mask (a single query attends to everything cached). A fused
+            // batch passes an explicit BOOL keep-mask (left-padded prompts:
+            // pad positions are never attended) — the mask REPLACES the
+            // causal mode, so a batched prefill's mask must already encode
+            // causality (keep[j] AND j <= i); a decode step's mask is
+            // keep-only ([B, 1, 1, len], the single query is last).
+            let att = match mask {
+                Some(m) => eval1(
+                    &self.table,
+                    &format!("{g}.sdp"),
+                    &g,
+                    Op::Sdp {
+                        scale,
+                        causal: false,
+                    },
+                    &[&qr, &kc, &vc, m],
+                    s,
+                )?,
+                None => eval1(
+                    &self.table,
+                    &format!("{g}.sdp"),
+                    &g,
+                    Op::Sdp {
+                        scale,
+                        causal: l > 1,
+                    },
+                    &[&qr, &kc, &vc],
+                    s,
+                )?,
+            };
 
             let att_t = transpose(&format!("{g}.att_t"), &att)?;
             let att_r = eval1(
@@ -1516,7 +1653,7 @@ impl Qwen3 {
                 &format!("{g}.att_r"),
                 &g,
                 Op::Reshape {
-                    shape: vec![1, l, n_h * d],
+                    shape: vec![bt, l, n_h * d],
                 },
                 &[&att_t],
                 s,
@@ -1678,6 +1815,7 @@ impl Qwen3 {
         // prefill phase, where its latency belongs.
         cache.reserve(
             &self.table,
+            1, // batch
             self.cfg.kv_heads,
             self.cfg.head_dim,
             prompt_ids.len() + max_tokens,
@@ -1777,9 +1915,10 @@ impl Qwen3 {
         // Whole-window reservation for BOTH engines (the spike lesson):
         // prompt + the generation cap, so no growth ever lands mid-round.
         let total = prompt_ids.len() + max_tokens;
-        cache.reserve(&self.table, self.cfg.kv_heads, self.cfg.head_dim, total, s)?;
+        cache.reserve(&self.table, 1, self.cfg.kv_heads, self.cfg.head_dim, total, s)?;
         dcache.reserve(
             &draft.table,
+            1,
             draft.cfg.kv_heads,
             draft.cfg.head_dim,
             total,

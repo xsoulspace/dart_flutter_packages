@@ -615,6 +615,7 @@ pub fn generate_greedy_mtp(
     let total = prompt_ids.len() + max_tokens + k + 4;
     cache.reserve(
         trunk.table(),
+        1,
         trunk.cfg.kv_heads,
         trunk.cfg.head_dim,
         total,

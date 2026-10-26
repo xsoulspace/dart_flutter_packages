@@ -116,6 +116,7 @@ fn measure_ar(
         cache
             .reserve(
                 trunk.table(),
+                1,
                 trunk.cfg.kv_heads,
                 trunk.cfg.head_dim,
                 PREFILL + steps + 8,
@@ -357,6 +358,7 @@ fn main() {
         cache
             .reserve(
                 trunk.table(),
+                1,
                 trunk.cfg.kv_heads,
                 trunk.cfg.head_dim,
                 PREFILL + l + 8,

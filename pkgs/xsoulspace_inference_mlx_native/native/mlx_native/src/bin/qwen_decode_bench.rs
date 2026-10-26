@@ -132,6 +132,7 @@ fn main() {
         cache
             .reserve(
                 model.table(),
+                1, // batch
                 model.cfg.kv_heads,
                 model.cfg.head_dim,
                 cache.offset + half + 1,

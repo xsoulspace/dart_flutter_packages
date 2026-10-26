@@ -159,6 +159,7 @@ fn greedy_decode_matches_reference() {
         cache
             .reserve(
                 model.table(),
+                1,
                 model.cfg.kv_heads,
                 model.cfg.head_dim,
                 fx.prompt_ids.len() + steps.len(),

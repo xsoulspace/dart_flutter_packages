@@ -195,6 +195,7 @@ pub fn generate_greedy_batched_timed(
         }
         caches[i].reserve(
             model.table(),
+            1, // batch
             model.cfg.kv_heads,
             model.cfg.head_dim,
             req.prompt_ids.len() + req.max_tokens,

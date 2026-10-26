@@ -78,7 +78,7 @@ fn run_qwen(
 ) -> Result<(f64, Vec<f64>), String> {
     let mut cache = mlx_native::qwen::KvCache::new(model.cfg.layers);
     cache
-        .reserve(model.table(), model.cfg.kv_heads, model.cfg.head_dim, ids.len() + steps, s)
+        .reserve(model.table(), 1, model.cfg.kv_heads, model.cfg.head_dim, ids.len() + steps, s)
         .map_err(|e| format!("reserve: mlx status {}", e.0))?;
     let t0 = Instant::now();
     let t = Array::from_data_i32(ids, &[1, ids.len()])

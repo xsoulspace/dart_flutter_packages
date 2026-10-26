@@ -477,14 +477,28 @@ hazard. Everything else stays in Python.** Applied here:
    per-task stays the default on cost. The shared-list cost reappears on the
    policy task of the same run (−0.089, leak-free) — the rule the gate
    wrote, measured on both ends.
-3. **Any batched-decode measurement at all** (L-G4) — now MEASURED (§ above):
-   the lever is worth 5.39× projected, the fused forward does not exist, and
-   the bit-level precondition is the wrong bar.
-4. **Any prompt-shape cost measurement** (L-G5) — the only thing that could
-   still move the shared-vs-separate rule on a _product_ number rather than an
-   accuracy number.
-5. **A third, dissimilar task arm** (L-G7). The corpus is generated and
-   non-degenerate; the arm is not run.
+3. **The fused batched decode — BUILT (2026-10-26), the lever is bought.**
+   The four-part qwen.rs change landed (`qwen_fused.rs` + the batch-generic
+   qwen.rs), the reformulated gate is GREEN (classification labels exact
+   across solo/B8/B16/positions; co-batching invariance EXACT at 0.0; the
+   solo-join floor measured at 0.071 with the positive control at 0.60),
+   and the measurement replaces the projection: **1.93× aggregate at B=8,
+   3.19× at B=16, AC-baseline** — the ≥1.5 gate clears, the 5.39×
+   projection retires against fixed per-step costs. Ranking economics
+   flipped conditionally: fused rank 0.80× of sequential at K=4 (the
+   prefix-once + cache fan-out design), break-even at K=2. Full numbers:
+   `bench/nursery/experiments/RESULTS-fused-tier-a-2026-10-26.md`. The
+   fused path is engine-level only — the product surface (QwenEngine /
+   serve_text) does not batch yet.
+4. **The prompt-shape cost (L-G5) — RUN (2026-10-26), FAIL at the frozen
+   terms, conditional recovery measured.** Shared adds +22 tokens/request
+   and +55 % cold prefill wall (c=1 AND c=8) — the ≤10 % AND 0-bytes
+   clauses fail; at a product-shaped window (2048+ shared tokens) a warm
+   prefix pool recovers ALL of it (100 % hit rate, 32–43 ms vs ~1880 ms =
+   57× reduction), while per-task lists hit 0 % on every task switch.
+   Per-task stays the default; shared is a long-shared-prefix product
+   only.
+5. **A third, dissimilar task arm** (L-G7) — RUN 2026-10-26, PASS (above).
 6. **A native-surface capability number.** The capability is still measured
    on the **python runtime-adapter path**; the Rust engine can load and merge
    the artifact (C-10 closed) but has never produced the scored completions.

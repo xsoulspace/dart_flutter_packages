@@ -776,6 +776,19 @@ legal here and still leak under L-G7.
 L-G7's business. A pass here says nothing about whether the shared list answers
 correctly.
 
+> **Post-run status (2026-10-26): FAIL at these frozen terms, with the
+> penalty measured as fully recoverable at one product shape.** The shared
+> union list adds +22 tokens (+96 B) per request and +55 % cold prefill
+> wall (c=1 AND c=8, fused-batched) — both clauses fail. At a
+> product-shaped window (2048+ shared instruction tokens, two tasks
+> interleaved) a warm prefix pool serves the shared list at 100 % hit rate
+> (2168/2169 matched) and 32–43 ms per request vs ~1880 ms cold — a 57×
+> prefill reduction — while the per-task lists hit 0 % on every task
+> switch. Per-task remains the default; shared is legal only where a long
+> shared prefix is actually cacheable. Evidence:
+> `bench/nursery/experiments/RESULTS-fused-tier-a-2026-10-26.md`. No
+> threshold above has moved.
+
 ## L-G6 — ranking versus generation
 
 **Question.** Can the legal labels be RANKED instead of generated?

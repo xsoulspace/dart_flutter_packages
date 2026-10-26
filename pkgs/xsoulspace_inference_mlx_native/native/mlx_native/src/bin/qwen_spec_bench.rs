@@ -144,6 +144,7 @@ fn plain_decode(
     let mut cache = KvCache::new(target.cfg.layers);
     cache.reserve(
         target.table(),
+        1,
         target.cfg.kv_heads,
         target.cfg.head_dim,
         prompt.len() + steps,
