@@ -75,11 +75,16 @@ with a non-zero status after emitting the error line).
    - `unsettled:<reason>` — observation or host-death guard.
    - `graceful:ok` | `graceful:fail:<n>` | `graceful:timeout` — optional hook
      outcome (not settlement).
-4. Host → leader commands:
-   - `term` — optional graceful hook, then group TERM+CONT.
-   - `kill` — group SIGKILL via leader (`kill(0, 9)`); host must not
-     `SIGKILL` the leader directly while the channel is healthy.
+4. Host → leader commands (only these three):
+   - `term` — optional graceful hook, then group TERM+CONT via `kill(0, …)`
+     from the leader.
+   - `kill` — group SIGKILL via leader (`kill(0, SIGKILL)`).
    - `settle` — leader acknowledges `settled` and may exit cleanly.
+
+The host **never** `SIGKILL`s the owned leader while the control channel is
+healthy; escalation uses `term` and `kill` on the socket. After the admitted
+target has exited, the host requests `settle` once **only the leader** remains
+in the observed session group (PGID anchor).
 
 **EOF** on the control socket (host died): leader kills the group, emits
 `unsettled:host-eof` when possible, exits non-zero.
@@ -100,11 +105,15 @@ Close-on-exec pipe detects target exec failure before `started`.
 
 ## Signal rules
 
-- Group signals use `kill(0, sig)` from the leader (same PGID).
+- Group signals use `kill(0, sig)` from the leader (same PGID) **only** when
+  the host sends `term` or `kill` on the control channel.
 - `term` command: optional graceful hook, then SIGTERM to group, then SIGCONT
   (unstop TERM-ignoring members).
 - `kill` command: SIGKILL to group through the leader only.
-- Leader `SIGTERM` handler forwards TERM+CONT to the group (orphan safety).
+- After `started`, the leader sets `$SIG{TERM} = 'IGNORE'`. A direct `SIGTERM`
+  to the leader PID does **not** propagate to the group; orphan safety is the
+  host-death guard (`unsettled:host-eof`) and bounded `settle`, not leader
+  self-forwarding of TERM.
 - Host `ps` enumeration uses a bounded budget (2s); missing `ps` is
   `unsettled`, not silent death certification. No stale-snapshot per-pid
   `killPid` fallback.
@@ -114,6 +123,8 @@ Close-on-exec pipe detects target exec failure before `started`.
 ## Graceful hook (optional)
 
 Configured with `--graceful` / `--graceful-timeout`. Invoked only on `term`,
-before group TERM+CONT. Must validate `BOUNDED_SESSION_MARKER` (and argv marker).
-Timeout and failures produce `graceful:*` lines only; escalation timing is
-unchanged.
+before group TERM+CONT. The hook is an executable invoked as
+`<hook> <marker>`; it must see environment variable `BOUNDED_SESSION_MARKER`
+equal to `<marker>`. Default `--graceful-timeout` is **2** seconds when omitted
+(reference leader: `owned_session_p1_leader.pl`). Timeout and failures produce
+`graceful:*` lines only; escalation timing is unchanged.

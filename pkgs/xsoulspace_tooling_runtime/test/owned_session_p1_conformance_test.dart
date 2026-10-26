@@ -115,6 +115,72 @@ void main() {
     );
 
     test(
+      'direct SIGTERM to leader is ignored; group does not receive TERM',
+      () async {
+        final binding = await _bindControl();
+        addTearDown(() => binding.dispose());
+        const marker = 'conf_marker_leader_term_ignore';
+        final workDir = Directory.systemTemp.createTempSync('p1-leader-term-');
+        final leader = await Process.start(perl, [
+          leaderScript,
+          '--protocol',
+          '1',
+          '--mode',
+          'owned',
+          '--marker',
+          marker,
+          '--control',
+          binding.socketPath,
+          '--',
+          'sh',
+          '-c',
+          r'trap "touch got_term" TERM; sleep 3600 & echo $! > member.pid; wait',
+        ], workingDirectory: workDir.path);
+        addTearDown(() async {
+          leader.kill(ProcessSignal.sigkill);
+          await leader.exitCode.timeout(const Duration(seconds: 2));
+          if (workDir.existsSync()) {
+            workDir.deleteSync(recursive: true);
+          }
+        });
+        final client = await binding.server.first.timeout(
+          const Duration(seconds: 5),
+        );
+        final lines = _LineReader(client);
+        expect(await lines.next(), marker);
+        expect(await lines.next(), 'started');
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        final memberPid = int.parse(
+          File('${workDir.path}/member.pid').readAsStringSync().trim(),
+        );
+        expect(
+          (await Process.run('kill', ['-TERM', '${leader.pid}'])).exitCode,
+          0,
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        expect(
+          (await Process.run('kill', ['-0', '${leader.pid}'])).exitCode,
+          0,
+          reason: 'leader must ignore direct SIGTERM',
+        );
+        expect(
+          (await Process.run('kill', ['-0', '$memberPid'])).exitCode,
+          0,
+          reason: 'group member must stay up when only the leader was signaled',
+        );
+        expect(
+          File('${workDir.path}/got_term').existsSync(),
+          isFalse,
+          reason: 'target group must not receive SIGTERM from leader ignore',
+        );
+        client.writeln('kill');
+        await client.flush();
+        expect(await _expectKilledGroup(lines), 'killed-group');
+        await client.close();
+      },
+    );
+
+    test(
       'term forwards SIGTERM+CONT to the group',
       () async {
         final binding = await _bindControl();
