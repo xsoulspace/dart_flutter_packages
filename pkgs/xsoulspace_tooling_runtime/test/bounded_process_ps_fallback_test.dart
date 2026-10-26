@@ -141,7 +141,7 @@ wait''',
             r'sleep 30 & echo $! > member.pid; sleep 30; wait',
           ],
           workingDirectory: directory.path,
-          deadline: const Duration(seconds: 30),
+          deadline: const Duration(seconds: 5),
           grace: const Duration(milliseconds: 200),
           onStarted: started.complete,
         );
@@ -155,8 +155,8 @@ wait''',
               member.readAsStringSync().trim(),
             ]);
           }
-          await stopProcessTree(root, grace: const Duration(seconds: 1));
-          await running;
+          await stopOwnedGroup(root, grace: const Duration(seconds: 1));
+          await running.timeout(const Duration(seconds: 6));
           directory.deleteSync(recursive: true);
         });
 
@@ -169,19 +169,37 @@ wait''',
         final memberPid = int.parse(memberFile.readAsStringSync().trim());
         expect((await Process.run('kill', ['-STOP', '$memberPid'])).exitCode, 0);
 
-        var psFaultPhase = 'live';
+        final observedDeadline = DateTime.now().add(const Duration(seconds: 5));
+        while (DateTime.now().isBefore(observedDeadline)) {
+          final observed = boundedProcessObservedMembersForRoot(root);
+          if (observed != null && observed.length >= 2) break;
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+        }
+        expect(
+          boundedProcessObservedMembersForRoot(root)?.length,
+          greaterThanOrEqualTo(2),
+          reason: 'need a live ps snapshot before arming cleared observation',
+        );
+
+        var clearedOnce = false;
+        var inStopReads = 0;
+        final stopPassBaseline = ownedGroupStopPass;
         boundedProcessGroupRowsOverride = () async {
-          if (psFaultPhase == 'live') {
+          if (ownedGroupStopInProgress == 0) {
+            inStopReads = 0;
             return probeBoundedProcessGroupRows();
           }
-          if (psFaultPhase == 'cleared') {
-            psFaultPhase = 'failed';
+          inStopReads++;
+          if (ownedGroupStopPass == stopPassBaseline + 1 && inStopReads == 1) {
+            clearedOnce = true;
             return <(int, int, int, String)>[];
           }
-          return null;
+          if (ownedGroupStopPass >= stopPassBaseline + 2) {
+            return null;
+          }
+          return probeBoundedProcessGroupRows();
         };
 
-        psFaultPhase = 'cleared';
         final first = await stopProcessTree(
           root,
           grace: const Duration(milliseconds: 100),
@@ -193,11 +211,10 @@ wait''',
           grace: const Duration(milliseconds: 100),
         );
         expect(second, isEmpty);
-        expect(
-          (await Process.run('kill', ['-0', '$root'])).exitCode,
-          0,
-          reason: 'stopped root must remain alive until cleanup',
-        );
+        expect(clearedOnce, isTrue);
+
+        await stopOwnedGroup(root, grace: const Duration(milliseconds: 100));
+        await running.timeout(const Duration(seconds: 6));
       },
       skip: Platform.isWindows ? 'POSIX session ownership' : null,
     );

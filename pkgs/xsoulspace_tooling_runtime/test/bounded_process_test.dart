@@ -115,7 +115,7 @@ void main() {
           'sleep 30 & wait', // compound: sh STAYS alive under the sleep
         ]);
         await Future<void>.delayed(const Duration(milliseconds: 300));
-        final signaled = await stopProcessTree(root.pid);
+        final signaled = await stopUnownedPosixProcessTree(root.pid);
         expect(signaled, contains(root.pid));
         expect(
           signaled.length,
