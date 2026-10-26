@@ -637,11 +637,13 @@ Future<List<int>> _stopOwnedProcessGroup(
       // ADR 0066: refuse -pgid after the admitted root is reaped — a recycled
       // id could be signaled. The stale-snapshot window is bounded only by the
       // gap between root reap and the host observing rootExited in the exit
-      // callback, not by an arbitrary clock.
-      if (owned.rootExited) return false;
+      // callback, not by an arbitrary clock. Per-pid delivery from the last
+      // enumerated snapshot is still allowed: identity was fixed before ps failed.
       if (owned.observedMembers.isEmpty) return false;
       signaled.addAll(owned.observedMembers);
-      Process.killPid(-owned.process.pid, value);
+      if (!owned.rootExited) {
+        Process.killPid(-owned.process.pid, value);
+      }
       for (final pid in owned.observedMembers) {
         try {
           Process.killPid(pid, value);
