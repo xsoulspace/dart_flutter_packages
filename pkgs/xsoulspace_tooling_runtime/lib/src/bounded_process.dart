@@ -606,9 +606,9 @@ Future<BoundedRunResult> runBounded(
     }
     final remaining = await _ownedGroupMembers(owned);
     if (remaining == null) {
+      settlementProblem ??= 'owned session observation unavailable';
       if (fired) {
         survivors.add(process.pid);
-        settlementProblem = 'owned session observation unavailable';
       }
     } else {
       for (final pid in remaining) {
