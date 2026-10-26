@@ -160,19 +160,28 @@ wait''',
           directory.deleteSync(recursive: true);
         });
 
-        final memberPid = int.parse(
-          File('${directory.path}/member.pid').readAsStringSync().trim(),
-        );
+        final memberFile = File('${directory.path}/member.pid');
+        final memberDeadline = DateTime.now().add(const Duration(seconds: 5));
+        while (!memberFile.existsSync() &&
+            DateTime.now().isBefore(memberDeadline)) {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+        }
+        final memberPid = int.parse(memberFile.readAsStringSync().trim());
         expect((await Process.run('kill', ['-STOP', '$memberPid'])).exitCode, 0);
 
-        var reads = 0;
+        var psFaultPhase = 'live';
         boundedProcessGroupRowsOverride = () async {
-          reads++;
-          if (reads <= 2) return probeBoundedProcessGroupRows();
-          if (reads == 3) return <(int, int, int, String)>[];
+          if (psFaultPhase == 'live') {
+            return probeBoundedProcessGroupRows();
+          }
+          if (psFaultPhase == 'cleared') {
+            psFaultPhase = 'failed';
+            return <(int, int, int, String)>[];
+          }
           return null;
         };
 
+        psFaultPhase = 'cleared';
         final first = await stopProcessTree(
           root,
           grace: const Duration(milliseconds: 100),
