@@ -5,8 +5,8 @@ description: >-
   normalization, and a block-compressed DefinitionPack format that keeps
   word definitions on-device with a constant few-MB memory footprint —
   no network, no server, no full-dictionary load.
-version: 3.13.0
-homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/ag-c/pkgs/universal_lexicon
+version: 0.1.0-dev.3
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/universal_lexicon
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
 

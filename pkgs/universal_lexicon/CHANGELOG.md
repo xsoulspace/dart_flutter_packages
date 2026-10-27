@@ -1,12 +1,12 @@
 # Changelog
 
-## 3.13.0
+## Unreleased
 
-- Restored to `dart_flutter_packages` at `pkgs/universal_lexicon` (moved to
-  `universal_automation_ai_device_use` in fb684053). Verified against UA
-  `a86be1a2` (`pkgs/universal_lexicon`): same library, assets, and tests aside
-  from Dart 3.13 `extraneous_modifier` fixes (removed `final` on parameters).
-  Version aligns with workspace SDK; repository links point at dfp.
+- Move package back into `dart_flutter_packages` at `pkgs/universal_lexicon`
+  (relocated to `universal_automation_ai_device_use` in fb684053). Update
+  `homepage`, `repository`, and `issue_tracker` to this repo. Compared with UA
+  `a86be1a2`, library and assets are unchanged; a few Dart files and one test
+  differ only in formatting (named-parameter line breaks and whitespace).
 
 ## 0.1.0-dev.3
 
