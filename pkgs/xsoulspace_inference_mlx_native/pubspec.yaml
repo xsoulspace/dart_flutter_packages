@@ -14,7 +14,10 @@ resolution: workspace
 
 dependencies:
   async_parallel:
-    path: /Users/antonio/xs/ecsly/plugins/async_parallel
+    git:
+      url: https://github.com/Arenukvern/ecsly.git
+      ref: 3661282c5861c873e0750094b3ef7710228fa5e6
+      path: plugins/async_parallel
   code_assets: any
   data_assets: any
   ffi: ^2.2.0
