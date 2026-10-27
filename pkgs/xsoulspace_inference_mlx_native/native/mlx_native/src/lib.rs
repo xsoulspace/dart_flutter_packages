@@ -802,6 +802,140 @@ pub extern "C" fn mlx_native_qwen_unload(handle: i64) {
     qwen_registry().lock().unwrap().remove(&handle);
 }
 
+/// Runtime capability probe for the additive batched-generation ABI. Older
+/// dylibs lack this symbol and remain usable through solo generation — the
+/// Dart layer degrades to the solo path instead of failing the wire.
+#[no_mangle]
+pub extern "C" fn mlx_native_qwen_batch_api_version() -> i32 {
+    1
+}
+
+#[derive(serde::Deserialize)]
+struct QwenBatchRow {
+    /// Raw text (tokenized by the checkpoint BPE) or explicit prompt ids.
+    #[serde(default)]
+    prompt: Option<String>,
+    #[serde(default)]
+    prompt_ids: Option<Vec<i32>>,
+    #[serde(default = "default_max_tokens")]
+    max_tokens: usize,
+}
+
+#[derive(serde::Deserialize)]
+struct QwenBatchGenerateRequest {
+    requests: Vec<QwenBatchRow>,
+    /// Batch-level EOS stop (mirrors `QwenGenerateRequest`'s contract: the
+    /// eos token itself is kept, HF convention; default OFF).
+    #[serde(default)]
+    stop_on_eos: bool,
+    #[serde(default)]
+    eos_ids: Vec<i32>,
+}
+
+/// FUSED batched greedy generation over one engine (the Tier-A lever at
+/// the wire): ONE left-padded batched prefill, then ONE [B, 1] forward per
+/// decode step. Request:
+/// `{"requests": [{"prompt": "…", "max_tokens": 64}, …],
+///   "stop_on_eos": true, "eos_ids": [...]}`. Response:
+/// `{"batch": B, "results": [{"prompt_ids": [...], "completion_ids": [...],
+///   "text": "…", "stop_reason": "stop"|"max_tokens"}],
+///   "timing": {"prefill_s": …, "decode_s": …, "tokens": N}}` or
+/// `{"error": "…"}`.
+///
+/// LAWS this export carries:
+/// - DECISION-LEVEL INVARIANCE, not bit identity: labels/decision answers
+///   are token-exact across batch sizes and positions (the fused gate);
+///   free-form streams may tie-flip under the kernel floor — reported by
+///   the gate, never hidden. The wire bar is the decision answer.
+/// - The prefix pool is NOT consulted (fresh KV per batch) — no cache
+///   entry can be served stale across paths.
+/// - No per-row cancellation: the unit of work is the batch (finished
+///   rows keep their slots fed, a static batch). Interactive cancellation
+///   stays a solo-path feature.
+/// - Any row whose prompt resolves to fewer than 2 tokens is refused
+///   (the fused prefill needs a real position beyond the last token).
+#[no_mangle]
+pub extern "C" fn mlx_native_qwen_generate_batched(
+    handle: i64,
+    request_json: *const c_char,
+) -> *mut c_char {
+    if request_json.is_null() {
+        return fail("missing request");
+    }
+    let engine = qwen_registry().lock().unwrap().get(&handle).map(Arc::clone);
+    let Some(engine) = engine else {
+        return fail("unknown handle");
+    };
+    let request: QwenBatchGenerateRequest =
+        match serde_json::from_slice(unsafe { CStr::from_ptr(request_json) }.to_bytes()) {
+            Ok(r) => r,
+            Err(_) => return fail("unreadable request JSON"),
+        };
+    if request.requests.is_empty() {
+        return fail("empty batch");
+    }
+    let _guard = forward_lock().lock().unwrap();
+    let stream = match gpu() {
+        Ok(stream) => stream,
+        Err(e) => return fail(&format!("stream initialization failed: mlx status {}", e.0)),
+    };
+    let mut rows: Vec<crate::qwen_batch::BatchRequest> = Vec::with_capacity(request.requests.len());
+    for (i, row) in request.requests.iter().enumerate() {
+        let prompt_ids = if let Some(ids) = &row.prompt_ids {
+            ids.clone()
+        } else if let Some(text) = &row.prompt {
+            match engine.tokenizer.encode(text) {
+                Ok(ids) => ids.into_iter().map(|v| v as i32).collect(),
+                Err(e) => return fail(&format!("row {i}: tokenize failed: {e}")),
+            }
+        } else {
+            return fail(&format!("row {i} needs prompt or prompt_ids"));
+        };
+        rows.push(crate::qwen_batch::BatchRequest {
+            prompt_ids,
+            max_tokens: row.max_tokens,
+        });
+    }
+    let stop: Option<&[i32]> = if request.stop_on_eos {
+        Some(&request.eos_ids)
+    } else {
+        None
+    };
+    let (outcome, timing) =
+        match crate::qwen_fused::generate_greedy_fused_timed(&engine.model, &rows, stop, stream) {
+            Ok(ok) => ok,
+            Err(e) => return fail(&format!("batched generate failed: mlx status {}", e.0)),
+        };
+    let mut results = Vec::with_capacity(rows.len());
+    for (i, row) in rows.iter().enumerate() {
+        let completion = &outcome.completions[i];
+        let text = engine
+            .tokenizer
+            .decode(&completion.iter().map(|&v| v as u32).collect::<Vec<_>>())
+            .unwrap_or_default();
+        results.push(serde_json::json!({
+            "prompt_ids": row.prompt_ids,
+            "completion_ids": completion,
+            "text": text,
+            "stop_reason": outcome.stop_reasons[i],
+        }));
+    }
+    let payload = serde_json::json!({
+        "batch": rows.len(),
+        "results": results,
+        "timing": {
+            "prefill_s": timing.prefill_s,
+            "decode_s": timing.decode_s,
+            "tokens": timing.tokens,
+        },
+    })
+    .to_string();
+    match CString::new(payload) {
+        Ok(c) => c.into_raw(),
+        Err(_) => fail("encode"),
+    }
+}
+
 // ---- nursery weights-splat store (Line I runtime-path seed) ----
 //
 // The LOAD path of the nursery runtime: open, verify, point-read a packed

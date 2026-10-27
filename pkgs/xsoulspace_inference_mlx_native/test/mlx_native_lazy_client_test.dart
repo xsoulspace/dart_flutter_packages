@@ -108,8 +108,14 @@ void main() {
     try {
       await qwen.load();
       if (qwen.isAvailable) {
+        // Budget with real headroom: this prompt's thinking measurably
+        // runs past 128 tokens (the 2026-10-27 run was still reasoning at
+        // the old cap), so 128 conflated "the switch is honored" with
+        // "thinking completes inside a too-small budget" and failed the
+        // protocol on truncation. 768 lets think+answer close; the
+        // assertion set is unchanged.
         final thinking = await qwen.infer(
-          InferenceRequest(prompt: 'What is 2+2?', maxTokens: 128, thinking: true),
+          InferenceRequest(prompt: 'What is 2+2?', maxTokens: 768, thinking: true),
         );
         expect(thinking.success, isTrue, reason: '${thinking.error?.toJson()}');
         expect(

@@ -169,3 +169,22 @@ Non-claims: battery-powered run (24–26 %, 0 mA) — all wall clocks and cost
 ratios on 2026-10-27 artifacts are non-claims; the runtime-LoRA surface runs
 the imperative path (no plan/fused claims under an adapter); one adapter, one
 machine.
+
+## 11. 2026-10-27 (later) — the fused batch at the wire: the lever is a product surface
+
+| result | value | class | evidence |
+| ------ | ----- | ----- | -------- |
+| W-G1 decision answers byte-equal at the wire | 6 heterogeneous classification prompts, concurrent, coalescing window 300 ms: every wire payload == its solo-path answer | ✓ gate (frozen before the run) | `RESULTS-wire-batch-2026-10-27.md` |
+| W-G2 the batch actually formed | batchRuns ≥ 1, lastBatchSize ≥ 2, batchedRows 6/6, soloFallbackRows 0 | ✓ gate | same |
+| W-G3 a lone request is untouched | size-1 window routes solo; answer == coalescing-OFF server | ✓ gate | same |
+| Free-form agreement probe | this run agreed; run-dependent by the engine gate's tie-flip measurement — reported, never gated | noted | same |
+| The CI-blocking red disposed | thinking test budget 128 → 768 (prompt's measured thinking length exceeds 128); assertion set unchanged; battery 42 pass / 1 skip / 0 fail | ✓ test-budget repair | same |
+
+Built: `mlx_native_qwen_generate_batched` FFI (+ api-version probe),
+`NativeQwenTextEngine.generateBatch/Async`, opt-in coalescing in
+`LayaQwenChatServer` (admission rises with the window; default server
+byte-identical to pre-change), `serve_text --coalesce-ms/--max-batch`.
+Non-claims: one base model, one machine, battery power (decision arms
+only); fused ≠ bit-identical to solo; coalescing default stays OFF for
+free-form traffic — the owner flip is informed by this evidence, not
+made by it.

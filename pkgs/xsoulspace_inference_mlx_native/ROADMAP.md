@@ -58,39 +58,44 @@ differently; when documents disagree, the cited artifact wins.
 
 ## THE OPEN ROADMAP (ordered by what it can unlock)
 
-1. **Product wiring of the fused batch** (QwenEngine / serve_text). Tier A is
-   engine-level; the product surface does not batch yet. Named pieces:
-   (a) an additive FFI export
-   `mlx_native_qwen_generate_batched(handle, requestJson)` wrapping
-   `plan_fused_batch` + `generate_greedy_fused_timed` (per-row EOS truncation
-   on the Dart side from the returned ids — the fused path decodes the whole
-   batch for the whole window); (b) `NativeQwenTextEngine.generateBatch` +
-   a coalescing window in `LayaQwenChatServer` (collect concurrent
-   `/v1/chat/completions` requests, batch, split); (c) the acceptance gate at
-   the WIRE: N concurrent requests' responses byte-equal their solo
-   responses (the fused gate's decision-invariance bar, one level up). This
-   is its own session of work: it touches the production serving path and
-   carries its own gate — deliberately not rushed onto the end of a full
-   session.
-2. **Nursery RUNG-1 (PERM-GATE-1)** — the decision head into laya's real
+1. **Nursery RUNG-1 (PERM-GATE-1)** — the decision head into laya's real
    slot; 15–50M, `tool/nursery/slots/perm_gate_1/` (real daily job, not a
    fixture). Stands without the MoE thesis. The destination of the confirmed
    adapter line: the LoRA lane measured WHAT the adapter can do; RUNG-1 is
    where a decision head earns a real slot. Scope: train the 15–50M rung per
    the Rung table, then acceptance = PERM-GATE-1 on the live harness slot.
-3. **A CI gate — WRITTEN 2026-10-27, needs one green run.**
+2. **A CI gate — WRITTEN, unblocked 2026-10-27, needs one green run.**
    `.github/archite_workflows/mlx_native_gate.yml`: the Dart surfaces
    (core + mlx_native) on ubuntu, the native crate on a macOS ARM runner
    (Metal present; snapshot absent ⇒ snapshot-gates skip loudly by design).
-   Known pre-existing red on the local battery, stash-proven at the
-   pre-session tree: `mlx_native_lazy_client_test.dart` "request-level
-   thinking" (a 128-token thinking completion truncates before satisfying the
-   protocol — a model-behavior assertion at the cap edge, not a lane
-   regression). It needs its own disposition BEFORE the workflow can show
-   green.
-4. **Tracked fixture for the adapter-format gate** (EXPERIMENT-PLAN §5.3) —
+   The former local red (`mlx_native_lazy_client_test.dart` "request-level
+   thinking") is DISPOSED: the test's own 128-token budget sat below the
+   prompt's measured thinking length; raised to 768 with the assertion set
+   unchanged (test-budget repair, not an oracle change — full local battery
+   42 pass / 1 honest skip / 0 fail). What remains is watching the runner
+   go green.
+3. **Tracked fixture for the adapter-format gate** (EXPERIMENT-PLAN §5.3) —
    make `mlx_lm_artifact_merge` runnable on a clone (the runtime-LoRA gate
    `qwen_runtime_lora.rs` now shares the same skip-on-clone shape).
+
+### Closed 2026-10-27, later the same day (was open this morning)
+
+- **Product wiring of the fused batch (Tier A at the wire)** — LANDED and
+  GATED: `mlx_native_qwen_generate_batched` FFI (+ api-version probe,
+  older dylibs degrade to solo), `NativeQwenTextEngine.generateBatch/
+  generateBatchAsync`, and an OPT-IN coalescing window in
+  `LayaQwenChatServer` (null window = the wire is byte-identical to the
+  pre-change solo path; window on = concurrent requests within it are
+  served as ONE fused batch, size-1 windows route solo, failed batches
+  fall back per-row, counted). **W-G1/G2/G3 all PASS on the first run**
+  (six heterogeneous classification answers byte-equal solo at the wire;
+  the batch actually formed, zero fallback; a lone request untouched) —
+  bars frozen before the run in
+  `bench/nursery/experiments/RESULTS-wire-batch-2026-10-27.md`. Free-form
+  streams keep the engine gate's recorded tie-flip freedom (agreement
+  reported, never gated) — which is WHY the window is opt-in; flipping
+  the product default is an owner decision this evidence now informs.
+  Gate: `test/mlx_native_qwen_batch_wire_test.dart`.
 
 ### Closed 2026-10-27 (was open when this file was created)
 

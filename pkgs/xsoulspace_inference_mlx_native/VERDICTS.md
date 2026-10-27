@@ -220,6 +220,7 @@ arm on new hardware (must be a new registered arm; see CONDITIONAL).
 | Instruments that paid | `qwen_marginal_cost` (53 s closed Line J), forced-eval law (28.7×), interleaved A/B, Tier-0/Tier-1 split | Row J; `PYTHON-BOUNDARY.md` |
 | Runtime-LoRA on the shipping surface (2026-10-27) | `Qwen3::attach_lora`: 56/56 targets, refuses unknown targets, moves logits, identity folds the digest, plan mode refused under an adapter; perm capability carries ABOVE python (+0.024), veto −0.070 | `tests/qwen_runtime_lora.rs`; `RESULTS-native-surface-2026-10-27.md` |
 | The ranker product shape (2026-10-27) | ranked(adapter) == generated(adapter) ± 0.009 both tasks; 0 outside-label-set by construction; sum-norm is the engine-robust normalization (80 % cross-engine agreement) | R-G1 in `RESULTS-native-surface-2026-10-27.md` |
+| The fused batch at the wire (2026-10-27) | W-G1/G2/G3 PASS first run: 6 heterogeneous classification answers byte-equal solo at the chat wire through the opt-in coalescing window; batch formed (zero fallback); a lone request untouched (size-1 windows route solo) | `RESULTS-wire-batch-2026-10-27.md`; `test/mlx_native_qwen_batch_wire_test.dart` |
 
 ---
 
