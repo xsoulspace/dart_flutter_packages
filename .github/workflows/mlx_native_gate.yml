@@ -9,18 +9,26 @@ name: mlx_native lane gate
 #     gates that could run ran, and the skips are visible in the log).
 # The known-flaky l0 perf gate stays in the suite: gates are not removed to
 # make CI green (the release gate is the same suite locally, on AC).
+#
+# LOCATION LAW (paid for 2026-10-27): GitHub Actions reads ONLY
+# `.github/workflows/`. This file first landed under
+# `.github/archite_workflows/` and never triggered a single run (the
+# repo's other three workflow files share that dead directory — their last
+# runs predate the move; moving them back is the owner's call, not this
+# lane's).
 
 on:
   pull_request:
     paths:
       - 'pkgs/xsoulspace_inference_mlx_native/**'
       - 'pkgs/xsoulspace_inference_core/**'
-      - '.github/archite_workflows/mlx_native_gate.yml'
+      - '.github/workflows/mlx_native_gate.yml'
   push:
-    branches: [main, master]
+    branches: [main, master, ag-c]
     paths:
       - 'pkgs/xsoulspace_inference_mlx_native/**'
       - 'pkgs/xsoulspace_inference_core/**'
+      - '.github/workflows/mlx_native_gate.yml'
 
 jobs:
   dart:

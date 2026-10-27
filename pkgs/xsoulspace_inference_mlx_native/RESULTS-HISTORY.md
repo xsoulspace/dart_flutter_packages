@@ -188,3 +188,15 @@ Non-claims: one base model, one machine, battery power (decision arms
 only); fused ≠ bit-identical to solo; coalescing default stays OFF for
 free-form traffic — the owner flip is informed by this evidence, not
 made by it.
+
+## 12. 2026-10-27 (latest) — the format gate runs on every clone; the workflow found its live path
+
+| result | value | class | evidence |
+| ------ | ----- | ----- | -------- |
+| Tracked format fixture (EXPERIMENT-PLAN §5.3) | synthetic mlx-lm adapter built in-test at the TRUE on-disk orientation, known dyadic values: transpose verified by VALUE, merge delta `1 + scale·B@A` exact, apply_to full, missing-target/unmatched-lora_a/no-LoRA-tensors refusals — 2/2 gates green locally | ✓ gate | `tests/mlx_lm_artifact_merge.rs` (new second test) |
+| Workflow location law | `.github/archite_workflows/` is DEAD to GitHub Actions (only `.github/workflows/` is read) — the gate file had never triggered a run; moved to the live path, trigger extended to `ag-c` pushes | ✓ paid-for lesson | `.github/workflows/mlx_native_gate.yml` header |
+
+Owner-facing note (recorded, not acted on): the repo's other three workflow
+files still sit in the dead `archite_workflows/` directory; their runs
+stopped when they left `.github/workflows/` (last: 2026-03-30). Restoring
+them is the owner's call.

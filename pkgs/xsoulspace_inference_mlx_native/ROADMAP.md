@@ -64,21 +64,39 @@ differently; when documents disagree, the cited artifact wins.
    adapter line: the LoRA lane measured WHAT the adapter can do; RUNG-1 is
    where a decision head earns a real slot. Scope: train the 15–50M rung per
    the Rung table, then acceptance = PERM-GATE-1 on the live harness slot.
-2. **A CI gate — WRITTEN, unblocked 2026-10-27, needs one green run.**
-   `.github/archite_workflows/mlx_native_gate.yml`: the Dart surfaces
-   (core + mlx_native) on ubuntu, the native crate on a macOS ARM runner
-   (Metal present; snapshot absent ⇒ snapshot-gates skip loudly by design).
-   The former local red (`mlx_native_lazy_client_test.dart` "request-level
-   thinking") is DISPOSED: the test's own 128-token budget sat below the
-   prompt's measured thinking length; raised to 768 with the assertion set
-   unchanged (test-budget repair, not an oracle change — full local battery
-   42 pass / 1 honest skip / 0 fail). What remains is watching the runner
-   go green.
-3. **Tracked fixture for the adapter-format gate** (EXPERIMENT-PLAN §5.3) —
-   make `mlx_lm_artifact_merge` runnable on a clone (the runtime-LoRA gate
-   `qwen_runtime_lora.rs` now shares the same skip-on-clone shape).
+2. **A CI gate — WRITTEN, unblocked, live-pathed 2026-10-27; needs one
+   green run.** `.github/workflows/mlx_native_gate.yml` — the file MOVED
+   from `.github/archite_workflows/` (which GitHub Actions never reads; it
+   had never triggered a single run — paid-for lesson recorded in the file
+   header). Now at the live path, triggering on pushes to main/master AND
+   `ag-c` plus PRs touching the lane: the Dart surfaces (core + mlx_native)
+   on ubuntu, the native crate on a macOS ARM runner (Metal present;
+   snapshot absent ⇒ snapshot-gates skip loudly by design). The former
+   local red (`mlx_native_lazy_client_test.dart` "request-level thinking")
+   is DISPOSED: the test's own 128-token budget sat below the prompt's
+   measured thinking length; raised to 768 with the assertion set unchanged
+   (test-budget repair, not an oracle change — full local battery 42 pass /
+   1 honest skip / 0 fail). What remains is watching the runner go green.
+   Owner-facing note: the repo's OTHER three workflow files still sit in
+   the dead `archite_workflows/` directory (their runs stopped when they
+   left `.github/workflows/`); restoring them is the owner's call.
 
 ### Closed 2026-10-27, later the same day (was open this morning)
+
+- **Tracked fixture for the adapter-format gate** (EXPERIMENT-PLAN §5.3):
+  `tests/mlx_lm_artifact_merge.rs` gained a second gate,
+  `the_artifact_format_gate_runs_anywhere_on_a_tracked_synthetic_adapter`
+  — a synthetic mlx-lm safetensors built IN-TEST with known dyadic values
+  at the TRUE on-disk orientation (`lora_a` [in,r] / `lora_b` [r,out]),
+  so every clone with a Metal device runs the full reader law: load_auto
+  detection, the transpose verified by VALUE (an orientation error flips
+  the expected numbers), the exact merge delta `1 + scale·B@A` per pair,
+  full `apply_to`, the missing-target refusal, the unmatched-`lora_a`
+  refusal, and the no-LoRA-tensors refusal. The trained-artifact gate
+  still proves the trainer's bytes where `bench/` exists and still skips
+  loudly elsewhere. Both gates green locally (2/2).
+
+### Closed 2026-10-27, earlier the same day (was open this morning)
 
 - **Product wiring of the fused batch (Tier A at the wire)** — LANDED and
   GATED: `mlx_native_qwen_generate_batched` FFI (+ api-version probe,
