@@ -64,8 +64,9 @@ differently; when documents disagree, the cited artifact wins.
    adapter line: the LoRA lane measured WHAT the adapter can do; RUNG-1 is
    where a decision head earns a real slot. Scope: train the 15–50M rung per
    the Rung table, then acceptance = PERM-GATE-1 on the live harness slot.
-2. **A CI gate — at its clean-clone truth (2026-10-27, first real run
-   40486026348).** `.github/workflows/mlx_native_gate.yml` — the file MOVED
+2. **A CI gate — LIVE AND GREEN at its clean-clone truth (2026-10-27;
+   first run 40486026348 named the blockers, re-scoped run 40486871329
+   PASSED, `native-compile` 30 s).** `.github/workflows/mlx_native_gate.yml` — the file MOVED
    from `.github/archite_workflows/` (which GitHub Actions never reads; it
    had never triggered a single run — paid-for lesson recorded in the file
    header), now triggering on pushes to main/master AND `ag-c`. The first

@@ -212,3 +212,5 @@ them is the owner's call.
 
 Local gates at close: merge gates 2/2 (trained artifact + new synthetic
 format fixture), Dart battery 42/1 skip/0 fail, native suite green.
+
+| 2026-10-27 (close) | re-scoped run 40486871329 PASSED — `native-compile` green in 30 s on macos-14; the lane gate is live at its honest scope | ✓ green run observed | `gh run view 40486871329` |
