@@ -30,7 +30,9 @@ void main() {
       );
       expect(entry, isNotNull);
       final packageRoot = File.fromUri(entry!).parent.parent;
-      leaderScript = '${packageRoot.path}/tool/owned_session_p1_leader.pl';
+      leaderScript =
+          Platform.environment['OWNED_SESSION_P1_LEADER'] ??
+          '${packageRoot.path}/tool/owned_session_p1_leader.pl';
       expect(File(leaderScript).existsSync(), isTrue);
       fixturesDir = '${packageRoot.path}/test/fixtures/owned_session_p1';
       for (final name in ['graceful_ok.sh', 'graceful_slow.sh', 'graceful_fail.sh']) {
@@ -366,6 +368,151 @@ void main() {
         await client.flush();
         expect(await _expectKilledGroup(lines), 'killed-group');
         await client.close();
+      },
+    );
+
+    test('back-to-back term and kill lines in one flush', () async {
+      final binding = await _bindControl();
+      addTearDown(() => binding.dispose());
+      const marker = 'conf_marker_back_to_back';
+      final leader = await Process.start(perl, [
+        leaderScript,
+        '--protocol',
+        '1',
+        '--mode',
+        'owned',
+        '--marker',
+        marker,
+        '--control',
+        binding.socketPath,
+        '--',
+        'sleep',
+        '3600',
+      ]);
+      addTearDown(() async {
+        leader.kill(ProcessSignal.sigkill);
+        await leader.exitCode.timeout(const Duration(seconds: 2));
+      });
+      final client = await binding.server.first.timeout(
+        const Duration(seconds: 5),
+      );
+      final lines = _LineReader(client);
+      expect(await lines.next(), marker);
+      expect(await lines.next(), 'started');
+      client.writeln('term');
+      client.writeln('kill');
+      await client.flush();
+      expect(await lines.next(), 'term-forwarded');
+      expect(await _expectKilledGroup(lines), 'killed-group');
+      await client.close();
+    });
+
+    test('single syswrite term+kill (perl harness)', () async {
+      final harness =
+          '$fixturesDir/control_back_to_back.pl';
+      final result = await Process.run(perl, [harness, leaderScript]);
+      expect(result.exitCode, 0, reason: result.stderr);
+      expect(result.stdout, contains('term-forwarded'));
+      expect(result.stdout, contains('killed-group'));
+    });
+
+    test('kill preempts a hung graceful hook', () async {
+      final binding = await _bindControl();
+      addTearDown(() => binding.dispose());
+      const marker = 'conf_marker_hook_kill';
+      final leader = await Process.start(perl, [
+        leaderScript,
+        '--protocol',
+        '1',
+        '--mode',
+        'owned',
+        '--marker',
+        marker,
+        '--control',
+        binding.socketPath,
+        '--graceful',
+        '$fixturesDir/graceful_slow.sh',
+        '--graceful-timeout',
+        '30',
+        '--',
+        'sleep',
+        '3600',
+      ]);
+      addTearDown(() async {
+        leader.kill(ProcessSignal.sigkill);
+        await leader.exitCode.timeout(const Duration(seconds: 2));
+      });
+      final client = await binding.server.first.timeout(
+        const Duration(seconds: 5),
+      );
+      final lines = _LineReader(client);
+      expect(await lines.next(), marker);
+      expect(await lines.next(), 'started');
+      client.writeln('term');
+      await client.flush();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      client.writeln('kill');
+      await client.flush();
+      expect(await _expectKilledGroup(lines), 'killed-group');
+      await client.close();
+    });
+
+    test(
+      'host EOF during hook does not strand the group (SIGPIPE ignored)',
+      () async {
+        final binding = await _bindControl();
+        addTearDown(() => binding.dispose());
+        const marker = 'conf_marker_pipe_hook';
+        final workDir = Directory.systemTemp.createTempSync('p1-pipe-');
+        final leader = await Process.start(perl, [
+          leaderScript,
+          '--protocol',
+          '1',
+          '--mode',
+          'owned',
+          '--marker',
+          marker,
+          '--control',
+          binding.socketPath,
+          '--graceful',
+          '$fixturesDir/graceful_slow.sh',
+          '--graceful-timeout',
+          '30',
+          '--',
+          'sh',
+          '-c',
+          r'sleep 3600 & echo $! > child.pid; wait',
+        ], workingDirectory: workDir.path);
+        final client = await binding.server.first.timeout(
+          const Duration(seconds: 5),
+        );
+        final lines = _LineReader(client);
+        expect(await lines.next(), marker);
+        expect(await lines.next(), 'started');
+        final childDeadline = DateTime.now().add(const Duration(seconds: 5));
+        var childPid = 0;
+        while (DateTime.now().isBefore(childDeadline)) {
+          final f = File('${workDir.path}/child.pid');
+          if (f.existsSync()) {
+            childPid = int.parse(f.readAsStringSync().trim());
+            break;
+          }
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+        }
+        expect(childPid, greaterThan(0));
+        client.writeln('term');
+        await client.flush();
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await client.close();
+        await leader.exitCode.timeout(const Duration(seconds: 5));
+        expect(
+          (await Process.run('kill', ['-0', '$childPid'])).exitCode,
+          isNot(0),
+          reason: 'group must die even when host vanishes during hook',
+        );
+        addTearDown(() {
+          if (workDir.existsSync()) workDir.deleteSync(recursive: true);
+        });
       },
     );
 
