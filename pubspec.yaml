@@ -37,8 +37,6 @@ dependency_overrides:
     path: ../../ai_computer_use_universal_automation/pkgs/universal_webrtc
   universal_webrtc_raw:
     path: ../../ai_computer_use_universal_automation/pkgs/universal_webrtc_raw
-  universal_lexicon:
-    path: ../../ai_computer_use_universal_automation/pkgs/universal_lexicon
   universal_storage_interface:
     path: ../../universal_storage/pkgs/universal_storage_interface
   universal_storage_filesystem:

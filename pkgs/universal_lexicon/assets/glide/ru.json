@@ -1,0 +1,12 @@
+{
+  "language": "ru",
+  "frequency": {
+    "source": "hermitdave/FrequencyWords (OpenSubtitles 2018/2016)",
+    "license": "CC-BY-SA 3.0",
+    "file": "ru_50k.txt",
+    "fetched": "2026-10-01T13:42:28.080888Z"
+  },
+  "definitions": 1179,
+  "built": "2026-10-01T13:51:18.334442Z",
+  "words": 10000
+}
