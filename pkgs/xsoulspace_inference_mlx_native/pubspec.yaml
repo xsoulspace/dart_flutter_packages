@@ -38,5 +38,4 @@ dev_dependencies:
   crypto: ^3.0.7
   lints: ^6.1.0
   test: ^1.31.2
-  xsoulspace_tooling_runtime:
-    path: ../xsoulspace_tooling_runtime
+  universal_tooling_runtime: ^0.2.0

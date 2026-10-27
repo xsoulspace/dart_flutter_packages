@@ -1,5 +1,8 @@
 ## Unreleased
 
+- Drop the in-repo `xsoulspace_tooling_runtime` copy; native CLI tooling and
+  tests now depend on hosted `universal_tooling_runtime` ^0.2.0.
+
 - Decode visible discussion from validated syntax spans while retaining raw
   source and typed calls, including prefilled thinking envelopes.
 
