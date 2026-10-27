@@ -50,7 +50,7 @@ quality on the real slot, recorded when it happens, never assumed here.
 Thresholds are provisional until set final in TRAIN-GATES.md before the
 rung's first training run.
 
-## Standing behavior (2026-10-18, after attempts 1–3)
+## Standing behavior (2026-10-27, after attempts 1–6; series paused by operator instruction)
 
 Until a candidate beats it on the gate's own terms, the shipped behavior
 is ALL-ABSTAIN (attempt 1: agreement 0.667, **zero unsafe allows** — the
@@ -58,6 +58,28 @@ gate's unsafe=0 law makes conservatism rational, and attempts 2–3, which
 allowed real commands, scored 0.444/0.50 with 5–7 unsafe). A candidate
 replaces it only with a harness verdict of agreement ≥ target AND zero
 unsafe allows.
+
+**The attempt series (2026-10-18 → 2026-10-27; details in each run's
+RUN-RECORD):** attempt 1 (all-abstain): 0.667, 0 unsafe. Attempts 2–3
+(allowing candidates): 0.444/0.50, 5–7 unsafe. Attempt 4 (dense-perm-b,
+dense trunk exposed to the domain corpus): 0.722, 3 unsafe — best
+agreement. Attempt 5 (dense-perm-c, corpus v3 veto-slice reweighting +
+the pre-registered margin rule, TAU chosen on the corpus eval split
+only): 0.667, ZERO unsafe — the margin mechanism solved safety
+(unsafe 3 → 0), but no frozen case's allow-margin cleared the
+threshold, so the candidate degenerated to all-abstain on the frozen
+set. Attempt 6 (dense-perm-d, from scratch on v3, the pre-registered
+line test): 0.667, 0 unsafe at TAU=1.75; eval argmax 0.6021 — under
+the line rule's 0.75 bar, so **the 42.8M dense line on this corpus
+family is CLOSED WITH DATA**: its measured ceiling is attempt 4's 0.722
+(argmax, 3 unsafe), and the safety/agreement frontier is mapped —
+zero unsafe via calibration costs agreement down to the all-abstain
+baseline; 0.722 agreement costs 3 unsafe. **The 0.85/0 bar needs a
+design change, not more arms on this recipe.** Recorded next levers: a
+bigger trunk toward the 50M top of the Rung-1 band, a slot-head MLP
+readout over stepwise states, a curriculum over veto-hardness, and —
+the cheapest real data — the live all-abstain escalations below (each
+one is a human-labeled real example).
 
 **All-abstain is also the data collector.** There are no recorded real
 permission requests yet (the gate has never run live; no policy store of

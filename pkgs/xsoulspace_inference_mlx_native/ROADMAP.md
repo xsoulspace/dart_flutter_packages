@@ -58,12 +58,38 @@ differently; when documents disagree, the cited artifact wins.
 
 ## THE OPEN ROADMAP (ordered by what it can unlock)
 
-1. **Nursery RUNG-1 (PERM-GATE-1)** — the decision head into laya's real
-   slot; 15–50M, `tool/nursery/slots/perm_gate_1/` (real daily job, not a
-   fixture). Stands without the MoE thesis. The destination of the confirmed
-   adapter line: the LoRA lane measured WHAT the adapter can do; RUNG-1 is
-   where a decision head earns a real slot. Scope: train the 15–50M rung per
-   the Rung table, then acceptance = PERM-GATE-1 on the live harness slot.
+1. **Nursery RUNG-1 (PERM-GATE-1) — attempts 5–6 RAN 2026-10-27; the
+   42.8M dense line CLOSED WITH DATA; the rung stays open at its named
+   design levers.** The acceptance harness
+   (`tool/nursery/slots/perm_gate_1/`) was fully exercised with two
+   pre-registered attempts (predictions written before training, the
+   margin decision rule and its TAU-selection rule frozen on the corpus
+   eval split before any frozen case was scored):
+   - **Attempt 5 (dense-perm-c)** — corpus v3 (v2 + a 600-row granted-
+     veto slice + a 500-row granted-safe slice, law unchanged, frozen-
+     case disjoint) + warm start from attempt 4 at lr 5e-4, plus the
+     margin rule (`allow_once` iff margin > TAU; TAU=0 is attempt 2's
+     argmax). **0.667 agreement, ZERO unsafe** — the margin mechanism
+     solved the safety failure (3 → 0) but no frozen case's allow-margin
+     cleared TAU=2.0, so the candidate degenerated to all-abstain.
+   - **Attempt 6 (dense-perm-d)** — from scratch, attempt 4's recipe on
+     v3, 1700 steps. **0.667 / 0 unsafe at TAU=1.75; eval argmax 0.6021**
+     — under the pre-registered 0.75 line bar: the 42.8M dense line
+     closes. Its measured ceiling: attempt 4's **0.722 (argmax, 3
+     unsafe)**; the safety/agreement frontier is mapped — 0 unsafe via
+     calibration costs agreement down to baseline.
+   - Standing shipped behavior unchanged: ALL-ABSTAIN (0.667 / 0 unsafe)
+     — still the best zero-unsafe operating point and the live data
+     collector. Fixtures: `dense-perm-c/` + `dense-perm-d/` RUN-RECORDs
+     (prediction/observed, margin sweeps, verdicts), corpus v3 manifest
+     (3000 rows, 0 frozen-case collisions).
+   - **Re-scoped next levers (design changes, not more arms on this
+     recipe):** a bigger trunk toward the 50M top of the Rung-1 band; a
+     slot-head MLP readout over stepwise states (never tried on the
+     dense trunk); a curriculum over veto-hardness; real labeled
+     examples from live all-abstain escalations. Live-slot half of
+     RUNG-1 acceptance (the real permission_gate.v1 answer quality)
+     remains a separate, later record — never assumed.
 2. **A CI gate — LIVE AND GREEN at its clean-clone truth (2026-10-27;
    first run 40486026348 named the blockers, re-scoped run 40486871329
    PASSED, `native-compile` 30 s).** `.github/workflows/mlx_native_gate.yml` — the file MOVED

@@ -214,3 +214,22 @@ Local gates at close: merge gates 2/2 (trained artifact + new synthetic
 format fixture), Dart battery 42/1 skip/0 fail, native suite green.
 
 | 2026-10-27 (close) | re-scoped run 40486871329 PASSED — `native-compile` green in 30 s on macos-14; the lane gate is live at its honest scope | ✓ green run observed | `gh run view 40486871329` |
+
+## 14. 2026-10-27 (day's end) — RUNG-1 attempts 5–6: safety solved, the 42.8M dense line closed with data
+
+| result | value | class | evidence |
+| ------ | ----- | ----- | -------- |
+| Corpus v3 | v2 + 600 granted-veto rows + 500 granted-safe rows (law `decide()` unchanged; frozen cases disjoint at pair+triple); 3000 rows, 1100 allow / 1900 abstain | ✓ artifact, sha256-stamped | `perm_domain_corpus_v3.jsonl` + manifest |
+| The margin rule (pre-registered) | `allow_once` iff margin > TAU; TAU selected on corpus eval ONLY (zero-unsafe, then max agreement, ties → smallest); TAU=0 byte-identical to attempt 2's argmax | ✓ mechanism | `candidate_perm_head.py --margin`; `tune_margin.py`; both PREDICTION.md |
+| Attempt 5 (dense-perm-c, warm-start 5e-4) | frozen cases 12/18 = 0.667, **0 unsafe** (attempt 4: 3) at TAU=2.0 — safety solved, but no case margin cleared the threshold ⇒ degenerated to all-abstain; eval argmax 0.6655/47 unsafe | gate FAIL on agreement, verdict recorded | `dense-perm-c/` RUN-RECORD + margin_sweep + verdict |
+| Attempt 6 (dense-perm-d, from scratch 1700 steps) | eval argmax 0.6021/98 (worse); frozen 12/18 = 0.667 / 0 unsafe at TAU=1.75 | line rule (< 0.75) FIRED: 42.8M dense line CLOSED | `dense-perm-d/` RUN-RECORD + margin_sweep + verdict |
+| The measured frontier | ceiling of the line = attempt 4's 0.722 (argmax, 3 unsafe); 0 unsafe costs agreement down to the 0.667 baseline — representation, not calibration, binds | ✓ measured, re-scopes the rung | both RUN-RECORDs |
+| Standing shipped behavior | ALL-ABSTAIN unchanged (0.667 / 0 unsafe) — best zero-unsafe point + the live data collector | ✓ | slot README |
+
+Non-claims: fixture-half only — the live permission_gate.v1 answer
+quality on the real slot is a separate later record; both runs on AC
+(recorded charge current); a gate FAIL is a verdict with data, not a
+shame (TRAIN-GATES law 5). Next levers are design changes: bigger trunk
+(→ 50M top of the band), slot-head MLP readout over stepwise states,
+veto-hardness curriculum, live-collected labeled examples. Attempt
+series paused by operator instruction.

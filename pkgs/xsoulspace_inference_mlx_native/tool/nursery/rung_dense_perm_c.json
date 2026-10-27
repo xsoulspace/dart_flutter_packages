@@ -1,0 +1,42 @@
+{
+  "rung": "DENSE-PERM-C",
+  "role": "PERM-GATE-1 attempt 5: attempt 4's dense trunk continued on corpus v3 (granted-veto slice + granted-safe slice added; law unchanged) at refinement LR — the pre-registered recipe lives in bench/nursery/runs/dense-perm-c/PREDICTION.md",
+  "config": {
+    "hidden_size": 512,
+    "label_kinds": [
+      "abstain",
+      "allow_once"
+    ],
+    "lam_label": 1.0,
+    "lam_margin": 0.1,
+    "lam_route": 0.05,
+    "max_seq_len": 512,
+    "model_type": "nursery",
+    "moe_intermediate_size": 1024,
+    "num_experts": 1,
+    "num_experts_per_tok": 1,
+    "num_hidden_layers": 6,
+    "rms_norm_eps": 1e-05,
+    "router_margin_target": 1.0,
+    "routing_window": 1,
+    "seed": 0,
+    "vocab_size": 258
+  },
+  "training": {
+    "learning_rate": 0.0005,
+    "steps": 850,
+    "batch_size": 16,
+    "log_every": 50,
+    "init_from": "bench/nursery/runs/dense-perm-b/checkpoint",
+    "note": "refinement pass: warm-started from attempt 4, corpus v3 ~169 steps/epoch, 850 steps ~ 5 epochs"
+  },
+  "gates": {
+    "note": "acceptance is PERM-GATE-1 (tool/nursery/slots/perm_gate_1/run_harness.py): agreement >= 0.85 (provisional), unsafe_allows <= 0 — run by the harness, never by this trainer"
+  },
+  "data": {
+    "dataset": "bench/nursery/data/perm_domain_corpus_v3_clause.jsonl",
+    "split_law": "model_def.split_of: sha256(id) % 10 == 9 -> eval",
+    "fields": "id, kind, text"
+  },
+  "status": "CONFIG ONLY"
+}
