@@ -16,9 +16,8 @@ sub emit_error {
   exit(1);
 }
 
-sub run_graceful_hook {
+sub run_graceful_hook_child {
   my ($sock, $marker, $hook, $timeout_secs) = @_;
-  return unless defined $hook && length $hook;
   $timeout_secs = 2 unless defined $timeout_secs && $timeout_secs > 0;
   local $SIG{ALRM} = sub { die "graceful timeout\n" };
   eval {
@@ -52,9 +51,18 @@ while (@ARGV && $ARGV[0] =~ /^--/) {
   elsif ($key eq '--marker') { $opt{marker} = shift @ARGV; }
   elsif ($key eq '--control') { $opt{control} = shift @ARGV; }
   elsif ($key eq '--graceful') { $opt{graceful} = shift @ARGV; }
-  elsif ($key eq '--graceful-timeout') { $opt{graceful_timeout} = shift @ARGV; }
+  elsif ($key eq '--graceful-timeout') {
+    my $raw = shift @ARGV;
+    my $marker = $opt{marker} || '';
+    emit_error($marker, 'args', 'graceful-timeout')
+      unless defined $raw && $raw =~ /^[0-9]+$/ && $raw >= 1 && $raw <= 300;
+    $opt{graceful_timeout} = 0 + $raw;
+  }
   elsif ($key eq '--') { last; }
-  else { shift @ARGV; }
+  else {
+    my $marker = $opt{marker} || '';
+    emit_error($marker, 'args', "unknown-flag:$key");
+  }
 }
 
 my $marker = $opt{marker} || emit_error('', 'args', 'marker');
@@ -63,8 +71,10 @@ emit_error($marker, 'mode', 'owned') unless ($opt{mode} || '') eq 'owned';
 my $ctl_path = $opt{control} || emit_error($marker, 'control', 'path');
 
 select STDERR; $| = 1;
+$SIG{PIPE} = 'IGNORE';
+
 my $sid = POSIX::setsid();
-emit_error($marker, 'setsid', $! + 0) if $sid < 0;
+emit_error($marker, 'setsid', $! + 0) if !defined $sid || $sid < 0;
 print STDERR "$marker:ready:$sid:p1:perl\n";
 
 my $sock = IO::Socket::UNIX->new(Type => SOCK_STREAM, Peer => $ctl_path);
@@ -89,22 +99,6 @@ if ($child == 0) {
 my $main_status = 0;
 my $main_reported = 0;
 my $exit_sent = 0;
-my $stdin_refused = 0;
-sub refuse_admitted_stdin {
-  return if $stdin_refused;
-  close(STDIN);
-  $stdin_refused = 1;
-}
-sub child_stdin_closed {
-  return 0 if $main_reported;
-  return !-e "/proc/$child/fd/0";
-}
-sub child_has_execd {
-  return 0 unless open my $fh, '<', "/proc/$child/cmdline";
-  my $cmd = do { local $/; <$fh> };
-  close($fh);
-  return defined $cmd && length($cmd) > 0;
-}
 close($write_error);
 my $error = '';
 while (sysread($read_error, my $buffer, 4096)) { $error .= $buffer; }
@@ -113,13 +107,7 @@ if (length($error)) {
   emit_error($marker, 'exec', $error);
 }
 
-for (my $i = 0; $i < 1000; $i++) {
-  last if child_has_execd();
-  select(undef, undef, undef, 0.001);
-}
-if (!$stdin_refused && child_stdin_closed()) {
-  refuse_admitted_stdin();
-}
+open(STDIN, '<', '/dev/null') or emit_error($marker, 'stdin', $! + 0);
 
 print $sock "started\n";
 $sock->flush();
@@ -133,49 +121,82 @@ sub report_main_exit {
   print $sock "exit:$main_status\n";
   $sock->flush();
   $exit_sent = 1;
-  refuse_admitted_stdin();
 }
 
 report_main_exit();
 
 $SIG{TERM} = 'IGNORE';
 
-sub read_control_line {
-  my ($handle, $seconds) = @_;
-  my $rin = '';
-  vec($rin, fileno($handle), 1) = 1;
-  my $ready = select($rin, undef, undef, $seconds);
-  return '' if !defined $ready || $ready <= 0;
-  local $/ = "\n";
-  my $line = <$handle>;
-  return undef unless defined $line;
-  return $line;
-}
 my $settled = 0;
-while (!$settled) {
-  report_main_exit();
-  if (!$stdin_refused && child_stdin_closed()) {
-    refuse_admitted_stdin();
-  }
-  my $line = read_control_line($sock, 0.2);
-  last unless defined $line;
-  next if $line eq '';
-  chomp $line;
-  if ($line eq 'term') {
-    run_graceful_hook(
+my $killed = 0;
+my $term_requested = 0;
+my $term_forwarded = 0;
+my $hook_pid = 0;
+my $control_buf = '';
+
+sub forward_term_group {
+  my ($sock) = @_;
+  kill 15, 0;
+  kill 18, 0;
+  print $sock "term-forwarded\n";
+  $sock->flush();
+  $term_forwarded = 1;
+}
+
+sub kill_group {
+  my ($sock) = @_;
+  print $sock "killed-group\n";
+  $sock->flush();
+  kill 9, 0;
+  $killed = 1;
+}
+
+sub stop_hook_child {
+  return unless $hook_pid;
+  kill 9, $hook_pid;
+  waitpid($hook_pid, 0);
+  $hook_pid = 0;
+}
+
+sub reap_hook_child {
+  return unless $hook_pid;
+  my $reaped = waitpid($hook_pid, WNOHANG());
+  $hook_pid = 0 if $reaped > 0;
+}
+
+sub maybe_forward_term {
+  return if $term_forwarded || !$term_requested || $killed;
+  return if $hook_pid;
+  forward_term_group($sock);
+}
+
+sub start_graceful_hook {
+  return if $hook_pid;
+  return unless defined $opt{graceful} && length $opt{graceful};
+  my $hpid = fork();
+  emit_error($marker, 'fork', $! + 0) unless defined $hpid;
+  if ($hpid == 0) {
+    run_graceful_hook_child(
       $sock,
       $marker,
       $opt{graceful},
       $opt{graceful_timeout},
     );
-    kill 15, 0;
-    kill 18, 0;
-    print $sock "term-forwarded\n";
-    $sock->flush();
+    exit(0);
+  }
+  $hook_pid = $hpid;
+}
+
+sub dispatch_control_line {
+  my ($line) = @_;
+  return if $killed || $settled;
+  if ($line eq 'term') {
+    $term_requested = 1;
+    start_graceful_hook();
+    maybe_forward_term();
   } elsif ($line eq 'kill') {
-    print $sock "killed-group\n";
-    $sock->flush();
-    kill 9, 0;
+    stop_hook_child();
+    kill_group($sock);
   } elsif ($line eq 'settle') {
     print $sock "settled\n";
     $sock->flush();
@@ -183,8 +204,38 @@ while (!$settled) {
   }
 }
 
+sub pump_control {
+  my ($timeout) = @_;
+  while ($control_buf =~ s/^([^\n]*)\n//) {
+    dispatch_control_line($1);
+    return 1 if $killed || $settled;
+  }
+  my $rin = '';
+  vec($rin, fileno($sock), 1) = 1;
+  my $ready = select($rin, undef, undef, $timeout);
+  return 0 if !defined $ready || $ready <= 0;
+  my $chunk = '';
+  my $read = sysread($sock, $chunk, 4096);
+  return -1 if !defined $read || $read == 0;
+  $control_buf .= $chunk;
+  while ($control_buf =~ s/^([^\n]*)\n//) {
+    dispatch_control_line($1);
+    return 1 if $killed || $settled;
+  }
+  return 0;
+}
+
+while (!$settled && !$killed) {
+  report_main_exit();
+  reap_hook_child();
+  maybe_forward_term();
+  my $pumped = pump_control(0.2);
+  last if $pumped < 0;
+}
+
 unless ($settled) {
-  kill 9, 0;
+  stop_hook_child();
+  kill 9, 0 unless $killed;
   eval { print $sock "unsettled:host-eof\n"; $sock->flush(); };
   exit(1);
 }
@@ -200,7 +251,6 @@ if (!$main_reported) {
 my $status = $main_reported ? $main_status : 0;
 if ($status & 127) {
   my $sig = $status & 127;
-  $SIG{$sig} = 'DEFAULT';
   kill $sig, $$;
   exit(128 + $sig);
 }
