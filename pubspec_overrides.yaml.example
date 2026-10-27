@@ -1,0 +1,103 @@
+# Copy to pubspec_overrides.yaml (gitignored) for live sibling checkouts on your
+# machine. CI and cloud agents resolve from hosted pub.dev and committed git
+# pins in pubspec.yaml — no overrides required.
+#
+#   cp pubspec_overrides.yaml.example pubspec_overrides.yaml
+#
+# Re-run `dart pub get` at the repo root after enabling or editing overrides.
+
+dependency_overrides:
+  # Re-emit root version pins when layering path overrides (pub replaces
+  # dependency_overrides keys per file; merge manually if you customize).
+  device_info_plus: 13.1.0
+  meta: 1.19.0
+  test_api: 0.7.13
+  analyzer: 14.1.0
+  intl: 0.20.3
+
+  # intentcall (Anton layout: ~/mcp/cline/intentcall)
+  dart_acp_toolkit:
+    path: /Users/antonio/mcp/cline/intentcall/packages/acp_toolkit
+  intentcall_schema:
+    path: /Users/antonio/mcp/cline/intentcall/packages/intentcall_schema
+  intentcall_core:
+    path: /Users/antonio/mcp/cline/intentcall/packages/intentcall_core
+  intentcall_bridge:
+    path: /Users/antonio/mcp/cline/intentcall/packages/intentcall_bridge
+  intentcall_platform:
+    path: /Users/antonio/mcp/cline/intentcall/packages/intentcall_platform
+  intentcall_platform_sync:
+    path: /Users/antonio/mcp/cline/intentcall/packages/intentcall_platform_sync
+  intentcall_platform_apple:
+    path: /Users/antonio/mcp/cline/intentcall/packages/intentcall_platform_apple
+  intentcall_platform_android:
+    path: /Users/antonio/mcp/cline/intentcall/packages/intentcall_platform_android
+  intentcall_session:
+    path: /Users/antonio/mcp/cline/intentcall/packages/intentcall_session
+
+  # ecsly (Anton layout: ~/xs/ecsly)
+  ecsly:
+    path: /Users/antonio/xs/ecsly/core_packages/ecsly
+  ecsly_serialization:
+    path: /Users/antonio/xs/ecsly/plugins/ecsly_serialization
+  ecsly_flutter:
+    path: /Users/antonio/xs/ecsly/core_packages/ecsly_flutter
+  ecsly_codegen:
+    path: /Users/antonio/xs/ecsly/core_packages/ecsly_codegen
+  ecsly_app:
+    path: /Users/antonio/xs/ecsly/core_packages/ecsly_app
+  ecsly_async_parallel:
+    path: /Users/antonio/xs/ecsly/plugins/ecsly_async_parallel
+  async_parallel:
+    path: /Users/antonio/xs/ecsly/plugins/async_parallel
+
+  # universal_automation (sibling: ../../ai_computer_use_universal_automation)
+  universal_automation_interface:
+    path: ../../ai_computer_use_universal_automation/pkgs/universal_automation_interface
+  universal_automation_semantics:
+    path: ../../ai_computer_use_universal_automation/pkgs/universal_automation_semantics
+  universal_automation_toolkit:
+    path: ../../ai_computer_use_universal_automation/pkgs/universal_automation_toolkit
+  universal_automation_conformance:
+    path: ../../ai_computer_use_universal_automation/pkgs/universal_automation_conformance
+  universal_driver_macos:
+    path: ../../ai_computer_use_universal_automation/pkgs/universal_driver_macos
+  universal_driver_linux:
+    path: ../../ai_computer_use_universal_automation/pkgs/universal_driver_linux
+  universal_driver_windows:
+    path: ../../ai_computer_use_universal_automation/pkgs/universal_driver_windows
+  universal_browser_cdp:
+    path: ../../ai_computer_use_universal_automation/pkgs/universal_browser_cdp
+  universal_browser_webdriver:
+    path: ../../ai_computer_use_universal_automation/pkgs/universal_browser_webdriver
+  universal_screencast:
+    path: ../../ai_computer_use_universal_automation/pkgs/universal_screencast
+  universal_capture_flutter:
+    path: ../../ai_computer_use_universal_automation/pkgs/universal_capture_flutter
+  universal_capture_macos:
+    path: ../../ai_computer_use_universal_automation/pkgs/universal_capture_macos
+  universal_webrtc:
+    path: ../../ai_computer_use_universal_automation/pkgs/universal_webrtc
+  universal_webrtc_raw:
+    path: ../../ai_computer_use_universal_automation/pkgs/universal_webrtc_raw
+
+  # universal_storage (sibling: ../../universal_storage)
+  universal_storage_interface:
+    path: ../../universal_storage/pkgs/universal_storage_interface
+  universal_storage_filesystem:
+    path: ../../universal_storage/pkgs/universal_storage_filesystem
+  universal_storage_live_apply:
+    path: ../../universal_storage/pkgs/universal_storage_live_apply
+  universal_storage_mesh_transport:
+    path: ../../universal_storage/pkgs/universal_storage_mesh_transport
+
+  agentic_executables_wire:
+    path: ../../agentic_executables/agentic_executables_wire
+
+  # oka 0.9.x dev (pub.dev latest is 0.8.1)
+  oka_core:
+    path: /Users/antonio/xs/oka/packages/oka_core
+  oka_supervisor:
+    path: /Users/antonio/xs/oka/packages/oka_supervisor
+  resource_composition:
+    path: /Users/antonio/xs/oka/packages/resource_composition

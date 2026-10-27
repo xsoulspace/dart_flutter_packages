@@ -10,17 +10,9 @@ environment:
   sdk: ^3.13.0
 
 dependencies:
-  oka_core: {path: /Users/antonio/xs/oka/packages/oka_core}
-  oka_supervisor: {path: /Users/antonio/xs/oka/packages/oka_supervisor}
-  resource_composition:
-    {path: /Users/antonio/xs/oka/packages/resource_composition}
-
-# The oka packages declare resource_composition as a hosted constraint;
-# this composition roots the whole substrate at the oka checkout, so the
-# path source must win over the hosted source.
-dependency_overrides:
-  resource_composition:
-    path: /Users/antonio/xs/oka/packages/resource_composition
+  oka_core: ^0.8.1
+  oka_supervisor: ^0.8.1
+  resource_composition: ^0.8.1
 
 dev_dependencies:
   lints: ^6.1.0

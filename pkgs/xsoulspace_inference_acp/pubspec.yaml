@@ -11,6 +11,10 @@ resolution: workspace
 dependencies:
   crypto: ^3.0.6
   dart_acp_toolkit:
+    git:
+      url: https://github.com/Arenukvern/intentcall.git
+      ref: 3e5934c1b1e754c4f68742be80b0906aa943b4c7
+      path: packages/acp_toolkit
   xsoulspace_inference_core: ^0.1.0-beta.1
 
 dev_dependencies:
