@@ -1,6 +1,11 @@
 # ADR 0066: One reusable tooling process runtime
 
-Status: Accepted
+Status: Accepted — **Moved** (2026-10-27). The implementation now lives in
+[Arenukvern/universal_automation_ai_device_use](https://github.com/Arenukvern/universal_automation_ai_device_use)
+as [`universal_tooling_runtime`](https://pub.dev/packages/universal_tooling_runtime)
+([UA ADR 0006](https://github.com/Arenukvern/universal_automation_ai_device_use/blob/main/docs/decisions/0006_tooling_runtime_into_ua_workspace.mdx)).
+The text below records the original DFP decision.
+
 Date: 2026-10-13
 North Star impact: applies
 
@@ -119,4 +124,4 @@ actual SDK kernel compilation/execution with stdin and expected output, input
 budget/EOF/error/deadline behavior, and unrelated-process preservation. They do
 not prove release readiness, arbitrary IPC equivalence, real-model coding or
 external-agent acceptance. The original generic process controls stay frozen.
-See [the qualification record](../../pkgs/xsoulspace_tooling_runtime/docs/evidence/2026-10-13/README.md).
+See [the qualification record](https://github.com/Arenukvern/universal_automation_ai_device_use/tree/main/pkgs/universal_tooling_runtime/docs/evidence/2026-10-13) (relocated with the package).

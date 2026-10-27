@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-import 'package:xsoulspace_tooling_runtime/xsoulspace_tooling_runtime.dart';
+import 'package:universal_tooling_runtime/universal_tooling_runtime.dart';
 
 Future<String> _digest(File file) async =>
     (await sha256.bind(file.openRead()).first).toString();
