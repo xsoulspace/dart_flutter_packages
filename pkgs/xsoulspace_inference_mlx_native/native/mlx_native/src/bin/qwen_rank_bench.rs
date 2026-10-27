@@ -128,6 +128,9 @@ struct Args {
     norm: rank::LengthNormalization,
     max_tokens: usize,
     snapshot_dir: Option<PathBuf>,
+    adapter: Option<PathBuf>,
+    adapter_scale: f32,
+    dump_rows: Option<PathBuf>,
 }
 
 fn usage() -> String {
@@ -155,6 +158,11 @@ fn usage() -> String {
      \x20                         (default mean; both are always reported)\n\
      \x20 --max-tokens N         the generation cap (default 16)\n\
      \x20 --out FILE             write the JSON summary here as well\n\
+     \x20 --adapter FILE         rank+generate UNDER this runtime-LoRA adapter
+     \x20                         (mlx-lm artifact; scale from --adapter-scale)
+     \x20 --adapter-scale F       the adapter scale (default 20.0)
+     \x20 --dump-rows FILE        per-row per-label records (span ids + sums)\n\
+     \x20                         for EVERY row of rep 0 — the cross-engine read\n\
      \x20 --snapshot-dir DIR     pin the checkpoint directory\n\
      -h, --help                this text\n\n\
      The human report goes to STDERR; the JSON summary goes to STDOUT.\n\n\
@@ -177,6 +185,9 @@ fn parse_args() -> Result<Args, String> {
         norm: rank::LengthNormalization::Mean,
         max_tokens: 16,
         snapshot_dir: None,
+        adapter: None,
+        adapter_scale: 20.0,
+        dump_rows: None,
     };
     let argv: Vec<String> = std::env::args().collect();
     let mut i = 1;
@@ -252,6 +263,20 @@ fn parse_args() -> Result<Args, String> {
                 a.max_tokens = arg_value(&argv, i)?
                     .parse()
                     .map_err(|e| format!("--max-tokens: {e}"))?;
+                i += 1;
+            }
+            "--adapter" => {
+                a.adapter = Some(PathBuf::from(arg_value(&argv, i)?));
+                i += 1;
+            }
+            "--dump-rows" => {
+                a.dump_rows = Some(PathBuf::from(arg_value(&argv, i)?));
+                i += 1;
+            }
+            "--adapter-scale" => {
+                a.adapter_scale = arg_value(&argv, i)?
+                    .parse()
+                    .map_err(|e| format!("--adapter-scale: {e}"))?;
                 i += 1;
             }
             "--snapshot-dir" => {
@@ -565,7 +590,7 @@ fn main() {
     let model_dir = snapshot(&args.model_fragment, args.snapshot_dir.as_deref())
         .expect("checkpoint snapshot (Qwen3-0.6B-4bit) absent");
     let t0 = Instant::now();
-    let model = Qwen3::load(&model_dir).expect("the model loads");
+    let mut model = Qwen3::load(&model_dir).expect("the model loads");
     let tokenizer = ByteLevelBpe::load(&model_dir)
         .or_else(|_| ByteLevelBpe::load_tokenizer_json(&model_dir))
         .expect("the tokenizer loads");
@@ -577,6 +602,16 @@ fn main() {
         model.cfg.vocab,
         t0.elapsed().as_secs_f64()
     );
+    if let Some(adapter) = &args.adapter {
+        let applied = model
+            .attach_lora(adapter, args.adapter_scale, s)
+            .unwrap_or_else(|e| panic!("--adapter {}: {e}", adapter.display()));
+        eprintln!(
+            "adapter: {} | {applied} runtime pairs at scale {} | the A/B below is              ranked(adapter) vs generated(adapter) on the same rows",
+            adapter.display(),
+            args.adapter_scale
+        );
+    }
 
     // The EOS ids the generation arm stops on.
     let mut eos_ids: Vec<i32> = Vec::new();
@@ -621,6 +656,7 @@ fn main() {
     };
 
     let mut stats: BTreeMap<String, TaskStats> = BTreeMap::new();
+    let mut dumped_rows: Vec<serde_json::Value> = Vec::new();
 
     // ---- the interleaved A/B ----
     for rep in 0..args.reps {
@@ -707,6 +743,25 @@ fn main() {
                     if gen_pred.as_deref() == Some(row.gold.as_str()) {
                         st.gen_correct += 1;
                     }
+                    if args.dump_rows.is_some() {
+                        let rec = serde_json::json!({
+                            "id": row.id,
+                            "gold": row.gold,
+                            "ranked_mean": pred_mean,
+                            "ranked_sum": pred_sum,
+                            "generation_completion": completion,
+                            "generation_pred": gen_pred,
+                            "scores": outcome.scores.iter().map(|sc| serde_json::json!({
+                                "label": sc.label,
+                                "sum": sc.sum_logprob,
+                                "mean": sc.mean_logprob,
+                                "span": sc.tokens,
+                                "scored_text": sc.scored_text,
+                                "boundary_mismatch": sc.boundary_mismatch,
+                            })).collect::<Vec<_>>(),
+                        });
+                        dumped_rows.push(rec);
+                    }
                     if st.sample_rows.len() < 5 {
                         st.sample_rows.push(serde_json::json!({
                             "id": row.id,
@@ -731,6 +786,16 @@ fn main() {
             }
         }
         eprintln!("rep {rep} done");
+    }
+
+    if let Some(dump) = &args.dump_rows {
+        let text = dumped_rows
+            .iter()
+            .map(|r| r.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+        std::fs::write(dump, text).expect("dump rows write");
+        eprintln!("dumped {} rows to {}", dumped_rows.len(), dump.display());
     }
 
     // ---- the report ----

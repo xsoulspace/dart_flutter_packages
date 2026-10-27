@@ -34,6 +34,11 @@ Reading order: **this file → [`LINES.md`](LINES.md) rows →
 
 ## The path forward (what is actually next)
 
+> **Distilled into [`ROADMAP.md`](ROADMAP.md) (2026-10-27):** the closed
+> experiments now live there as a register (verdict, why, evidence), and the
+> live open list is maintained in one place. The tier record below is how the
+> 2026-10-26 program landed; it is history, not the queue.
+
 Ordered by the lane's own law — *an arm that can close or unlock the line runs
 before an arm that can only refine it* — and by measured cost.
 
@@ -159,7 +164,7 @@ arm on new hardware (must be a new registered arm; see CONDITIONAL).
 | MTP `copy` 0.0851 / `constant` 0.0227 trivial baselines | do not reproduce under any of 16 pool×eval combinations (reproduced: 0.0384 / 0.0515, pool-dependent); both erred in the direction that flattered the arms | re-derive with a pinned pool definition (the recorded one is unrecoverable from the tree) | nothing load-bearing — bigram (the closure's baseline) reproduces (0.1483 → 0.1457/0.2330) |
 | Arm determinism (any training arm) | the only "reproduction" was one run copied twice | run one arm twice, distinct timestamps, compare artifacts byte-wise | any future claim that an arm matrix replicates |
 | L-G6 sum-vs-mean pattern across engines | native: 293/293 rows differ on perm, 0 on veto; python the opposite — same corpus file | localize (prompt rendering vs generation cap), then one deliberate cross-read | a clean L-G6 re-run; the FAIL verdict itself is F-class and stands |
-| Native-surface adapter capability | the +0.31/+0.47 came from the python runtime path; the native path loads+merges but has never scored | score the cached prompts through the Rust engine | any product claim about adapter capability on the shipping surface |
+| ~~Native-surface adapter capability~~ **RESOLVED 2026-10-27** | was: python-path only; merge refuses a quantized base | DONE: runtime LoRA (`attach_lora`) scored the same rows natively — perm 0.8976 (ABOVE python), veto 0.6828 (−0.02 past the frozen margin); coverage 1.0 | closed; readings in `RESULTS-native-surface-2026-10-27.md` |
 | L-G4 projected ratios (1.91/3.66/5.39/9.95×) | projected from an amortization probe; the fused forward does not exist; numbers measured through a fused path are not gate inputs until decision-invariance + no-short-row hold | build the fused path (Tier A) and measure through it | any fused-batch throughput claim |
 | Template-era absolute tok/s and wall clocks (all rows) | battery/charge-current holes; the same binary runs 53 s quiet / 4 m 47 s loaded | none — permanent: **ratios are the measurement** (POWER.md law, not a debt) | nothing; quoted as non-claims |
 
@@ -185,13 +190,13 @@ arm on new hardware (must be a new registered arm; see CONDITIONAL).
 
 | item | gate | cost | pre-registered expectation |
 | ---- | ---- | ---- | -------------------------- |
-| ranked(adapter) | compare vs generation accuracy + prefill-bound cost | minutes | unnamed by any gate yet — would need a frozen threshold before it counts |
+| ~~ranked(adapter)~~ **RUN 2026-10-27 (R-G1 PASS)** | ranked matches generated within 0.009 on both tasks under the adapter; 0 illegal labels by construction | done | frozen in `RESULTS-native-surface-2026-10-27.md` before the run |
 | Constrained decoding / logit masking | probe: base outside-label-set rate | minutes | predicted dead on arrival — the base already emits 0 illegal labels (L-G6) |
 | Seed determinism E2E test | seeded local decode reproduces via `MlxNativeTextClient` | small | contract exists (ADR 0071); enforcement does not |
 | Nursery RUNG-1 (decision head → laya's slot) | PERM-GATE-1 | one training rung | stands WITHOUT the MoE thesis (margins noise-stable) |
 | MTP attention head | none — J'-G4 does not buy it | not bought | eligible only if flat-forward hardware appears AND a head passes J'-G1 on it |
 | Tracked fixture for the adapter-format gate | make `mlx_lm_artifact_merge` runnable on a clone | small | closes the "gate that cannot run on a clone" gap (EXPERIMENT-PLAN §5.3) |
-| CI of any kind | — | — | the repo has no workflow directory; every number is produced by hand |
+| CI of any kind | **WORKFLOW WRITTEN 2026-10-27** (`.github/archite_workflows/mlx_native_gate.yml`) | small | needs one green run; one pre-existing local red (thinking-truncation test, stash-proven non-regression) needs its own disposition first |
 
 ---
 
@@ -213,6 +218,8 @@ arm on new hardware (must be a new registered arm; see CONDITIONAL).
 | Engine parity spine | laya 63/63 @ 0.0 / 1.5e-8; qwen+lfm2 plan-tree bit-identical; plan_op_sweep 23 cells | `test_fresh.sh`; R6 record |
 | Replay infrastructure | every gate question from cached completions, 0.183–0.35 s, no GPU; one scoring definition (`tool/nursery/scoring.py`) | EXPERIMENT-PLAN §2, §3 |
 | Instruments that paid | `qwen_marginal_cost` (53 s closed Line J), forced-eval law (28.7×), interleaved A/B, Tier-0/Tier-1 split | Row J; `PYTHON-BOUNDARY.md` |
+| Runtime-LoRA on the shipping surface (2026-10-27) | `Qwen3::attach_lora`: 56/56 targets, refuses unknown targets, moves logits, identity folds the digest, plan mode refused under an adapter; perm capability carries ABOVE python (+0.024), veto −0.070 | `tests/qwen_runtime_lora.rs`; `RESULTS-native-surface-2026-10-27.md` |
+| The ranker product shape (2026-10-27) | ranked(adapter) == generated(adapter) ± 0.009 both tasks; 0 outside-label-set by construction; sum-norm is the engine-robust normalization (80 % cross-engine agreement) | R-G1 in `RESULTS-native-surface-2026-10-27.md` |
 
 ---
 

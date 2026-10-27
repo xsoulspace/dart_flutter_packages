@@ -208,8 +208,16 @@ pub struct Qwen3 {
     /// The identity of the WEIGHTS this model runs. A prefix cache computed
     /// under one weight set is stale under another, so the cache keys on this
     /// (see `qwen_prefix`). It is the CHECKPOINT's digest at load; a merged
-    /// adapter produces a different model and therefore a different identity.
+    /// adapter produces a different model and therefore a different identity
+    /// — and so does a RUNTIME adapter (see `attach_lora`).
     weights_id: String,
+    /// A runtime (unmerged) LoRA, applied inside `linear` at every forward.
+    /// `None` until `attach_lora`. While present, the DECLARED-PLAN path is
+    /// refused (the plan builder does not emit the delta ops — a plan forward
+    /// under an adapter would be the silent-no-apply failure mode), so every
+    /// entry point routes through `forward_impl`, where the delta is
+    /// structural.
+    runtime_lora: Option<crate::lora::RuntimeLora>,
 }
 
 /// Acceptance counters for one speculative greedy decode run (ADR 0057
@@ -548,6 +556,7 @@ impl Qwen3 {
             cfg,
             table: BindingTable::baseline(),
             weights_id,
+            runtime_lora: None,
         })
     }
 
@@ -560,10 +569,92 @@ impl Qwen3 {
         self.weights_id.clone()
     }
 
+    /// Attach a RUNTIME (unmerged) LoRA adapter.
+    ///
+    /// This is the native mirror of the python mlx-lm path —
+    /// `mlx_lm.load(model, adapter_path=...)` — so an adapter trained on the
+    /// QUANTIZED base can run on the quantized base with no merge and no
+    /// base confound (the merge surface refuses a quantized base, correctly,
+    /// K-G4). Every forward then computes
+    /// `y = x·Wᵀ + scale·((x·a_t)·b_t)` inside `linear`.
+    ///
+    /// The contract, enforced here:
+    ///   * every adapter target must name a linear module this model has —
+    ///     a missing target is a hard error, never a silent skip;
+    ///   * the weight identity folds the adapter digest — a cache entry
+    ///     computed under the base alone is stale under the adapter;
+    ///   * the declared-plan path is DISABLED while an adapter is attached
+    ///     (the plan builder does not emit the delta ops; running it would
+    ///     silently drop the adapter — the one failure mode this surface
+    ///     exists to prevent). Perf claims measured through this surface are
+    ///     imperative-path numbers, and the throughput levers (plan prefill,
+    ///     fused batch) are NOT claimed under an adapter.
+    pub fn attach_lora(&mut self, path: &Path, scale: f32, s: Stream) -> Result<usize, String> {
+        let adapter = crate::lora::LoraAdapter::load_auto(path, scale, s)?;
+        // Every target must name one of this model's linear modules. The
+        // model's weights are stored under the checkpoint names WITHOUT the
+        // `.weight` suffix; the adapter's targets carry it.
+        for pair in &adapter.pairs {
+            let Some(module) = pair.target.strip_suffix(".weight") else {
+                return Err(format!("adapter target {} has no .weight suffix", pair.target));
+            };
+            if !self.is_linear_module(module) {
+                return Err(format!(
+                    "adapter targets {} which this model does not have (embeddings and \
+                     norms are not runtime-LoRA targets)",
+                    pair.target
+                ));
+            }
+        }
+        let runtime = crate::lora::RuntimeLora::from_adapter(&adapter, Dtype::BFloat16, s)?;
+        let applied = runtime.len();
+        self.weights_id = crate::nursery::sha256_hex(
+            format!("{}:runtime-lora:{}", self.weights_id, runtime.digest).as_bytes(),
+        );
+        self.runtime_lora = Some(runtime);
+        Ok(applied)
+    }
+
+    /// Whether a runtime adapter is attached (and therefore which perf
+    /// claims this model's forwards can carry).
+    pub fn has_runtime_lora(&self) -> bool {
+        self.runtime_lora.is_some()
+    }
+
+    /// The checkpoint name of every linear module this model has.
+    fn is_linear_module(&self, module: &str) -> bool {
+        let Some(rest) = module.strip_prefix("model.layers.") else {
+            return false;
+        };
+        let Some((li, proj)) = rest.split_once('.') else {
+            return false;
+        };
+        let Ok(li) = li.parse::<usize>() else {
+            return false;
+        };
+        li < self.cfg.layers
+            && matches!(
+                proj,
+                "self_attn.q_proj"
+                    | "self_attn.k_proj"
+                    | "self_attn.v_proj"
+                    | "self_attn.o_proj"
+                    | "mlp.gate_proj"
+                    | "mlp.up_proj"
+                    | "mlp.down_proj"
+            )
+    }
+
+    /// Plan mode, gated by the adapter law: a model with a runtime adapter
+    /// runs the imperative walk, whose delta is structural.
+    fn plan_enabled(&self) -> bool {
+        qwen_plan_mode() && self.runtime_lora.is_none()
+    }
+
     // ---- op composites (the mlx-lm reference, op for op) ----
 
-    fn linear(&self, name: &str, w: &Weight, x: &Array, s: Stream) -> MlxResult<Array> {
-        match w {
+    fn linear(&self, name: &str, module: &str, w: &Weight, x: &Array, s: Stream) -> MlxResult<Array> {
+        let y = match w {
             Weight::Quant(q) => eval1(
                 &self.table,
                 name,
@@ -575,7 +666,7 @@ impl Qwen3 {
                 },
                 &[x, &q.w, &q.scales, &q.biases],
                 s,
-            ),
+            )?,
             Weight::Plain(w) => {
                 let wt = eval1(
                     &self.table,
@@ -585,8 +676,27 @@ impl Qwen3 {
                     &[w],
                     s,
                 )?;
-                eval1(&self.table, name, "q.linear", Op::Matmul, &[x, &wt], s)
+                eval1(&self.table, name, "q.linear", Op::Matmul, &[x, &wt], s)?
             }
+        };
+        // The runtime-LoRA delta: y + scale·((x·a_t)·b_t). The reference
+        // (mlx_lm LoRALinear) computes exactly this, casting the pair to the
+        // input's dtype per call; the pair here was cast once, at attach. The
+        // scale is applied to the product, as the reference does. These ops
+        // deliberately do NOT go through the binding table — they ride the
+        // arrays, so no plan cache can ever serve a forward that dropped
+        // them.
+        match &self.runtime_lora {
+            None => Ok(y),
+            Some(rt) => match rt.by_target.get(&format!("{module}.weight")) {
+                None => Ok(y),
+                Some((a_t, b_t)) => {
+                    let za = x.matmul(a_t, s)?;
+                    let zb = za.matmul(b_t, s)?;
+                    let scaled = zb.mul(&Array::scalar_f32(rt.scale), s)?;
+                    y.add(&scaled, s)
+                }
+            },
         }
     }
 
@@ -724,7 +834,7 @@ impl Qwen3 {
         cache: &mut KvCache,
         s: Stream,
     ) -> MlxResult<Array> {
-        self.hidden_states(tokens, cache, qwen_plan_mode(), s)
+        self.hidden_states(tokens, cache, self.plan_enabled(), s)
     }
 
     /// The whole transformer except the lm_head, on an explicit path —
@@ -747,7 +857,7 @@ impl Qwen3 {
     /// One forward pass over `tokens` ([1, L] i32) with the cache. Returns
     /// logits [1, L, V] (unevaluated, like every plan output).
     pub fn forward_step(&self, tokens: &Array, cache: &mut KvCache, s: Stream) -> MlxResult<Array> {
-        self.step_logits(tokens, cache, qwen_plan_mode(), s)
+        self.step_logits(tokens, cache, self.plan_enabled(), s)
     }
 
     /// The decode step on an explicit path: `use_plan` runs the declared
@@ -768,7 +878,7 @@ impl Qwen3 {
         let t = self.forward_impl(tokens, cache, None, s)?;
         // Tied embeddings: the lm_head IS the (quantized) embedding table,
         // applied as_linear.
-        self.linear("q.lm_head", &self.embed, &t, s)
+        self.linear("q.lm_head", "lm_head", &self.embed, &t, s)
     }
 
     /// The fused-batch forward: tokens [B, L] (a left-padded prompt set or
@@ -786,12 +896,12 @@ impl Qwen3 {
         with_head: bool,
         s: Stream,
     ) -> MlxResult<Array> {
-        if qwen_plan_mode() {
+        if self.plan_enabled() {
             return self.forward_plan(tokens, cache, with_head, Some(mask), s);
         }
         let t = self.forward_impl(tokens, cache, Some(mask), s)?;
         if with_head {
-            self.linear("q.lm_head", &self.embed, &t, s)
+            self.linear("q.lm_head", "lm_head", &self.embed, &t, s)
         } else {
             Ok(t)
         }
@@ -801,7 +911,7 @@ impl Qwen3 {
     /// project any hidden state ([.., D] → [.., V]) on the same weights
     /// (the fourth part of the fused-batch change).
     pub fn lm_head(&self, hidden: &Array, s: Stream) -> MlxResult<Array> {
-        self.linear("q.lm_head", &self.embed, hidden, s)
+        self.linear("q.lm_head", "lm_head", &self.embed, hidden, s)
     }
 
     /// The declared-plan path for any forward (decode l=1, prefill chunk
@@ -1545,9 +1655,27 @@ impl Qwen3 {
 
             // --- attention ---
             let ln1 = self.rms(&format!("{g}.ln1"), &h, &layer.ln1, s)?;
-            let q = self.linear(&format!("{g}.q"), &layer.q, &ln1, s)?;
-            let k = self.linear(&format!("{g}.k"), &layer.k, &ln1, s)?;
-            let v = self.linear(&format!("{g}.v"), &layer.v, &ln1, s)?;
+            let q = self.linear(
+                &format!("{g}.q"),
+                &format!("model.layers.{li}.self_attn.q_proj"),
+                &layer.q,
+                &ln1,
+                s,
+            )?;
+            let k = self.linear(
+                &format!("{g}.k"),
+                &format!("model.layers.{li}.self_attn.k_proj"),
+                &layer.k,
+                &ln1,
+                s,
+            )?;
+            let v = self.linear(
+                &format!("{g}.v"),
+                &format!("model.layers.{li}.self_attn.v_proj"),
+                &layer.v,
+                &ln1,
+                s,
+            )?;
 
             let reshape = |nm: &str, arr: &Array, heads: usize| -> MlxResult<Array> {
                 eval1(
@@ -1658,7 +1786,13 @@ impl Qwen3 {
                 &[&att_t],
                 s,
             )?;
-            let o = self.linear(&format!("{g}.o"), &layer.o, &att_r, s)?;
+            let o = self.linear(
+                &format!("{g}.o"),
+                &format!("model.layers.{li}.self_attn.o_proj"),
+                &layer.o,
+                &att_r,
+                s,
+            )?;
             // Fused residual+RMSNorm (R4 epilogue): outputs [sum, normed].
             // The one-pass MSL kernel IS the default binding (R4's 1.33x
             // row); its kernel history — a fixed 1024-float threadgroup
@@ -1686,8 +1820,20 @@ impl Qwen3 {
 
             // --- mlp: down(silu(gate(x)) * up(x)) ---
             let ln2 = ln2_fused;
-            let gate = self.linear(&format!("{g}.gate"), &layer.gate, &ln2, s)?;
-            let up = self.linear(&format!("{g}.up"), &layer.up, &ln2, s)?;
+            let gate = self.linear(
+                &format!("{g}.gate"),
+                &format!("model.layers.{li}.mlp.gate_proj"),
+                &layer.gate,
+                &ln2,
+                s,
+            )?;
+            let up = self.linear(
+                &format!("{g}.up"),
+                &format!("model.layers.{li}.mlp.up_proj"),
+                &layer.up,
+                &ln2,
+                s,
+            )?;
             let sig = eval1(
                 &self.table,
                 &format!("{g}.sig"),
@@ -1714,7 +1860,13 @@ impl Qwen3 {
                 &[&silu, &up],
                 s,
             )?;
-            let ff = self.linear(&format!("{g}.down"), &layer.down, &ff_in, s)?;
+            let ff = self.linear(
+                &format!("{g}.down"),
+                &format!("model.layers.{li}.mlp.down_proj"),
+                &layer.down,
+                &ff_in,
+                s,
+            )?;
             h = eval1(
                 &self.table,
                 &format!("{g}.res2"),

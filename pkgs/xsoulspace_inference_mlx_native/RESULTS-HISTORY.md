@@ -153,3 +153,19 @@ full split 293/227 (coverage-complete).
 | scoring-question cost after caching | ~6,000× cheaper than a training arm (0.183 s vs 995 s) | ✓ | EXPERIMENT-PLAN B.1 |
 | substring-scorer blast radius | one defect class produced both the −0.847 collapse and the think-echo defect | ✓ lesson | C-4; META-LESSONS |
 | record ID collision | C-11/C-12 double-assigned across `EXPERIMENT-PLAN.md` and `MTP-GATES.md` | ✓ noted | `VERDICTS.md` hygiene note |
+
+## 10. 2026-10-27 — the native surface carries the adapter (mostly); the ranker product is viable
+
+| result | value | class | evidence |
+| ------ | ----- | ----- | -------- |
+| Runtime-LoRA surface | `Qwen3::attach_lora`: 56/56 targets validated, unknown targets refuse, logits MOVE, identity folds the digest, plan mode refused under an adapter | ✓ gate | `tests/qwen_runtime_lora.rs` |
+| N-G1 native capability | perm 0.8976 (bar 0.8237 — native ABOVE python's 0.8737) / veto 0.6828 (bar 0.7033 — −0.02 past the margin); coverage 1.0, leak 0; +0.3379/+0.4009 over matched trivial | F/C split at the frozen terms | `RESULTS-native-surface-2026-10-27.md` |
+| R-G1 the ranker product | ranked(adapter) vs generated(adapter): perm 0.8942 vs 0.8976, veto 0.6916 vs 0.6828 — PASS both; 0 illegal labels by construction | ✓ | same |
+| L-G6 veto residual localized | tokenization identical (0/908); per-label sums differ median 0.27 nats (bf16-vs-fp16 class); all 91 argmax flips are the near-tied secret_path/no_grant pair; sum-norm agrees 80 % | ✓ localization | same |
+| Cross-engine reproduction | python re-derived 2026-10-27 == recorded cells exactly (0.2291 veto); two native binaries agree exactly on generation (263/293; 0.6828) | ✓ | same |
+| Pre-existing red recorded | `mlx_native_lazy_client_test` thinking-truncation test red at the pre-session tree too (stash-proven); disposition owed before CI green | noted | this session |
+
+Non-claims: battery-powered run (24–26 %, 0 mA) — all wall clocks and cost
+ratios on 2026-10-27 artifacts are non-claims; the runtime-LoRA surface runs
+the imperative path (no plan/fused claims under an adapter); one adapter, one
+machine.

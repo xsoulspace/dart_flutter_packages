@@ -499,13 +499,18 @@ hazard. Everything else stays in Python.** Applied here:
    Per-task stays the default; shared is a long-shared-prefix product
    only.
 5. **A third, dissimilar task arm** (L-G7) — RUN 2026-10-26, PASS (above).
-6. **A native-surface capability number — STILL OWED, now scoped.** The
-   capability is still measured on the **python runtime-adapter path**; the
-   merge surface refuses quantized weights (correctly, K-G4) and `Qwen3`
-   has no runtime adapter application. Two options named in
-   `bench/nursery/experiments/RESULTS-tier-c-repairs-2026-10-26.md` §4
-   (bf16-base merge arm with a base confound, vs runtime-LoRA on the 4-bit
-   base with no confound) — buy one deliberately.
+6. **A native-surface capability number — DONE (2026-10-27).** The
+   no-confound option was built: `Qwen3::attach_lora` (runtime LoRA on the
+   4-bit base, the mirror of the python path) with its gate
+   (`tests/qwen_runtime_lora.rs`). Frozen reading N-G1: **PASS perm (0.8976,
+   above python's 0.8737) / FAIL veto (0.6828, −0.02 beyond the margin)**,
+   coverage 1.0, leak 0, +0.3379/+0.4009 over matched trivial. Tier B-5 ran
+   the same day: **ranked(adapter) matches generated(adapter) within 0.009
+   on both tasks (R-G1 PASS)** with 0 illegal labels by construction. The
+   L-G6 veto residual localized to the activation-dtype class (bf16 vs fp16;
+   tokenization identical 0/908; all 91 argmax disagreements are the
+   near-tied secret_path/no_grant pair). Numbers and non-claims:
+   `bench/nursery/experiments/RESULTS-native-surface-2026-10-27.md`.
 7. **The seed contract's enforcement — the client-side test now EXISTS**
    (2026-10-26): `test/mlx_native_seed_e2e_test.dart` asserts reproducibility
    through `MlxNativeTextClient`, the per-call meta echo, and the honesty

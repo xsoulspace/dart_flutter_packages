@@ -230,6 +230,76 @@ impl LoraAdapter {
     }
 }
 
+/// The RUNTIME application surface: adapter pairs kept UNMERGED and applied
+/// at every forward, as `y = x·Wᵀ + scale·((x·a_t)·b_t)`.
+///
+/// WHY A SECOND SURFACE. The merge surface ([`LoraAdapter::apply_to`]) is the
+/// cheap shape on this device — but it requires a PLAIN base (merging into a
+/// quantized base means dequantize → merge → requantize, and the requant
+/// error is the same order as the adapter's own delta, which K-G4 refuses to
+/// approximate). The lane's real adapter is trained on the 4-BIT base and
+/// evaluated on the python mlx-lm path, which applies the adapter at runtime
+/// for exactly this reason. This struct is the native mirror of that path, so
+/// the capability measured on python can be measured on the shipping surface
+/// WITHOUT a base confound.
+///
+/// The arrays are kept in the orientation the runtime math needs —
+/// `a_t: [in, r]`, `b_t: [r, out]` — with the scale UNFOLDED, so the forward
+/// computes exactly what the reference computes: `y + scale·((x·a_t)·b_t)`,
+/// cast to the model's activation dtype once, at attach (the reference casts
+/// per call; casting once is the same values, cheaper).
+pub struct RuntimeLora {
+    /// Pair per target, keyed by the BASE weight name (`<module>.weight`).
+    pub by_target: HashMap<String, (Array, Array)>,
+    /// The one scale multiplier (mlx-lm's `lora_parameters.scale`).
+    pub scale: f32,
+    /// The adapter file digest (identity folding, cache keys).
+    pub digest: String,
+}
+
+impl RuntimeLora {
+    /// Build the runtime pair set from a loaded adapter.
+    ///
+    /// The loader's pairs are in the PEFT orientation (`a [r, in]`,
+    /// `b [out, r]`, both Float32); the runtime math wants the transposes,
+    /// and `merge_transposed` documents why: `(B @ A)ᵀ == Aᵀ @ Bᵀ`.
+    pub fn from_adapter(adapter: &LoraAdapter, dtype: Dtype, s: Stream) -> Result<Self, String> {
+        let mut by_target: HashMap<String, (Array, Array)> = HashMap::new();
+        for pair in &adapter.pairs {
+            let a_t = pair
+                .a
+                .transpose_axes(&[1, 0], s)
+                .map_err(|e| format!("lora a_t {}: {}", pair.target, e.0))?
+                .astype(dtype, s)
+                .map_err(|e| format!("lora a_t {}: {}", pair.target, e.0))?;
+            let b_t = pair
+                .b
+                .transpose_axes(&[1, 0], s)
+                .map_err(|e| format!("lora b_t {}: {}", pair.target, e.0))?
+                .astype(dtype, s)
+                .map_err(|e| format!("lora b_t {}: {}", pair.target, e.0))?;
+            a_t.eval()
+                .map_err(|e| format!("lora a_t {}: {}", pair.target, e.0))?;
+            b_t.eval()
+                .map_err(|e| format!("lora b_t {}: {}", pair.target, e.0))?;
+            by_target.insert(pair.target.clone(), (a_t, b_t));
+        }
+        Ok(Self {
+            by_target,
+            scale: adapter.pairs.first().map(|p| p.scale).unwrap_or(0.0),
+            digest: adapter.digest.clone(),
+        })
+    }
+
+    pub fn len(&self) -> usize {
+        self.by_target.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.by_target.is_empty()
+    }
+}
+
 /// Every target must exist in the base. Pure (no GPU): callable before any
 /// tensor is materialized.
 pub fn validate_targets(targets: &[String], params: &HashMap<String, Array>) -> Result<(), String> {

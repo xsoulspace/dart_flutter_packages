@@ -71,6 +71,21 @@ and what it costs).
 > the Tier-C record repairs. Evidence:
 > `bench/nursery/experiments/RESULTS-noise-2026-10-26.md` and
 > `RESULTS-third-2026-10-26.md`; ledger: [`LINES.md`](LINES.md) Row M.
+>
+> ## STATUS (2026-10-27) — the engineering landed; the closed set is extracted
+>
+> Tier A is BUILT, GATED, and MEASURED (fused batch 1.93× @ B8 / 3.19× @ B16,
+> the 5.39× projection retired); three of the four Tier-C repairs closed
+> (arm determinism measured, seed E2E pinned, L-G6 localized to two real
+> native-scorer bugs — both fixed, engines now agree exactly on perm). The
+> fourth — the native-surface capability number — landed the same day via
+> `Qwen3::attach_lora` (runtime LoRA on the 4-bit base, the no-confound
+> option), together with Tier B-5, ranked(adapter). Readings and frozen
+> bars: `bench/nursery/experiments/RESULTS-native-surface-2026-10-27.md`.
+> **The closed-experiment register and the live open list now live in
+> [`ROADMAP.md`](ROADMAP.md)**; the remaining open items are the veto
+> residual cross-read (a gate input once ranking is), the product wiring of
+> the fused batch, RUNG-1 (PERM-GATE-1), and a CI gate.
 
 ---
 

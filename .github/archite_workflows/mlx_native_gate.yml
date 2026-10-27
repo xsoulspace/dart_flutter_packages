@@ -1,0 +1,52 @@
+name: mlx_native lane gate
+
+# The lane's CI-able subset (Row M gap 9: "a CI gate — this repository has no
+# workflow at all"). Two jobs:
+#   * the DART surface (core + mlx_native packages) on ubuntu;
+#   * the NATIVE crate on a macOS ARM runner (Metal is present; the model
+#     snapshot and the bench artifacts are NOT — every snapshot-dependent
+#     gate is built to SKIP LOUDLY on a clone, so a green run means the
+#     gates that could run ran, and the skips are visible in the log).
+# The known-flaky l0 perf gate stays in the suite: gates are not removed to
+# make CI green (the release gate is the same suite locally, on AC).
+
+on:
+  pull_request:
+    paths:
+      - 'pkgs/xsoulspace_inference_mlx_native/**'
+      - 'pkgs/xsoulspace_inference_core/**'
+      - '.github/archite_workflows/mlx_native_gate.yml'
+  push:
+    branches: [main, master]
+    paths:
+      - 'pkgs/xsoulspace_inference_mlx_native/**'
+      - 'pkgs/xsoulspace_inference_core/**'
+
+jobs:
+  dart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: core package tests
+        run: |
+          cd pkgs/xsoulspace_inference_core
+          flutter pub get
+          flutter test
+      - name: mlx_native package tests
+        run: |
+          cd pkgs/xsoulspace_inference_mlx_native
+          flutter pub get
+          flutter test
+
+  native:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: cargo test (release)
+        working-directory: pkgs/xsoulspace_inference_mlx_native/native/mlx_native
+        run: cargo test --release
