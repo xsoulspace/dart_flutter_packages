@@ -200,3 +200,15 @@ Owner-facing note (recorded, not acted on): the repo's other three workflow
 files still sit in the dead `archite_workflows/` directory; their runs
 stopped when they left `.github/workflows/` (last: 2026-03-30). Restoring
 them is the owner's call.
+
+## 13. 2026-10-27 (final) — the first real CI run named the clean-clone truth
+
+| result | value | class | evidence |
+| ------ | ----- | ----- | -------- |
+| The workflow RAN (first time ever) | run 40486026348 on ag-c; both legs failed fast on environment, zero lane regressions | ✓ run observed | `.github/workflows/mlx_native_gate.yml` |
+| DART leg blocker | root pubspec `dependency_overrides` point whole families (ecsly/intentcall/universal_*) at machine-private checkouts (absolute `/Users/antonio/...`); `resolution: workspace` makes every package's pub get resolve the root ⇒ `flutter pub get` fails on ANY clone | owner decision (publish or vendor) | run log; root `pubspec.yaml` |
+| NATIVE leg blocker | `cargo test` needs machine-local cmake MLX/mlxc static libs (build.rs refuses loudly); the real test gate stays local on AC | ✓ by design | `build.rs`; ADR 0061 |
+| CI scope re-set | workflow now runs the honest compile gate: `cargo check --release --all-targets` against named stub artifact dirs on macos-14 | ✓ re-scoped | the workflow file |
+
+Local gates at close: merge gates 2/2 (trained artifact + new synthetic
+format fixture), Dart battery 42/1 skip/0 fail, native suite green.

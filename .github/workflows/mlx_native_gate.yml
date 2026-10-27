@@ -1,14 +1,23 @@
 name: mlx_native lane gate
 
-# The lane's CI-able subset (Row M gap 9: "a CI gate — this repository has no
-# workflow at all"). Two jobs:
-#   * the DART surface (core + mlx_native packages) on ubuntu;
-#   * the NATIVE crate on a macOS ARM runner (Metal is present; the model
-#     snapshot and the bench artifacts are NOT — every snapshot-dependent
-#     gate is built to SKIP LOUDLY on a clone, so a green run means the
-#     gates that could run ran, and the skips are visible in the log).
-# The known-flaky l0 perf gate stays in the suite: gates are not removed to
-# make CI green (the release gate is the same suite locally, on AC).
+# The lane's CI-able subset — re-scoped 2026-10-27 from the FIRST real run
+# (40486026348), whose evidence named two clean-clone blockers:
+#
+#   * The DART leg cannot run on a clean clone AT ALL: the workspace root
+#     pubspec.yaml's dependency_overrides map whole package families (ecsly,
+#     intentcall, universal_automation, universal_storage, …) to machine-
+#     private checkouts, some at absolute /Users/antonio/... paths, and
+#     `resolution: workspace` makes every package's pub get resolve the
+#     root. Fixing that is an OWNER decision (publish the families or
+#     vendor them) — not this lane's call. Until then `flutter test` is
+#     local-only; on this machine it is green (42 pass / 1 skip).
+#   * The NATIVE leg's `cargo test` needs the cmake-built MLX/mlxc static
+#     libraries (build/mlx-install, build/mlxc-install), which are
+#     machine-local by design; build.rs refuses loudly without them. The
+#     REAL test gate stays local (on AC, ADR 0061). What a clean runner
+#     CAN prove is that all Rust code and tests COMPILE: `cargo check
+#     --all-targets` against stub artifact dirs (build.rs only checks the
+#     dirs exist and emits link flags; check never links).
 #
 # LOCATION LAW (paid for 2026-10-27): GitHub Actions reads ONLY
 # `.github/workflows/`. This file first landed under
@@ -21,40 +30,25 @@ on:
   pull_request:
     paths:
       - 'pkgs/xsoulspace_inference_mlx_native/**'
-      - 'pkgs/xsoulspace_inference_core/**'
       - '.github/workflows/mlx_native_gate.yml'
   push:
     branches: [main, master, ag-c]
     paths:
       - 'pkgs/xsoulspace_inference_mlx_native/**'
-      - 'pkgs/xsoulspace_inference_core/**'
       - '.github/workflows/mlx_native_gate.yml'
 
 jobs:
-  dart:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-      - name: core package tests
-        run: |
-          cd pkgs/xsoulspace_inference_core
-          flutter pub get
-          flutter test
-      - name: mlx_native package tests
-        run: |
-          cd pkgs/xsoulspace_inference_mlx_native
-          flutter pub get
-          flutter test
-
-  native:
+  native-compile:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: cargo test (release)
+      - name: stub the machine-local MLX artifacts (named, not hidden)
+        run: |
+          mkdir -p "$RUNNER_TEMP/laya-mlx-stub/mlx-install/lib" \
+                   "$RUNNER_TEMP/laya-mlx-stub/mlxc-install/lib"
+      - name: cargo check (release, all targets — the CI-able compile gate)
         working-directory: pkgs/xsoulspace_inference_mlx_native/native/mlx_native
-        run: cargo test --release
+        env:
+          LAYA_MLX_BUILD_DIR: ${{ runner.temp }}/laya-mlx-stub
+        run: cargo check --release --all-targets

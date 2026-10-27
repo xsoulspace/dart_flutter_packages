@@ -64,22 +64,25 @@ differently; when documents disagree, the cited artifact wins.
    adapter line: the LoRA lane measured WHAT the adapter can do; RUNG-1 is
    where a decision head earns a real slot. Scope: train the 15–50M rung per
    the Rung table, then acceptance = PERM-GATE-1 on the live harness slot.
-2. **A CI gate — WRITTEN, unblocked, live-pathed 2026-10-27; needs one
-   green run.** `.github/workflows/mlx_native_gate.yml` — the file MOVED
+2. **A CI gate — at its clean-clone truth (2026-10-27, first real run
+   40486026348).** `.github/workflows/mlx_native_gate.yml` — the file MOVED
    from `.github/archite_workflows/` (which GitHub Actions never reads; it
    had never triggered a single run — paid-for lesson recorded in the file
-   header). Now at the live path, triggering on pushes to main/master AND
-   `ag-c` plus PRs touching the lane: the Dart surfaces (core + mlx_native)
-   on ubuntu, the native crate on a macOS ARM runner (Metal present;
-   snapshot absent ⇒ snapshot-gates skip loudly by design). The former
-   local red (`mlx_native_lazy_client_test.dart` "request-level thinking")
-   is DISPOSED: the test's own 128-token budget sat below the prompt's
-   measured thinking length; raised to 768 with the assertion set unchanged
-   (test-budget repair, not an oracle change — full local battery 42 pass /
-   1 honest skip / 0 fail). What remains is watching the runner go green.
-   Owner-facing note: the repo's OTHER three workflow files still sit in
-   the dead `archite_workflows/` directory (their runs stopped when they
-   left `.github/workflows/`); restoring them is the owner's call.
+   header), now triggering on pushes to main/master AND `ag-c`. The first
+   real run named TWO blockers, both pre-existing repo conditions:
+   (a) the DART leg cannot run on a clean clone at all — the workspace
+   root's dependency_overrides point whole package families at machine-
+   private checkouts (absolute `/Users/antonio/...` paths), so `pub get`
+   fails for every workspace package; publishing or vendoring them is an
+   OWNER decision. Until then `flutter test` is local-only (green here:
+   42 pass / 1 skip / 0 fail).
+   (b) `cargo test` needs the machine-local cmake-built MLX/mlxc static
+   libraries (build.rs refuses loudly without them) — the REAL test gate
+   stays local on AC; CI runs the honest compile gate
+   (`cargo check --release --all-targets` against named stub dirs).
+   The former local red ("request-level thinking") is DISPOSED: budget
+   128 → 768 with the assertion set unchanged — full local battery 42
+   pass / 1 honest skip / 0 fail.
 
 ### Closed 2026-10-27, later the same day (was open this morning)
 
