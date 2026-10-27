@@ -24,6 +24,7 @@
 /// grants. Nothing here performs I/O.
 library;
 
+export 'src/automation_os_consent.dart';
 export 'src/permission_decision.dart';
 export 'src/permission_gate.dart';
 export 'src/permission_grants.dart';
