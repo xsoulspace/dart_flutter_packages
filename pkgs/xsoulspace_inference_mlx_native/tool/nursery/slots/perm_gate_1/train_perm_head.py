@@ -260,6 +260,13 @@ def main(argv=None):
         for batch in train_batches:
             tokens, lengths, ys = collate(batch)
             total, grads = vg(trainable, tokens, lengths, ys)
+            # Same guard as train_rung0: a NaN/inf loss must not poison
+            # the weights (attempt 7a diverged the MLP head at lr 5e-3
+            # and NaN margins silently answer abstain everywhere).
+            if not bool(mx.isfinite(total).item()):
+                print(f"epoch {epoch}: NON-FINITE loss — update skipped",
+                      flush=True)
+                continue
             opt.update(trainable, grads)
             mx.eval(total, trainable)
             running += float(total.item())
