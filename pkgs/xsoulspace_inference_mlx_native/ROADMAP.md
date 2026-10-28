@@ -58,9 +58,14 @@ differently; when documents disagree, the cited artifact wins.
 
 ## THE OPEN ROADMAP (ordered by what it can unlock)
 
-1. **Nursery RUNG-1 (PERM-GATE-1) — attempts 5–6 RAN 2026-10-27; the
-   42.8M dense line CLOSED WITH DATA; the rung stays open at its named
-   design levers.** The acceptance harness
+1. **Nursery RUNG-1 (PERM-GATE-1) — attempts 5–7 RAN 2026-10-27/28; the
+   dense line CLOSED WITH DATA and its readout lever CLOSED with it
+   (attempt 7); the rung stays open at two PRE-REGISTERED, battery-
+   gated levers.** (Ledger note: "42.8M" was a misnomer — that is
+   rung1-scale, the MoE trunk; the dense-perm trunks measure
+   16,006,656 params, the band BOTTOM. History records keep their
+   original names; this annotation is the correction.) The acceptance
+   harness
    (`tool/nursery/slots/perm_gate_1/`) was fully exercised with two
    pre-registered attempts (predictions written before training, the
    margin decision rule and its TAU-selection rule frozen on the corpus
@@ -83,11 +88,30 @@ differently; when documents disagree, the cited artifact wins.
      collector. Fixtures: `dense-perm-c/` + `dense-perm-d/` RUN-RECORDs
      (prediction/observed, margin sweeps, verdicts), corpus v3 manifest
      (3000 rows, 0 frozen-case collisions).
-   - **Re-scoped next levers (design changes, not more arms on this
-     recipe):** a bigger trunk toward the 50M top of the Rung-1 band; a
-     slot-head MLP readout over stepwise states (never tried on the
-     dense trunk); a curriculum over veto-hardness; real labeled
-     examples from live all-abstain escalations. Live-slot half of
+   - **Attempt 7 (perm-slot-dense, 2026-10-28)** — the slot-head MLP
+     readout over stepwise states on the FROZEN attempt-4 trunk (never
+     tried on the dense line). 7a (lr 5e-3) diverged to NaN — recorded,
+     preserved, and the trainer now carries train_rung0's finite guard;
+     7b (lr 1e-3, amended before any frozen case was scored) trained
+     finite and STILL converged to all-abstain: flat margin sweep, every
+     eval row ≤ 0 margin at every TAU 0→8; frozen 12/18 = 0.667 / 0
+     unsafe at the selected TAU=0.0 — **the pre-registered FAIL
+     condition met exactly; the readout lever closes for the dense
+     trunk with data.** Also measured and excluded from all rows: the
+     corpus law's compound-command hole (`dart test && rm -rf /` is
+     allow_once by prefix match) — an operator-review finding.
+   - **Staged next levers — each pre-registered with its own
+     PREDICTION.md before any run, both battery-gated on 2026-10-28**
+     (the measured 0.5–0.7 %/min drain prices dense-perm-e at ~2.6 h):
+     **dense-perm-e** = capacity, hidden 896, 48,655,488 params (3.04×
+     the closed line, under the 50M band top), attempt-6 recipe
+     verbatim, own line rule (closes if eval argmax < 0.70 AND frozen
+     zero-unsafe < 0.722); **dense-perm-f** = boundary data, corpus v4
+     (v3 + a 600-row hard near-miss slice at every measured law
+     boundary), curriculum stage 2 from dense-perm-c at lr 5e-4. Launch
+     commands live in the rung jsons. Real labeled examples from live
+     all-abstain escalations remain the cheapest future data — the
+     shipped behavior collects them whenever it runs. Live-slot half of
      RUNG-1 acceptance (the real permission_gate.v1 answer quality)
      remains a separate, later record — never assumed.
 2. **A CI gate — LIVE AND GREEN at its clean-clone truth (2026-10-27;

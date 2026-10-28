@@ -50,7 +50,7 @@ quality on the real slot, recorded when it happens, never assumed here.
 Thresholds are provisional until set final in TRAIN-GATES.md before the
 rung's first training run.
 
-## Standing behavior (2026-10-27, after attempts 1–6; series paused by operator instruction)
+## Standing behavior (2026-10-28, after attempts 1–7)
 
 Until a candidate beats it on the gate's own terms, the shipped behavior
 is ALL-ABSTAIN (attempt 1: agreement 0.667, **zero unsafe allows** — the
@@ -59,7 +59,7 @@ allowed real commands, scored 0.444/0.50 with 5–7 unsafe). A candidate
 replaces it only with a harness verdict of agreement ≥ target AND zero
 unsafe allows.
 
-**The attempt series (2026-10-18 → 2026-10-27; details in each run's
+**The attempt series (2026-10-18 → 2026-10-28; details in each run's
 RUN-RECORD):** attempt 1 (all-abstain): 0.667, 0 unsafe. Attempts 2–3
 (allowing candidates): 0.444/0.50, 5–7 unsafe. Attempt 4 (dense-perm-b,
 dense trunk exposed to the domain corpus): 0.722, 3 unsafe — best
@@ -70,21 +70,38 @@ only): 0.667, ZERO unsafe — the margin mechanism solved safety
 threshold, so the candidate degenerated to all-abstain on the frozen
 set. Attempt 6 (dense-perm-d, from scratch on v3, the pre-registered
 line test): 0.667, 0 unsafe at TAU=1.75; eval argmax 0.6021 — under
-the line rule's 0.75 bar, so **the 42.8M dense line on this corpus
-family is CLOSED WITH DATA**: its measured ceiling is attempt 4's 0.722
-(argmax, 3 unsafe), and the safety/agreement frontier is mapped —
-zero unsafe via calibration costs agreement down to the all-abstain
-baseline; 0.722 agreement costs 3 unsafe. **The 0.85/0 bar needs a
-design change, not more arms on this recipe.** Recorded next levers: a
-bigger trunk toward the 50M top of the Rung-1 band, a slot-head MLP
-readout over stepwise states, a curriculum over veto-hardness, and —
-the cheapest real data — the live all-abstain escalations below (each
-one is a human-labeled real example).
+the line rule's 0.75 bar, so **the dense-from-scratch line on this
+corpus family is CLOSED WITH DATA** (ledger note, 2026-10-28: the
+"42.8M" name was a misnomer — that number is rung1-scale, the MoE
+trunk; the dense-perm trunks measure 16,006,656 params, the BOTTOM of
+the 15–50M band). Attempt 7 (perm-slot-dense, the slot-head MLP
+readout over stepwise states on the frozen attempt-4 trunk — never
+before tried on the dense line): 7a diverged to NaN at lr 5e-3 and is
+preserved as a recorded divergence (the trainer now carries
+train_rung0's finite guard); 7b at lr 1e-3 trained finite and still
+converged to all-abstain — flat margin sweep, every eval row at or
+below zero margin at every TAU 0→8, frozen 12/18 = 0.667 / 0 unsafe
+at the selected TAU=0.0: **the pre-registered FAIL condition met
+exactly — the readout lever CLOSES for the dense trunk with data.**
+
+**The lever ledger after attempt 7:** the dense-trunk picture is
+complete — its label head reaches 0.722 by over-allowing, and every
+calibrated operating point (label-head margin, slot-head MLP margin)
+degenerates to all-abstain. Remaining, each pre-registered with its
+own PREDICTION.md before any run: **dense-perm-e** (capacity — hidden
+896, 48,655,488 params, 3.04× the closed line, under the 50M band
+top; attempt-6 recipe verbatim; battery-blocked 2026-10-28 at ~2.6h
+needed) and **dense-perm-f** (boundary data — corpus v4's 600-row
+hard near-miss slice, curriculum stage 2 from dense-perm-c;
+battery-blocked by the same power gate). **The 0.85/0 bar needs a
+design change, not more arms on this recipe** — and the two staged
+design changes are exactly capacity and boundary data.
 
 **All-abstain is also the data collector.** There are no recorded real
 permission requests yet (the gate has never run live; no policy store of
-past decisions exists — checked laya_permission_policy.dart, 2026-10-18).
-Every live escalation under all-abstain produces exactly one
-human-labeled real example — the domain corpus attempts 2–3 lacked. The
-fastest path to attempt 4's training data is to run the shipped behavior
-and record the verdicts.
+past decisions exists — checked laya_permission_policy.dart, 2026-10-18;
+the afm package has since left this monorepo, so the seam's current
+home is the harness-side record). Every live escalation under
+all-abstain produces exactly one human-labeled real example — the
+domain corpus attempts 2–3 lacked. The fastest path to attempt 4's
+training data is to run the shipped behavior and record the verdicts.

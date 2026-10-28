@@ -233,3 +233,37 @@ shame (TRAIN-GATES law 5). Next levers are design changes: bigger trunk
 (→ 50M top of the band), slot-head MLP readout over stepwise states,
 veto-hardness curriculum, live-collected labeled examples. Attempt
 series paused by operator instruction.
+
+## 15. 2026-10-28 — the whole repo's CI leaves the dead directory; the owner's pin PR meets its first honest execution
+
+| result | value | class | evidence |
+| ------ | ----- | ----- | -------- |
+| The dead directory is empty | all four workflow files now live in `.github/workflows/` (Actions never read `archite_workflows/`; three had never triggered a run) | ✓ location law applied repo-wide | `git log a5526680` |
+| apple_foundation_test repaired | unclosed YAML quote in the PR path list fixed; nonexistent `xsoulspace_agentic_harness` path dropped; ag-c + self-path triggers added | ✓ runs | run 40607784860 |
+| platform_sdk_verify live + scoped | path-filtered to the 23 packages it verifies (+ script + own file); ag-c added — was an every-push trigger with no paths | ✓ runs | run 40607784919 |
+| registry_publish: two latent load failures surfaced | (1) workflow-level `env` referencing `${{ runner.temp }}`; (2) after moving it to job-level env, actionlint named the law: `runner` context is unavailable at BOTH workflow- and job-level env. Fix: an early step writes `$RUNNER_TEMP`-based paths into `$GITHUB_ENV`. Verified by absence — no phantom run on the fix push | ✓ loader-clean | `actionlint` clean on all four files; run 40607783181 / 40608073810 (the two named failures) |
+| The pin skew (owner finding) | both test workflows ran and failed the same way: `test_core 0.6.21` fails to COMPILE against the root's pinned `test_api 0.7.13` — CI is the first honest execution of the PR #7 pin set (Actions was dead when it merged). `flutter pub get` itself PASSED on the clone: the machine-private-override blocker from §13 is retired by the git/pub.dev pins | owner review (pin alignment) | run logs (test_core errors); pubspec.yaml `dependency_overrides` |
+| Power law correction to §14 | attempt 6's RUN-RECORD says "AC at run", but its own recorded power snapshots say `pmset_source: Battery Power` (93%→58% across the run) — the snapshot is the machine's confession and it is recorded, not the prose claim | ✓ honest annotation | `dense-perm-d/record.json` power blocks |
+
+Non-claims: green runs on the two test workflows are blocked by the
+repo's own dependency pins, not by the workflows — that is what "the
+workflows work" honestly means here. The lane's own gate
+(`mlx_native_gate`) stayed green through the moves.
+
+## 16. 2026-10-28 — the RUNG-1 levers: the readout lever closes with data; capacity and boundary data are pre-registered and battery-gated
+
+| result | value | class | evidence |
+| ------ | ----- | ----- | -------- |
+| Attempt 7a — slot-head MLP @ lr 5e-3 | DIVERGED: loss NaN from epoch 4; all 32,962 head params non-finite; NaN margins silently answer all-abstain. `train_perm_head.py` lacked train_rung0's finite guard — fixed (skip update, say so, keep going) | ✓ divergence recorded, tooling gap closed | `perm-slot-dense/attempt-7a-diverged/` (head + full log + RUN-NOTES) |
+| Attempt 7b — lr 1e-3, guard on (recipe amended BEFORE any frozen case was scored; the attempt-4 precedent) | trained FINITE (max abs w 0.356, 0 non-finite) and still converged to all-abstain: flat margin sweep (every eval row ≤ 0 margin at every TAU 0→8), frozen 12/18 = 0.667 / 0 unsafe at the selected TAU=0.0 — the pre-registered FAIL condition met exactly | gate FAIL ⇒ **readout lever CLOSED for the dense trunk, with data** | `perm-slot-dense/RUN-RECORD.md` + `verdict.json` + sweep |
+| The dense-trunk picture, complete | label head reaches 0.722 by over-allowing; every calibrated operating point (label-head margin, slot-head MLP margin) degenerates to all-abstain on the frozen 16M trunk | ✓ measured, re-scopes the rung | attempts 4–7 |
+| Lever A — dense-perm-e (capacity) | hidden 896 → **48,655,488 params** (3.04× the closed 16M line; under the 50M band top); attempt-6 recipe verbatim on corpus v3; pre-registered line rule: closes if eval argmax < 0.70 AND frozen zero-unsafe agreement < 0.722. **NOT RUN — battery-gated** (~2.6 h needed at the measured 0.5–0.7 %/min drain; machine on battery 37%→15% across this session) | ✓ pre-registered, launch command in the rung json | `rung_dense_perm_e.json`; `dense-perm-e/PREDICTION.md` |
+| Lever C — dense-perm-f (boundary data) | corpus **v4** = v3 + a 600-row balanced hard near-miss slice at every measured law boundary (3600 rows, sha256 6d43d2fa…d848e, 0 frozen-case collisions); curriculum stage 2 from dense-perm-c, lr 5e-4, 850 steps. **NOT RUN — same battery gate** | ✓ pre-registered, corpus generated + verified | `rung_dense_perm_f.json`; `dense-perm-f/PREDICTION.md`; `perm_domain_corpus_v4.jsonl` + manifest |
+| **Corpus-law hole, measured** | `decide("run_command", "dart test && rm -rf /", granted)` → **allow_once**: space-separated chaining passes `command_is_safe`'s prefix match (`;` chaining happens to fail it). Excluded from all training rows; operator review, not a lane fix | ✓ recorded finding | boundary-probe log in §16 sources; `hard_rows` docstring |
+| Lever D — live escalations | unchanged and honest: the gate has never run live; no policy store exists; every live all-abstain escalation is one human-labeled real example when it happens | ✓ status re-verified | slot README |
+| Ledger correction | "the 42.8M dense line" was a misnomer — 42,793,280 is rung1-scale (MoE); the dense-perm trunks measure **16,006,656** (band BOTTOM, not band middle) — recorded as an annotation, history not rewritten | ✓ annotation | README + dense-perm-e PREDICTION |
+
+Non-claims: fixture-half only; attempt 7 ran on battery (recorded; no
+throughput claims); a FAIL is a verdict with data. The two staged
+levers carry their own PREDICTION.md files and launch the moment the
+power gate opens — no recipe decisions remain open.
