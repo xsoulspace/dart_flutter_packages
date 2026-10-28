@@ -232,7 +232,10 @@ final class MlxNativeTextClient implements InferenceClient {
     String model = 'lfm2.5-instruct-mlx-4bit',
     int defaultMaxTokens = 320,
     double defaultTemperature = 0.0,
-    ToolCallSyntax? toolSyntax,
+    // The checkpoint's own qualified native signature grammar
+    // (ADR 0058 law: the textual format is fixture-gated before it
+    // executes). Null keeps prose-only behavior.
+    ToolCallSyntax? toolSyntax = ToolCallSyntax.lfmNative,
   }) {
     NativeLfm2TextEngine? engine;
     final client = MlxNativeTextClient._(

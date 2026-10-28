@@ -210,4 +210,150 @@ void main() {
       const ToolName('write'),
     );
   });
+
+  group('the LFM native signature profile (qualified 2026-10-28)', () {
+    final lfmRegistry = ToolRegistry()
+      ..register(
+        const ToolDefinition().toDef(
+          name: const ToolName('get_weather'),
+          execute: (_) async => null,
+        ),
+      )
+      ..register(
+        const ToolDefinition().toDef(
+          name: const ToolName('write'),
+          execute: (_) async => null,
+        ),
+      );
+
+    ToolSyntaxParseResult parse(String text) => ToolCallSyntax.lfmNative.parse(
+      text,
+      registry: lfmRegistry,
+      requireRegistry: true,
+    );
+
+    test('the measured checkpoint shape: [name(key="value")] span', () {
+      // Live-measured 2026-10-28, LFM2.5-1.2B on the function-tool surface:
+      // <|tool_call_start|>[get_weather(city="Tokyo")]<|tool_call_end|>
+      final result = parse(
+        '<|tool_call_start|>[get_weather(city="Tokyo")]<|tool_call_end|>',
+      );
+      expect(result.success, isTrue);
+      final call = result.calls.single;
+      expect(call.name.value, 'get_weather');
+      expect(call.arguments, {'city': 'Tokyo'});
+    });
+
+    test('escapes, numbers, booleans and None decode to Dart values', () {
+      final result = parse(
+        '<|tool_call_start|>[write(path="a\\nb.txt", lines=3, rate=0.5, '
+        'verbose=True, tail=None)]<|tool_call_end|>',
+      );
+      expect(result.success, isTrue);
+      final call = result.calls.single;
+      expect(call.name.value, 'write');
+      expect(call.arguments['path'], 'a\nb.txt');
+      expect(call.arguments['lines'], 3);
+      expect(call.arguments['rate'], 0.5);
+      expect(call.arguments['verbose'], isTrue);
+      expect(call.arguments['tail'], isNull);
+    });
+
+    test('top-level comma segments are separate calls', () {
+      final result = parse(
+        '<|tool_call_start|>[get_weather(city="Tokyo"), write(path="x")]'
+        '<|tool_call_end|>',
+      );
+      expect(result.success, isTrue);
+      expect(result.calls, hasLength(2));
+      expect(result.calls[0].name.value, 'get_weather');
+      expect(result.calls[1].name.value, 'write');
+    });
+
+    test('the JSON list spelling of the same checkpoint family admits', () {
+      final result = parse(
+        '<|tool_call_start|>[{"name": "write", "arguments": '
+        '{"path": "a"}}]<|tool_call_end|>',
+      );
+      expect(result.success, isTrue);
+      expect(result.calls.single.name.value, 'write');
+      expect(result.calls.single.arguments, {'path': 'a'});
+    });
+
+    test('prose stays zero calls; surrounding text is presentation', () {
+      final result = parse(
+        'Let me check. <|tool_call_start|>'
+        '[get_weather(city="Tokyo")]<|tool_call_end|>',
+      );
+      expect(result.success, isTrue);
+      expect(result.calls, hasLength(1));
+    });
+
+    test('an unknown tool refuses by name, never executes', () {
+      expect(
+        parse(
+          '<|tool_call_start|>[get_weather(city="Tokyo")]'
+          '<|tool_call_end|><|tool_call_start|>[rm(rf="/")]'
+          '<|tool_call_end|>',
+        ).errorCode,
+        'tool_call_unknown',
+      );
+    });
+
+    test('a truncated envelope (budget cap) refuses atomically', () {
+      expect(
+        parse('<|tool_call_start|>[get_weather(city="Tok').errorCode,
+        'tool_call_truncated',
+      );
+    });
+
+    test('a bare close without an open admits nothing and stays prose', () {
+      final result = parse('<|tool_call_end|> nothing was opened');
+      expect(result.success, isTrue);
+      expect(result.calls, isEmpty);
+    });
+
+    test('the measured repetition artifact yields one call', () {
+      // Live-measured 2026-10-28: the checkpoint repeats a completed call
+      // as a bare trailing duplicate. The matched envelope supplies the
+      // call; the repetition stays in the presentation text.
+      final result = parse(
+        '<|tool_call_start|>[get_weather(city="Tokyo")]<|tool_call_end|>'
+        '[get_weather(city="Tokyo")]<|tool_call_end|>',
+      );
+      expect(result.success, isTrue);
+      expect(result.calls, hasLength(1));
+      expect(result.calls.single.name.value, 'get_weather');
+    });
+
+    test('an unqualified value shape refuses instead of guessing', () {
+      expect(
+        parse('<|tool_call_start|>[get_weather(city=Tokyo)]<|tool_call_end|>')
+            .errorCode,
+        'tool_call_malformed',
+      );
+    });
+
+    test('duplicate keys in one call refuse as ambiguous', () {
+      expect(
+        parse(
+          '<|tool_call_start|>[write(path="a", path="b")]'
+          '<|tool_call_end|>',
+        ).errorCode,
+        'tool_call_ambiguous',
+      );
+    });
+
+    test('renderCall round-trips the signature form', () {
+      const call = ToolCall(
+        name: ToolName('get_weather'),
+        arguments: {'city': 'Tokyo'},
+      );
+      final rendered = ToolCallSyntax.lfmNative.renderCall(call);
+      final result = parse(rendered);
+      expect(result.success, isTrue);
+      expect(result.calls.single.name.value, 'get_weather');
+      expect(result.calls.single.arguments, {'city': 'Tokyo'});
+    });
+  });
 }

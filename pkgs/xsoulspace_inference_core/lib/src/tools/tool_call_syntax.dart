@@ -6,8 +6,9 @@ import 'tool_registry.dart';
 enum ToolSyntaxKind { call, definition, result, thought }
 
 /// One declarative envelope in a provider-selected syntax tree.
-/// Payloads are JSON objects. Named envelopes carry the name before
-/// [separator].
+/// Payloads are JSON objects, except [ToolSyntaxEnvelope.signatureCall],
+/// whose payload is the qualified function-signature grammar. Named
+/// envelopes carry the name before [separator].
 final class ToolSyntaxEnvelope {
   const ToolSyntaxEnvelope.jsonCall({
     required this.open,
@@ -16,7 +17,25 @@ final class ToolSyntaxEnvelope {
     this.argumentsKey = 'arguments',
     this.rejectOrphanClose = false,
   }) : kind = ToolSyntaxKind.call,
-       separator = null;
+       separator = null,
+       signatureForm = false;
+
+  /// A function-signature call region between the markers: the measured
+  /// Liquid/LFM2.5 native shape
+  /// (`<|tool_call_start|>[get_weather(city="Tokyo")]<|tool_call_end|>`).
+  /// The payload grammar is the separately tested signature grammar
+  /// (ADR 0058: a checkpoint's own textual format is qualified by
+  /// fixtures before it executes), tolerant of the JSON list/object
+  /// spellings the same checkpoints also emit.
+  const ToolSyntaxEnvelope.signatureCall({
+    required this.open,
+    required this.close,
+    this.rejectOrphanClose = false,
+  }) : kind = ToolSyntaxKind.call,
+       separator = null,
+       nameKey = 'name',
+       argumentsKey = 'arguments',
+       signatureForm = true;
 
   const ToolSyntaxEnvelope.namedJson({
     required this.kind,
@@ -25,7 +44,8 @@ final class ToolSyntaxEnvelope {
     this.separator = '|',
     this.rejectOrphanClose = false,
   }) : nameKey = 'name',
-       argumentsKey = 'arguments';
+       argumentsKey = 'arguments',
+       signatureForm = false;
 
   /// Declared non-action region; contents are never recursively parsed.
   const ToolSyntaxEnvelope.opaque({
@@ -35,7 +55,12 @@ final class ToolSyntaxEnvelope {
   }) : kind = ToolSyntaxKind.thought,
        separator = null,
        nameKey = 'name',
-       argumentsKey = 'arguments';
+       argumentsKey = 'arguments',
+       signatureForm = false;
+
+  /// Whether the payload parses as the qualified function-signature
+  /// grammar instead of a JSON object.
+  final bool signatureForm;
 
   final ToolSyntaxKind kind;
   final String open;
@@ -134,6 +159,27 @@ final class ToolCallSyntax {
         kind: ToolSyntaxKind.result,
         open: '<result|',
         close: '>',
+      ),
+    ],
+  );
+
+  /// The LFM2 native signature profile, qualified 2026-10-28 from live
+  /// measurement of the LFM2.5-1.2B checkpoint on the function-tool
+  /// surface: the model emits
+  /// `<|tool_call_start|>[get_weather(city="Tokyo")]<|tool_call_end|>`.
+  /// The payload grammar also admits the JSON list/object spellings the
+  /// same checkpoint family emits (ADR 0058 tools bench, 2026-10-09).
+  static const lfmNative = ToolCallSyntax(
+    id: 'lfm-native-signature-v1',
+    envelopes: [
+      // The close marker is NOT reserved: the 1.2B checkpoint repeats a
+      // completed call as a bare trailing duplicate (measured 2026-10-28),
+      // and a close-only span carries no payload it could admit. The
+      // repetition survives as presentation text; the matched envelope
+      // supplies the call.
+      ToolSyntaxEnvelope.signatureCall(
+        open: '<|tool_call_start|>',
+        close: '<|tool_call_end|>',
       ),
     ],
   );
@@ -294,70 +340,251 @@ final class ToolCallSyntax {
       }
       if (close < 0) return fail('tool_call_truncated', start);
       final body = text.substring(payloadStart, close).trim();
-      String name;
-      Map<String, dynamic> arguments;
-      try {
-        final separator = envelope.separator;
-        if (separator != null) {
-          final split = body.indexOf(separator);
-          name = (split < 0 ? body : body.substring(0, split)).trim();
-          arguments = split < 0
-              ? <String, dynamic>{}
-              : (jsonDecode(body.substring(split + separator.length)) as Map)
-                    .cast<String, dynamic>();
-          if (split >= 0 &&
-              _hasDuplicateKeys(body.substring(split + separator.length))) {
-            return fail('tool_call_ambiguous', start);
+      final parsed = envelope.signatureForm
+          ? _parseSignatureCalls(body)
+          : _parseJsonPayload(body, envelope);
+      if (parsed.errorCode != null) return fail(parsed.errorCode!, start);
+      for (final (name, arguments) in parsed.calls!) {
+        if (name.isEmpty ||
+            name.trim() != name ||
+            RegExp(r'[\s<>|]').hasMatch(name)) {
+          return fail('tool_call_malformed', start);
+        }
+        if (envelope.kind == ToolSyntaxKind.call) {
+          if (requireRegistry && registry == null) {
+            return fail('tool_call_unbound', start);
           }
-        } else {
-          final decoded = jsonDecode(body) as Map;
-          if (decoded.keys.any(
-            (key) =>
-                key != envelope!.nameKey && key != envelope.argumentsKey,
-          )) {
-            return fail('tool_call_malformed', start);
-          }
-          name = decoded[envelope.nameKey] as String;
-          arguments = (decoded[envelope.argumentsKey] as Map)
-              .cast<String, dynamic>();
-          if (_hasDuplicateKeys(body)) {
-            return fail('tool_call_ambiguous', start);
+          if (registry != null && registry.get(ToolName(name)) == null) {
+            return fail('tool_call_unknown', start);
           }
         }
-      } on Object {
-        return fail('tool_call_malformed', start);
-      }
-      if (name.isEmpty ||
-          name.trim() != name ||
-          RegExp(r'[\s<>|]').hasMatch(name)) {
-        return fail('tool_call_malformed', start);
-      }
-      if (envelope.kind == ToolSyntaxKind.call) {
-        if (requireRegistry && registry == null) {
-          return fail('tool_call_unbound', start);
+        if (nodes.length >= limits.maxNodes) {
+          return fail('tool_syntax_limit', start);
         }
-        if (registry != null && registry.get(ToolName(name)) == null) {
-          return fail('tool_call_unknown', start);
-        }
+        final end = close + envelope.close.length;
+        nodes.add(
+          ToolSyntaxNode(
+            kind: envelope.kind,
+            name: name,
+            payload: Map.unmodifiable(arguments),
+            start: start,
+            end: end,
+            raw: text.substring(start, end),
+            call: envelope.kind == ToolSyntaxKind.call
+                ? ToolCall(name: ToolName(name), arguments: arguments)
+                : null,
+          ),
+        );
       }
-      final end = close + envelope.close.length;
-      nodes.add(
-        ToolSyntaxNode(
-          kind: envelope.kind,
-          name: name,
-          payload: Map.unmodifiable(arguments),
-          start: start,
-          end: end,
-          raw: text.substring(start, end),
-          call: envelope.kind == ToolSyntaxKind.call
-              ? ToolCall(name: ToolName(name), arguments: arguments)
-              : null,
-        ),
-      );
-      cursor = end;
+      cursor = close + envelope.close.length;
     }
     return ToolSyntaxParseResult._(nodes: List.unmodifiable(nodes));
   }
+}
+
+/// One parsed call: the tool name and its argument map.
+typedef _ParsedCall = (String, Map<String, dynamic>);
+
+/// A payload parse outcome: the calls, or the named refusal.
+final class _PayloadParse {
+  const _PayloadParse.ok(this.calls) : errorCode = null;
+  const _PayloadParse.error(this.errorCode) : calls = null;
+  final List<_ParsedCall>? calls;
+  final String? errorCode;
+}
+
+/// Decodes one JSON-object payload (the existing envelope grammar).
+_PayloadParse _parseJsonPayload(String body, ToolSyntaxEnvelope envelope) {
+  final String name;
+  final Map<String, dynamic> arguments;
+  try {
+    final separator = envelope.separator;
+    if (separator != null) {
+      final split = body.indexOf(separator);
+      name = (split < 0 ? body : body.substring(0, split)).trim();
+      arguments = split < 0
+          ? <String, dynamic>{}
+          : (jsonDecode(body.substring(split + separator.length)) as Map)
+                .cast<String, dynamic>();
+      if (split >= 0 &&
+          _hasDuplicateKeys(body.substring(split + separator.length))) {
+        return const _PayloadParse.error('tool_call_ambiguous');
+      }
+    } else {
+      final decoded = jsonDecode(body) as Map;
+      if (decoded.keys.any(
+        (key) => key != envelope.nameKey && key != envelope.argumentsKey,
+      )) {
+        return const _PayloadParse.error('tool_call_malformed');
+      }
+      name = decoded[envelope.nameKey] as String;
+      arguments = (decoded[envelope.argumentsKey] as Map)
+          .cast<String, dynamic>();
+      if (_hasDuplicateKeys(body)) {
+        return const _PayloadParse.error('tool_call_ambiguous');
+      }
+    }
+  } on Object {
+    return const _PayloadParse.error('tool_call_malformed');
+  }
+  return _PayloadParse.ok([(name, arguments)]);
+}
+
+/// The qualified function-signature payload grammar (LFM2 native shape).
+///
+/// Measured forms, in admission order:
+/// 1. JSON list of call objects: `[{"name": "write", "arguments": {...}}]`
+///    (or a single object) — the structured spelling.
+/// 2. Function signatures, optionally list-wrapped, comma-separated at
+///    top level: `[get_weather(city="Tokyo"), ping()]` — values are
+///    quoted strings (escapes decoded), integers, doubles, True, False
+///    or None.
+///
+/// Admission is atomic: any malformed segment refuses the whole envelope.
+_PayloadParse _parseSignatureCalls(String body) {
+  if (body.isEmpty) {
+    return const _PayloadParse.error('tool_call_malformed');
+  }
+  if (body.startsWith('{') || body.startsWith('[')) {
+    final jsonCalls = _trySignatureJsonCalls(body);
+    if (jsonCalls != null) return _PayloadParse.ok(jsonCalls);
+  }
+  var rest = body.trim();
+  if (rest.startsWith('[') && rest.endsWith(']')) {
+    rest = rest.substring(1, rest.length - 1).trim();
+    if (rest.isEmpty) {
+      return const _PayloadParse.error('tool_call_malformed');
+    }
+  }
+  final calls = <_ParsedCall>[];
+  for (final segment in _splitSignatureSegments(rest)) {
+    final head = RegExp(r'^([A-Za-z0-9_]+)\s*\(([\s\S]*)\)$')
+        .firstMatch(segment);
+    if (head == null) {
+      return const _PayloadParse.error('tool_call_malformed');
+    }
+    final arguments = <String, dynamic>{};
+    final pair = RegExp(
+      r'''([A-Za-z0-9_]+)\s*=\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|-?\d+(?:\.\d+)?|True|False|None)''',
+    );
+    final argumentBody = head.group(2)!.trim();
+    if (argumentBody.isNotEmpty) {
+      final matches = pair.allMatches(argumentBody).toList();
+      // Every pair must be accounted for: leftovers mean a value shape
+      // this grammar has not qualified.
+      var covered = 0;
+      for (final match in matches) {
+        covered += match.group(0)!.length;
+      }
+      // Pairs are comma-separated: completeness is measured against the
+      // body with separators and whitespace removed.
+      final bare = argumentBody.replaceAll(RegExp(r'[\s,]'), '');
+      if (covered != bare.length) {
+        return const _PayloadParse.error('tool_call_malformed');
+      }
+      for (final match in matches) {
+        final key = match.group(1)!;
+        if (arguments.containsKey(key)) {
+          return const _PayloadParse.error('tool_call_ambiguous');
+        }
+        arguments[key] = _signatureValue(match.group(2)!);
+      }
+    }
+    calls.add((head.group(1)!, arguments));
+  }
+  return _PayloadParse.ok(calls);
+}
+
+/// The JSON spelling of a signature payload: one call object or a list of
+/// them. Null when the body is not that shape (the caller falls through
+/// to the signature grammar).
+List<_ParsedCall>? _trySignatureJsonCalls(String body) {
+  final Object? decoded;
+  try {
+    decoded = jsonDecode(body);
+  } on Object {
+    return null;
+  }
+  final elements = decoded is List ? decoded : [if (decoded is Map) decoded];
+  if (elements.isEmpty) return null;
+  final calls = <_ParsedCall>[];
+  for (final element in elements) {
+    if (element is! Map) return null;
+    final name = element['name'];
+    final arguments = element['arguments'];
+    if (name is! String || arguments is! Map) return null;
+    calls.add((name, arguments.cast<String, dynamic>()));
+  }
+  return calls;
+}
+
+/// Splits a signature body at top-level commas: depth counts parentheses
+/// and brackets; quoted regions never split.
+List<String> _splitSignatureSegments(String body) {
+  final segments = <String>[];
+  final current = StringBuffer();
+  var depth = 0;
+  var quoted = false;
+  var escaped = false;
+  for (var i = 0; i < body.length; i++) {
+    final character = body[i];
+    if (quoted) {
+      current.write(character);
+      if (escaped) {
+        escaped = false;
+      } else if (character == r'\') {
+        escaped = true;
+      } else if (character == '"' || character == "'") {
+        quoted = false;
+      }
+      continue;
+    }
+    if (character == '"' || character == "'") {
+      quoted = true;
+      current.write(character);
+      continue;
+    }
+    if (character == '(' || character == '[') depth++;
+    if (character == ')' || character == ']') depth--;
+    if (character == ',' && depth == 0) {
+      segments.add(current.toString().trim());
+      current.clear();
+      continue;
+    }
+    current.write(character);
+  }
+  final last = current.toString().trim();
+  if (last.isNotEmpty) segments.add(last);
+  return segments;
+}
+
+/// Converts one qualified signature value: quoted string (escapes
+/// decoded), integer, double, True, False or None.
+dynamic _signatureValue(String raw) {
+  if (raw.startsWith('"') || raw.startsWith("'")) {
+    final body = raw.substring(1, raw.length - 1);
+    final buffer = StringBuffer();
+    for (var i = 0; i < body.length; i++) {
+      final character = body[i];
+      if (character != r'\' || i + 1 >= body.length) {
+        buffer.write(character);
+        continue;
+      }
+      i++;
+      final String decoded = switch (body[i]) {
+        'n' => '\n',
+        't' => '\t',
+        'r' => '\r',
+        final other => other,
+      };
+      buffer.write(decoded);
+    }
+    return buffer.toString();
+  }
+  if (raw == 'True') return true;
+  if (raw == 'False') return false;
+  if (raw == 'None') return null;
+  return num.tryParse(raw) ?? raw;
 }
 
 /// Decode an embedded tool payload without silently choosing duplicate keys.
