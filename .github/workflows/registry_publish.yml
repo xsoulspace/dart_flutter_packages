@@ -30,18 +30,22 @@ env:
 jobs:
   registry_publish:
     runs-on: ubuntu-latest
-    # The runner context exists at job-level env, not workflow-level env —
-    # the old top-level ${{ runner.temp }} entries are why the first live
-    # load of this file failed ("Unrecognized named-value: 'runner'"); it
-    # had never been validated while the file sat in the dead directory.
-    env:
-      REGISTRY_OUTPUT_DIR: ${{ runner.temp }}/registry-build-primary
-      REGISTRY_VERIFY_OUTPUT_DIR: ${{ runner.temp }}/registry-build-secondary
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      # The runner context does not exist in workflow- or job-level env
+      # (actionlint: available contexts there are github/inputs/matrix/
+      # needs/secrets/strategy/vars) — the original top-level
+      # ${{ runner.temp }} entries are why this file's first live loads
+      # failed with zero jobs, invisibly, while it sat in the dead
+      # directory. GITHUB_ENV carries the paths to every later step.
+      - name: Set registry output dirs
+        run: |
+          echo "REGISTRY_OUTPUT_DIR=$RUNNER_TEMP/registry-build-primary" >> "$GITHUB_ENV"
+          echo "REGISTRY_VERIFY_OUTPUT_DIR=$RUNNER_TEMP/registry-build-secondary" >> "$GITHUB_ENV"
 
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
