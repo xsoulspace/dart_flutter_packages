@@ -26,12 +26,17 @@ permissions:
 env:
   DEFAULT_REGISTRY_BASE_URL: https://pub.xsoulspace.dev
   DEFAULT_INDEX_BRANCH: registry-index
-  REGISTRY_OUTPUT_DIR: ${{ runner.temp }}/registry-build-primary
-  REGISTRY_VERIFY_OUTPUT_DIR: ${{ runner.temp }}/registry-build-secondary
 
 jobs:
   registry_publish:
     runs-on: ubuntu-latest
+    # The runner context exists at job-level env, not workflow-level env —
+    # the old top-level ${{ runner.temp }} entries are why the first live
+    # load of this file failed ("Unrecognized named-value: 'runner'"); it
+    # had never been validated while the file sat in the dead directory.
+    env:
+      REGISTRY_OUTPUT_DIR: ${{ runner.temp }}/registry-build-primary
+      REGISTRY_VERIFY_OUTPUT_DIR: ${{ runner.temp }}/registry-build-secondary
     steps:
       - name: Checkout
         uses: actions/checkout@v4
