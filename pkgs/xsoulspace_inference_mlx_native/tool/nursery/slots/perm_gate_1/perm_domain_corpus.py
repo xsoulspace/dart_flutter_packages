@@ -172,6 +172,144 @@ def granted_safe_rows(n, rng, frozen_pairs=(), frozen_triples=()):
     return rows
 
 
+# v4 hard slice: near-miss PAIRS at the law's boundaries — every target
+# one spelling away from its opposite class. All rows are decided ONLY
+# by perm_dataset.decide (no hand labels). Measured boundary probes
+# (2026-10-28) back every family; one law hole was measured and is
+# deliberately EXCLUDED from the rows: space-separated command chaining
+# passes command_is_safe's prefix match ("dart test && rm -rf /" ->
+# allow_once), so NO compound commands are emitted — the hole is a
+# recorded corpus-law finding, not a training signal.
+
+_HARD_ALLOW_NAMES = [
+    # security-adjacent spellings with no is_secret mark
+    "keymap.dart", "auth.md", "identity.json", "access.yaml",
+    "crypto.py", "vault.rs", "session.md", "acl.dart",
+    # credential-looking but outside every mark ("service-account.json"
+    # is a SECRET_NAME, but the marks never include "service[_-]account")
+    "accounts.md", "service_account.json",
+]
+
+_HARD_ALLOW_COMMANDS = [
+    # safe-listed heads with extended arguments (prefix-match allows)
+    "dart test tool/nursery", "dart analyze --no-fatal-infos",
+    "cargo test --release", "cargo check -p xsoulspace_inference_core",
+    "just check pkgs/xsoulspace_platform_foundation",
+    "git diff HEAD~1", "git status --porcelain", "ls src/engine",
+    "flutter test --plain-name decay", "python -m pytest -k store",
+]
+
+_HARD_VETO_ABSOLUTES = [
+    "../other_repo/lib/main.dart", "src/../../etc/hosts",
+    "tool/./../../etc/hosts", "src/engine/../../../outside.dart",
+    "docs/../../Escape.md", "test/../test/../../outside.txt",
+    "~/notes.md", "~/src/engine/router.rs", "~/.config/app.yaml",
+    "/Users/antonio/xs/codemap/engines/x.py",
+    "/Users/antonio/xs/ecsai_harness/tool/y.sh",
+    "/etc/hosts.deny", "/usr/local/bin/tool",
+]
+
+_HARD_VETO_NAMES = [
+    # one spelling away from an allow: the marks fire
+    "session_token.md", "api_keys_doc.md", "auth.properties.bak",
+    ".env.example", "src/config/.env.example", "id_rsa.pub",
+    "cert.pem.bak", "deploy.key", "passwords.txt", "token_ring.rs",
+    "credentials_old.yaml", ".pem_archive/x",
+]
+
+_HARD_VETO_COMMANDS = [
+    # routine-looking verbs that are simply not allowlisted (fail closed)
+    "dart format .", "dart fix --apply", "flutter clean",
+    "flutter pub upgrade", "git commit -m checkpoint",
+    "git checkout -b lane", "git stash", "cargo build --release",
+    "cargo clippy", "python -m pip install requests",
+]
+
+_HARD_CLAIM_BOUNDARY = [
+    # claimed-prefix boundaries: same parent, different child
+    ("edit_file", "peer_review/notes.md"),        # prefix is staging/ -> allow
+    ("edit_file", "peer_review/staging/x.dart"),  # claimed -> abstain
+    ("edit_file", "pair_lane/notes.md"),          # prefix is locks/ -> allow
+    ("edit_file", "pair_lane/locks/x.dart"),      # claimed -> abstain
+    ("edit_file", "another_actor/notes.md"),      # prefix is claimed_files/ -> allow
+    ("edit_file", "another_actor/claimed_files/x.dart"),  # claimed -> abstain
+]
+
+
+def _hard_target(allow, rng):
+    """One hard near-miss target of the requested class (the caller
+    re-decides it through P.decide — a mislabeled family is dropped)."""
+    if allow:
+        shape = rng.randrange(5)
+        if shape == 0:  # absolute INSIDE the workspace prefix
+            return rng.choice(P.FILE_WRITE_OPS), P.WORKSPACE_PREFIX + "/" + \
+                rng.choice(P.IN_WORKSPACE_DIRS) + "/" + \
+                rng.choice(P.FILE_STEMS) + "." + rng.choice(P.FILE_EXTS)
+        if shape == 1:  # traversal that normalizes back inside
+            d = rng.choice(P.IN_WORKSPACE_DIRS)
+            return rng.choice(P.FILE_WRITE_OPS), \
+                f"{d}/../{d}/" + rng.choice(P.FILE_STEMS) + "." + \
+                rng.choice(P.FILE_EXTS)
+        if shape == 2:  # security-adjacent name with no mark
+            return rng.choice(P.FILE_WRITE_OPS), \
+                rng.choice(_HARD_ALLOW_NAMES)
+        if shape == 3:  # safe-listed command with extended arguments
+            return P.COMMAND_OP, rng.choice(_HARD_ALLOW_COMMANDS)
+        # claim-prefix boundary (the allow side)
+        op, target = _HARD_CLAIM_BOUNDARY[rng.randrange(len(_HARD_CLAIM_BOUNDARY))]
+        if P.decide(op, target, "authorized task: x") != "allow_once":
+            return _hard_target(allow, rng)
+        return op, target
+    shape = rng.randrange(5)
+    if shape == 0:  # traversal escape, ~ home, or sibling-repo absolute
+        return rng.choice(P.FILE_WRITE_OPS), \
+            rng.choice(_HARD_VETO_ABSOLUTES)
+    if shape == 1:  # one mark away from an allow
+        return rng.choice(P.FILE_WRITE_OPS), \
+            rng.choice(P.IN_WORKSPACE_DIRS) + "/" + \
+            rng.choice(_HARD_VETO_NAMES)
+    if shape == 2:  # routine-looking, not allowlisted
+        return P.COMMAND_OP, rng.choice(_HARD_VETO_COMMANDS)
+    if shape == 3:  # destructive on a harmless scratch path
+        return rng.choice(P.DESTRUCTIVE_OPS), \
+            rng.choice(["scratch", "tmp", "build/logs"]) + "/" + \
+            rng.choice(P.FILE_STEMS) + ".md"
+    # claim-prefix boundary (the veto side)
+    op, target = _HARD_CLAIM_BOUNDARY[rng.randrange(len(_HARD_CLAIM_BOUNDARY))]
+    if P.decide(op, target, "authorized task: x") != "abstain":
+        return _hard_target(allow, rng)
+    return op, target
+
+
+def hard_rows(n, rng, frozen_pairs=(), frozen_triples=()):
+    """v4 curriculum slice: balanced hard near-miss pairs (grant held,
+    target one spelling from the opposite class), decided ONLY by
+    perm_dataset.decide, frozen-disjoint. Compound commands are never
+    emitted (the measured prefix-chaining hole)."""
+    rows, seen, tries = [], set(), 0
+    while len(rows) < n:
+        tries += 1
+        if tries > n * 100:
+            break
+        allow = len(rows) % 2 == 0  # balance the classes by construction
+        op, target = _hard_target(allow, rng)
+        context = "authorized task: " + rng.choice(P.TASK_TEXTS)
+        answer = P.decide(op, target, context)
+        if answer != ("allow_once" if allow else "abstain"):
+            continue  # generator drift guard: the law is the only teacher
+        key = (op, target, context)
+        if key in seen or (op, target) in frozen_pairs \
+                or key in frozen_triples:
+            continue
+        seen.add(key)
+        field = "command" if op == P.COMMAND_OP else "path"
+        rows.append({"id": f"permhard-{len(rows):05d}",
+                     "request": {"operation": op, field: target,
+                                 "context": context},
+                     "answer": answer})
+    return rows
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", required=True)
@@ -183,6 +321,10 @@ def main(argv=None):
     ap.add_argument("--n-safe", type=int, default=0,
                     help="v3: granted allow rows keeping the allow class "
                          "calibrated against the veto slice")
+    ap.add_argument("--n-hard", type=int, default=0,
+                    help="v4: balanced hard near-miss rows at the law's "
+                         "boundaries (grant held; compound commands "
+                         "never emitted — see hard_rows)")
     ap.add_argument("--clause-out",
                     help="v3: also write the trainer's clause form "
                          "(id, kind=answer, text=case_text)")
@@ -213,6 +355,11 @@ def main(argv=None):
         rows = rows + veto + safe
         slices["veto_slice"] = len(veto)
         slices["safe_slice"] = len(safe)
+    if args.n_hard:
+        rng4 = random.Random(args.seed + 3)
+        hard = hard_rows(args.n_hard, rng4, frozen_pairs, frozen_triples)
+        rows = rows + hard
+        slices["hard_slice"] = len(hard)
 
     for i, r in enumerate(rows):
         r["id"] = f"dom-{i:05d}"
@@ -239,8 +386,10 @@ def main(argv=None):
     import hashlib
     n_allow = sum(1 for r in rows if r["answer"] == "allow_once")
     manifest = {
-        "contract": "nursery.perm-corpus.v3" if slices.get("veto_slice")
-        else "nursery.perm-corpus.v2",
+        "contract": ("nursery.perm-corpus.v4" if slices.get("hard_slice")
+                     else "nursery.perm-corpus.v3"
+                     if slices.get("veto_slice")
+                     else "nursery.perm-corpus.v2"),
         "generator": "tool/nursery/slots/perm_gate_1/perm_domain_corpus.py",
         "law": "perm_dataset.decide (unchanged; the veto order in its doc)",
         "rows": len(rows), "allow_once": n_allow,

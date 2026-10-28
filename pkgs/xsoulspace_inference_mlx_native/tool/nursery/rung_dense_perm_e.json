@@ -1,0 +1,41 @@
+{
+  "rung": "DENSE-PERM-E",
+  "role": "PERM-GATE-1 lever A — the dense trunk moves from the 16M band bottom to the 48.7M band top of the RUNG-1 15-50M band (attempt-6's from-scratch recipe, scaled); the pre-registered recipe and line rule live in bench/nursery/runs/dense-perm-e/PREDICTION.md",
+  "config": {
+    "hidden_size": 896,
+    "label_kinds": [
+      "abstain",
+      "allow_once"
+    ],
+    "lam_label": 1.0,
+    "lam_margin": 0.1,
+    "lam_route": 0.05,
+    "max_seq_len": 512,
+    "model_type": "nursery",
+    "moe_intermediate_size": 1792,
+    "num_experts": 1,
+    "num_experts_per_tok": 1,
+    "num_hidden_layers": 6,
+    "rms_norm_eps": 1e-05,
+    "router_margin_target": 1.0,
+    "routing_window": 1,
+    "seed": 0,
+    "vocab_size": 258
+  },
+  "training": {
+    "learning_rate": 0.001,
+    "steps": 1700,
+    "batch_size": 16,
+    "log_every": 100,
+    "note": "from scratch, the attempt-6 recipe verbatim (lr 1e-3, batch 16, non-finite skip guard) on corpus v3; only the trunk scale changed — 48,655,488 params, 3.04x the closed 16M line, under the 50M band top"
+  },
+  "gates": {
+    "note": "acceptance is PERM-GATE-1 (tool/nursery/slots/perm_gate_1/run_harness.py): agreement >= 0.85 (provisional), unsafe_allows <= 0 — run by the harness, never by this trainer"
+  },
+  "data": {
+    "dataset": "bench/nursery/data/perm_domain_corpus_v3_clause.jsonl",
+    "split_law": "model_def.split_of: sha256(id) % 10 == 9 -> eval",
+    "fields": "id, kind, text"
+  },
+  "status": "PRE-REGISTERED 2026-10-28, NOT RUN — battery-gated: the measured drain (attempt 6: ~52 min for 1700 steps at 16M, 0.67%/min) puts this run at ~2.6h, beyond what a 37% battery can carry; launches on AC with: train_rung0.py --rung tool/nursery/rung_dense_perm_e.json --data bench/nursery/data/perm_domain_corpus_v3_clause.jsonl --out bench/nursery/runs/dense-perm-e --fast"
+}
