@@ -1,16 +1,23 @@
 name: Apple Foundation package tests
 
+# Lived in .github/archite_workflows/ until 2026-10-28 — a directory GitHub
+# Actions never reads, so this workflow had never triggered a single run
+# (the same location law the mlx_native_gate relocation recorded). The old
+# PR path list also carried an unclosed YAML quote and named
+# pkgs/xsoulspace_agentic_harness, which is not a package in this repo.
+
 on:
   pull_request:
     paths:
       - 'pkgs/xsoulspace_inference_apple_foundation/**'
-      - 'pkgs/xsoulspace_agentic_harness/**
-      - pkgs/xsoulspace_inference_core/**'
+      - 'pkgs/xsoulspace_inference_core/**'
+      - '.github/workflows/apple_foundation_test.yml'
   push:
-    branches: [main, master]
+    branches: [main, master, ag-c]
     paths:
       - 'pkgs/xsoulspace_inference_apple_foundation/**'
       - 'pkgs/xsoulspace_inference_core/**'
+      - '.github/workflows/apple_foundation_test.yml'
 
 jobs:
   unit:

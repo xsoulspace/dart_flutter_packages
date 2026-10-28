@@ -1,0 +1,87 @@
+name: platform_sdk_verify
+
+# Lived in .github/archite_workflows/ until 2026-10-28 — a directory GitHub
+# Actions never reads, so this workflow had never triggered a single run
+# (the mlx_native_gate relocation lesson). Path-scoped on relocation so it
+# runs when its inputs change instead of on every push to the branch.
+
+on:
+  pull_request:
+    paths:
+      - 'pkgs/xsoulspace_platform_core_interface/**'
+      - 'pkgs/xsoulspace_platform_social_interface/**'
+      - 'pkgs/xsoulspace_platform_gamification_interface/**'
+      - 'pkgs/xsoulspace_platform_multiplayer_interface/**'
+      - 'pkgs/xsoulspace_platform_foundation/**'
+      - 'pkgs/xsoulspace_platform_purchases_bridge/**'
+      - 'pkgs/xsoulspace_platform_ads_bridge/**'
+      - 'pkgs/xsoulspace_platform_monetization_bridge/**'
+      - 'pkgs/xsoulspace_vkplay_js/**'
+      - 'pkgs/xsoulspace_ysdk_games_js/**'
+      - 'pkgs/xsoulspace_crazygames_js/**'
+      - 'pkgs/xsoulspace_discord_js/**'
+      - 'pkgs/xsoulspace_platform_steam/**'
+      - 'pkgs/xsoulspace_platform_vkplay/**'
+      - 'pkgs/xsoulspace_platform_yandex_games/**'
+      - 'pkgs/xsoulspace_platform_crazygames/**'
+      - 'pkgs/xsoulspace_platform_discord/**'
+      - 'pkgs/xsoulspace_monetization_yandex_games/**'
+      - 'pkgs/xsoulspace_monetization_ads_crazygames/**'
+      - 'pkgs/xsoulspace_platform_yandex_games_purchases/**'
+      - 'pkgs/xsoulspace_platform_crazygames_ads/**'
+      - 'pkgs/xsoulspace_vkplay_server_api/**'
+      - 'pkgs/xsoulspace_discord_server_api/**'
+      - 'tool/platform_sdk_verify.sh'
+      - '.github/workflows/platform_sdk_verify.yml'
+  push:
+    branches:
+      - main
+      - master
+      - ag-c
+    paths:
+      - 'pkgs/xsoulspace_platform_core_interface/**'
+      - 'pkgs/xsoulspace_platform_social_interface/**'
+      - 'pkgs/xsoulspace_platform_gamification_interface/**'
+      - 'pkgs/xsoulspace_platform_multiplayer_interface/**'
+      - 'pkgs/xsoulspace_platform_foundation/**'
+      - 'pkgs/xsoulspace_platform_purchases_bridge/**'
+      - 'pkgs/xsoulspace_platform_ads_bridge/**'
+      - 'pkgs/xsoulspace_platform_monetization_bridge/**'
+      - 'pkgs/xsoulspace_vkplay_js/**'
+      - 'pkgs/xsoulspace_ysdk_games_js/**'
+      - 'pkgs/xsoulspace_crazygames_js/**'
+      - 'pkgs/xsoulspace_discord_js/**'
+      - 'pkgs/xsoulspace_platform_steam/**'
+      - 'pkgs/xsoulspace_platform_vkplay/**'
+      - 'pkgs/xsoulspace_platform_yandex_games/**'
+      - 'pkgs/xsoulspace_platform_crazygames/**'
+      - 'pkgs/xsoulspace_platform_discord/**'
+      - 'pkgs/xsoulspace_monetization_yandex_games/**'
+      - 'pkgs/xsoulspace_monetization_ads_crazygames/**'
+      - 'pkgs/xsoulspace_platform_yandex_games_purchases/**'
+      - 'pkgs/xsoulspace_platform_crazygames_ads/**'
+      - 'pkgs/xsoulspace_vkplay_server_api/**'
+      - 'pkgs/xsoulspace_discord_server_api/**'
+      - 'tool/platform_sdk_verify.sh'
+      - '.github/workflows/platform_sdk_verify.yml'
+
+jobs:
+  platform_sdk_verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Verify platform SDK packages
+        run: bash tool/platform_sdk_verify.sh

@@ -1,3 +1,7 @@
+# Lived in .github/archite_workflows/ until 2026-10-28 — a directory GitHub
+# Actions never reads (the mlx_native_gate relocation lesson). Logic and
+# triggers unchanged by the move: publishing fires on main/master pushes and
+# workflow_dispatch, never on lane branches.
 name: registry_publish
 
 on:
