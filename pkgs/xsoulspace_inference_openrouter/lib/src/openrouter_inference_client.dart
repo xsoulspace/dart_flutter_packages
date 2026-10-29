@@ -352,6 +352,25 @@ class OpenRouterInferenceClient
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
         diagnosticOutcome = 'http_${response.statusCode}';
+        final limitExhausted =
+            (response.statusCode == 402 || response.statusCode == 403) &&
+            response.body.contains('limit_source') &&
+            (response.body.contains('key_limit') ||
+                response.body.contains('Key limit exceeded'));
+        if (limitExhausted) {
+          return InferenceResult<InferenceResponse>.fail(
+            code: 'provider_key_limit_exhausted',
+            message: _errorMessage(response.body),
+            details: <String, dynamic>{
+              'http_status': response.statusCode,
+              'body': response.body,
+            },
+            meta: <String, dynamic>{
+              'provider': id,
+              'model': model,
+            },
+          );
+        }
         if (response.statusCode != 401 &&
             response.statusCode != 429 &&
             utf8.encode(response.body).length <= 16 * 1024) {
