@@ -143,6 +143,49 @@ Ordered by how much of the lane's own confirmed machinery they reuse:
 6. **The reflex tier (long shot).** The althea SSM mechanical tier —
    outside this repo's control; revisit only if that project lands a
    wireable tier.
+7. **Weight-space programming (frontier-LLM weight repair of a local
+   cast) — EXTERNAL POINTER, recorded 2026-11-03; unreplicated here.**
+   Measured externally (Takehi et al.; blog + full logs + HF checkpoint):
+   GPT-6 Astra edited Qwen3.5-0.8B weights directly — no gradients, no
+   training; a CPU python kernel over the weights plus a forward-pass
+   budget (50 passes; each answers ≤512 problems / reads ≤1024 texts);
+   it diagnoses failure patterns from OUTPUTS, traces them to weight
+   directions, subtracts. MATH-500 7.9→48.1, GSM8K 13.8→67.1, **IFEval
+   21.0→62.3**, hit-token-limit 93→33.1; 0.016 % of weights changed (a
+   "looping direction written by MLPs in layers 15 and 19"). The
+   authors' own limits: it CANNOT add an absent capability (Gemma 270M
+   moved ≈±1 point), weights-only reading fails at scale (needed
+   attention patterns), budgets below ~50 passes barely moved the loops,
+   and no benchmark/harness is released yet ("currently building").
+   Why it is relevant here: the dominant local-cast loss class is
+   INSTRUCTION FOLLOWING (malformed action envelopes, format-bound
+   scoring, no-effect/looping rounds — reliability-program receipts
+   U2/U4), and the artifact is a LOCAL checkpoint: pay hosted once, run
+   local forever — zero marginal cost, which is what the harness's
+   unlimited-actor architecture needs.
+   Laws it must face BEFORE it could become an arm: (a) the 2026-10-28
+   synthesis "no distillation from qwen anywhere" — this is NOT
+   distillation mechanically (no data generation, no gradients) but it
+   IS a hosted→local capability transfer; it needs an explicit owner
+   decision as a NEW line; (b) the K-G4 requant law (requant error ≈ the
+   adapter delta): an edit changing 0.016 % of weights must be shown to
+   SURVIVE 4-bit requantization, or run at fp16 (0.6B fp16 fits the
+   16 GB machine easily) — retention is a first-class cell; (c) the
+   standard pre-registration: same frozen corpora/scorers, edited vs
+   unedited, McNemar pairing, trivial-baseline law; (d) sequencing —
+   only AFTER the loop-bench (program Phase 1) provides per-shape
+   pass@N baselines, else an edit win cannot be separated from noise.
+   Cheapest meaningful pilot: qwen0.6B, a corpus assembled from the
+   lane's OWN malformed-envelope / no-effect receipts + the tool-lane
+   fixtures; success = the instruction-following rate on the frozen
+   fixtures with the edited weights surviving requant.
+   Source: x.com/rikiyatakehi/status/2117313742891327994 →
+   rikIyat.github.io/blog/weight-space-programming (logs:
+   github.com/RikiyaT/lm_understand-logs; HF:
+   RikiyaT/Qwen3.5-0.8B-weight-space-programming). NON-CLAIMS: external
+   results unreplicated here; one lab, pre-benchmark; their largest
+   edited LLM is 0.8B; the edit session depends on a hosted frontier
+   model even though the artifact does not.
 
 ## Honest boundaries (carried from the analysis, unchanged)
 
