@@ -127,6 +127,22 @@ Owed regardless of the levers:
   the gated-draft bench shape). That file schedules nothing here; the lane
   law — thresholds freeze before runs — is unchanged.)
 
+- **Direction #7 — weight-space programming (external pointer, recorded
+  2026-11-03; UNREPLICATED here).** A frontier LLM (GPT-6 Astra) edited
+  Qwen3.5-0.8B weights directly — no gradients, no training, 0.016 % of
+  weights changed: **IFEval 21.0→62.3**, MATH-500 7.9→48.1, GSM8K
+  13.8→67.1 (Takehi et al.; logs + HF checkpoint public; no released
+  benchmark yet). Relevant because the dominant local-cast loss class is
+  INSTRUCTION FOLLOWING (malformed envelopes, format-bound scoring,
+  no-effect rounds — the reliability program's U2/U4 receipts) and the
+  artifact is a LOCAL checkpoint: pay hosted once, run local forever —
+  zero marginal cost, which is what the harness's unlimited-actor
+  architecture needs. Status: discussion direction, NOT an arm — the full
+  record and the laws it must face before it could become one (owner
+  decision on the no-distillation tension, the K-G4 requant-survival law,
+  standard pre-registration, sequencing AFTER the loop-bench baselines)
+  are in [`REASONING-TRACK.md`](REASONING-TRACK.md) direction #7.
+
 ---
 
 ## Deliberately NOT scheduled (and why)
