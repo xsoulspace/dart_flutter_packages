@@ -569,3 +569,38 @@ Evidence: `bench/nursery/experiments/sk-fill-{1.7b-2026-11-03T10-01-55Z,
 skeleton text) + `sk-fill-verdict-*.json`; runner `tool/nursery/skeleton_fill.py`;
 generator `tool/nursery/decomp_skeleton_dataset.py` (tracked; the dataset
 itself is gitignored working material, sha-pinned in the run records).
+
+## 21. 2026-11-03 — the intent-first line is RETIRED by owner decision
+
+Owner instruction (2026-11-03, after the arc report): stop the intent-first
+experiment line, update docs, clean up. Scope of the retirement:
+
+- **No new arm will be registered from the intent-first hypothesis family.**
+  Lines IC (§18), IC-2 (§19) and SK (§20) are the line's complete record;
+  their frozen Parts (MTP-GATES 5–7) stand as written, post-run blocks
+  included.
+- **The two owed items are DECLINED, not parked:** the ≈350-case SK rerun
+  (non-lexical skeleton-carry criterion) and the blind-rubric oracle for
+  open-form quality. Neither is owed as open debt any more; if either is
+  ever wanted, it returns as a NEW line with its own frozen Part and its
+  own owner go — the standard F-law route, now explicitly unowned.
+- **What survives the retirement is product knowledge, not an experiment
+  queue:** the no-preamble product law for adapter-served slots (§19,
+  IC2-G5), the content-vs-structure mechanism fact (replicated across
+  judgment and generation shapes, §19–§20), the crumb itself as a narrow
+  banked mechanism (1.7b/veto fixed prefix, +5.73 pp, p=2.4e-4, 13-0), and
+  the scale-gating facts (closed-intent selection 6.1 % vs 71 % malformed;
+  1.7B clause format-bound). These are cited by the product rows
+  (VERDICTS ✓/F tables), not by any open queue.
+- **The lane's next questions are elsewhere and unchanged:** the
+  completion@N loop-bench (reasoning-track direction #1, never measured),
+  consolidation of the confirmed ranker/gate/streaming surface, and the
+  decision-compile policy (direction #3). The staged RUNG-1 levers and the
+  corpus-law hole review keep their own pre-registrations.
+
+Cleanup performed with the retirement: the three SMOKE plumbing dirs under
+`bench/nursery/experiments/` deleted (4-row caches, zero evidential value;
+the gated runs' caches stay); session temp artifacts removed; no tracked
+file deleted. Evidence for the retired line remains where it always lived:
+the run dirs + verdict jsons under `bench/nursery/experiments/` (gitignored
+by lane convention) and the tracked records cited above.

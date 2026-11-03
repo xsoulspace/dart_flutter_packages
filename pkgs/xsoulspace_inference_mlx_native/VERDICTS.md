@@ -36,6 +36,17 @@ Reading order: **this file → [`LINES.md`](LINES.md) rows →
 
 ## The path forward (what is actually next)
 
+> **RETIRED LINE (2026-11-03, owner decision — RESULTS-HISTORY §21):** the
+> intent-first family (Lines IC / IC-2 / SK, MTP-GATES Parts 5–7) is closed
+> as a LINE, not merely as arms: no new arm will be registered from it, and
+> its two owed items (blind-rubric oracle, ≈350-case powered SK rerun) are
+> DECLINED, not parked. What survives is product knowledge cited in the
+> tables below — the no-preamble law for adapter-served slots, the
+> content-vs-structure mechanism fact, the replicated 13-0 crumb, the
+> scale-gating facts. The lane's live questions are the completion@N
+> loop-bench, consolidation of the confirmed ranker/gate/streaming surface,
+> and the decision-compile policy (ROADMAP §1/§3).
+>
 > **Distilled into [`ROADMAP.md`](ROADMAP.md) (2026-10-28 split):** ROADMAP
 > now carries the LIVE QUEUE only — the closed register lives HERE (the
 > tables below), and every dated measurement is tabulated in

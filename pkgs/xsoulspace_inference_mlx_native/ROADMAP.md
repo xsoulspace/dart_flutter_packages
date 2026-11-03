@@ -112,10 +112,10 @@ Owed regardless of the levers:
   trend; the generic control moved 1.7B by exactly 0.00: structure buys
   nothing, content rides). Registers:
   [`VERDICTS.md`](VERDICTS.md), [`RESULTS-HISTORY.md`](RESULTS-HISTORY.md)
-  §18–§20, `LINES.md` Rows N–O. Owed and UNSCHEDULED: the blind-rubric
-  oracle for open-form quality, and — if the owner wants the SK trend
-  resolved — a ≈350+ case corpus revision with a non-lexical skeleton-carry
-  criterion; each as its own new frozen Part.)
+  §18–§20, `LINES.md` Rows N–O. **RETIRED 2026-11-03 by owner
+  decision** (§21): no new arm from the intent-first family; the blind-rubric
+  oracle and the ≈350-case SK rerun are DECLINED, not parked — if ever
+  wanted they return as a NEW line with its own frozen Part and owner go.)
 
 ---
 

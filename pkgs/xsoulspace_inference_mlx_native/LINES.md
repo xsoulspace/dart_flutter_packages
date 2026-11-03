@@ -645,7 +645,7 @@ on and they decide nothing about whether the adapter is worth training.
   law, and what IS worth porting, are in
   [`PYTHON-BOUNDARY.md`](PYTHON-BOUNDARY.md).
 
-## Row N — Line IC: intent conditioning on the AR stack (CLOSED, F — no signal cell)
+## Row N — Line IC: intent conditioning on the AR stack (CLOSED, F — no signal cell) — line retired 2026-11-03 (see Row O tail, §21)
 
 **The question (owner's 2026-11-02 proposal).** Generate an *intent* first,
 then fill the completion conditioned on it ("kinda like diffusion"). Split
@@ -745,7 +745,7 @@ The generation-shaped leg left this row for its own: Row O (Line SK,
 Part 7). Full numbers: [`RESULTS-HISTORY.md`](RESULTS-HISTORY.md) §19;
 evidence under `bench/nursery/experiments/ic2-judgment-*-2026-11-03T*`.
 
-## Row O — Line SK: skeleton→fill on constrained generation (CLOSED, F — twice-blocked; the control discrimination is the durable fact)
+## Row O — Line SK: skeleton→fill on constrained generation (CLOSED, F — twice-blocked; the control discrimination is the durable fact) — **LINE RETIRED 2026-11-03**
 
 **The question.** The owner's intent-first proposal in generation shape
 (Part 5 reading 3's named route): pass 1 authors the key facts a one-line

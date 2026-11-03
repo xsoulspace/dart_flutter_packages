@@ -1283,6 +1283,11 @@ the first gated run is a NEW arm with a NEW frozen Part.
 > recorded two-pass artifact). Nothing below moved. Evidence:
 > `RESULTS-HISTORY.md` §20, `bench/nursery/experiments/sk-fill-*-2026-11-03T*`
 > + `sk-fill-verdict-*.json`.
+>
+> **LINE RETIRED 2026-11-03 by owner decision** (RESULTS-HISTORY §21):
+> Parts 5–7 are the intent-first line's complete frozen record; no further
+> arm will be registered from this hypothesis family. The owed items
+> (rubric oracle, powered SK rerun) are declined, not parked.
 
 The owner's intent-first proposal in its GENERATION-shaped form — the route
 Line IC's reading 3 named. Instead of a blind-rubric judge, this Part uses

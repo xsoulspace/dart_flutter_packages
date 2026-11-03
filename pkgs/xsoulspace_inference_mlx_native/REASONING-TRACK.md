@@ -22,10 +22,10 @@ any run. Recorded 2026-10-28, branch `ag-c`.
 > SK-G3's lexical carry criterion mismatched the entity rule), with the
 > generic-structure control at exactly 0.00 pp. The intent-first question
 > is now measured at judgment level AND constrained-generation level; what
-> remains owed and unscheduled: the blind-rubric oracle for open-form
-> quality, and a properly powered SK rerun (≈350+ cases, non-lexical carry
-> criterion) if the owner wants the trend resolved. §18–§20; VERDICTS ✓/F
-> rows; LINES Rows N–O.
+> **RETIRED 2026-11-03 by owner decision**
+> (RESULTS-HISTORY §21): no new arm from the intent-first family; the
+> blind-rubric oracle and the powered SK rerun are declined, not parked.
+> §18–§20; VERDICTS ✓/F rows; LINES Rows N–O.
 
 ## Why this file exists
 
