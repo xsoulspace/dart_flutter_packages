@@ -149,10 +149,17 @@ Ordered by how much of the lane's own confirmed machinery they reuse:
 - **No deterministic checker ⇒ N retries buy nothing on soft quality.** A
   1.2B-class model does not get "extremely reliable" on open chat by
   looping; the loop honest options are escalate or declare softness.
-- **Context assembly for small windows is UNSOLVED** (the measured afm
-  profile dropped every decision at 2776 tokens; the coding cut needed
-  4187+) — meaning-runtime cuts must become model-aware before any
-  multi-step loop is cheap.
+- **Context assembly for small windows** — the 2026-10-10 boundary
+  ("UNSOLVED": the measured afm profile dropped every decision at 2776
+  tokens; the coding cut needed 4187+) is STALE as an absence claim
+  (annotated 2026-11-03): the harness has since landed the model-aware
+  capacity chain — casts declare real windows, session tiers size
+  `maxInput`, the input gate names the dominant term and runs one bounded
+  retry with a floor short-circuit (2026-10-20..11-02; harness
+  `surface_gaps.md` "compaction rule" entry — the 2776 measurement
+  predates the chain and its diagnosed cause was a WRONG WINDOW +
+  UNBOUND MODEL). What remains is live re-measurement debt (reliability
+  program Phase 0), not absence.
 - Thinking at 0.6B, the 2.6B cast, self-drafting, and ungated drafting stay
   **measured-dead**; reopening any of them is a NEW registered arm with a
   frozen threshold, not a rerun.
