@@ -36,7 +36,8 @@ any run. Recorded 2026-10-28, branch `ag-c`.
 > live journeys). It consumes directions **#1** (completion@N loop-bench =
 > the program's Phase 1; on owner go it leaves this file and freezes as
 > MTP-GATES Part 8 BEFORE any run, per the law above), **#3**
-> (decision-compile = served-shape routing, Phase 2b) and **#4**
+> (decision-compile = ADVISORY measured-shape routing — routing economics,
+> never an actor limit per the equals law, Phase 2b) and **#4**
 > (verifier-gated draft loop = the gated-draft bench shape + Phase-3
 > pilots). Receipt that sharpens direction #1: a local cast HAS completed
 > the full durable tool lane once (qwen0.6B, proof driver, harness 090523e6,

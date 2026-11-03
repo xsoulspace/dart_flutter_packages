@@ -122,7 +122,8 @@ Owed regardless of the levers:
   (`pkgs/xsoulspace_agentic_harness/docs/agent/local_actor_reliability_program.md`)
   and consumes REASONING-TRACK directions #1 (completion@N loop-bench =
   its Phase 1 — freezes as MTP-GATES Part 8 on owner go), #3
-  (decision-compile = served-shape routing) and #4 (verifier-gated draft =
+  (decision-compile = advisory measured-shape routing, never an actor
+  limit) and #4 (verifier-gated draft =
   the gated-draft bench shape). That file schedules nothing here; the lane
   law — thresholds freeze before runs — is unchanged.)
 
