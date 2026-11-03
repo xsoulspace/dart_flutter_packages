@@ -27,6 +27,22 @@ any run. Recorded 2026-10-28, branch `ag-c`.
 > blind-rubric oracle and the powered SK rerun are declined, not parked.
 > §18–§20; VERDICTS ✓/F rows; LINES Rows N–O.
 
+> **Update 2026-11-03b (the owner named the goal):** the target is now
+> explicit — reliable **world-data conversation on the local casts,
+> including coding and tool usage** (the journal is the unbounded context;
+> each turn is a bounded cut). The cross-repo program lives in the harness:
+> `ecsai_harness/pkgs/xsoulspace_agentic_harness/docs/agent/local_actor_reliability_program.md`
+> (that ROADMAP's immediate slice — everyday local collaboration — owns the
+> live journeys). It consumes directions **#1** (completion@N loop-bench =
+> the program's Phase 1; on owner go it leaves this file and freezes as
+> MTP-GATES Part 8 BEFORE any run, per the law above), **#3**
+> (decision-compile = served-shape routing, Phase 2b) and **#4**
+> (verifier-gated draft loop = the gated-draft bench shape + Phase-3
+> pilots). Receipt that sharpens direction #1: a local cast HAS completed
+> the full durable tool lane once (qwen0.6B, proof driver, harness 090523e6,
+> 2026-10-30) — n=1 is exactly why the loop, not the shot, is the
+> unmeasured quantity. Still no gates in this file.
+
 ## Why this file exists
 
 The lane converged on two live, measured tracks: a **capability track**

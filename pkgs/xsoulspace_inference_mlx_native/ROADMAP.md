@@ -115,7 +115,16 @@ Owed regardless of the levers:
   §18–§20, `LINES.md` Rows N–O. **RETIRED 2026-11-03 by owner
   decision** (§21): no new arm from the intent-first family; the blind-rubric
   oracle and the ≈350-case SK rerun are DECLINED, not parked — if ever
-  wanted they return as a NEW line with its own frozen Part and owner go.)
+  wanted they return as a NEW line with its own frozen Part and owner go.
+  **2026-11-03b — the owner named the program goal:** reliable world-data
+  conversation on the local casts (coding + tool usage). The cross-repo
+  program lives in the harness
+  (`pkgs/xsoulspace_agentic_harness/docs/agent/local_actor_reliability_program.md`)
+  and consumes REASONING-TRACK directions #1 (completion@N loop-bench =
+  its Phase 1 — freezes as MTP-GATES Part 8 on owner go), #3
+  (decision-compile = served-shape routing) and #4 (verifier-gated draft =
+  the gated-draft bench shape). That file schedules nothing here; the lane
+  law — thresholds freeze before runs — is unchanged.)
 
 ---
 
