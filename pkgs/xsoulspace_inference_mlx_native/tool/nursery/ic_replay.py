@@ -36,7 +36,6 @@ import argparse
 import glob
 import json
 import os
-import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -44,35 +43,21 @@ PKG = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 
 from adapter_conditioning import TASKS  # noqa: E402
-from scoring import mcnemar  # noqa: E402
+from scoring import (  # noqa: E402
+    extract_label_first_line,
+    extract_label_starts_with,
+    mcnemar,
+)
 
 RUNS = os.path.join(PKG, "bench", "nursery", "experiments")
 
-
-def first_line_extract(text, labels):
-    """The first line of the completion, exactly equal to a label."""
-    if not text:
-        return None
-    line = text.split("\n")[0].strip().strip(".").strip("*").strip()
-    low = line.lower()
-    for lab in labels:
-        if low == lab.lower():
-            return lab
-    return None
-
-
-def starts_with_extract(text, labels):
-    """The label the completion STARTS with, at a word boundary (C-4-safe:
-    `abstained` does not match `abstain`)."""
-    if not text:
-        return None
-    low = text.lower().lstrip()
-    for lab in labels:  # no label is a prefix of another in any task set
-        if low.startswith(lab):
-            nxt = low[len(lab) : len(lab) + 1]
-            if not nxt or not re.match(r"[a-z0-9_]", nxt):
-                return lab
-    return None
+# ONE definition of the extractors (C-4/C-11): since MTP-GATES.md Part 6
+# froze first-line as the IC-2 PRIMARY, the canonical implementations live
+# in scoring.py; this replay tool imports them. The local copies that
+# produced the 2026-11-03 addendum reads were byte-identical in rule (the
+# stripping order is documented in scoring.py and matches).
+first_line_extract = extract_label_first_line
+starts_with_extract = extract_label_starts_with
 
 
 def load_run(cast, run_dir=None):

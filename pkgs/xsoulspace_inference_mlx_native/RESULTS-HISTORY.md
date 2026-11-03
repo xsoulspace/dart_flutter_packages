@@ -426,3 +426,146 @@ bare-label instruction in ALL arms), vary the thing whose value you test
 decider (the confirmed adapter, not the base), and match the task shape to
 the hypothesis (skeleton→fill belongs on generation-shaped tasks, which owe
 a new paired blind-rubric oracle).
+
+## 19. 2026-11-03 — Line IC-2: the crumb replicates under pre-registration (PASS, one SIGNAL cell); preambles are lethal to adapter-served slots
+
+Owner go on the full IC-2 design after the §18-addendum critique. Part 6
+frozen BEFORE any run; the three design repairs: first-line extraction as
+the frozen PRIMARY (canonical `extract_label_first_line` in `scoring.py`),
+the missing `fixed`/`random` procedure controls, and the CONFIRMED untagged
+adapter as the 0.6B decider under the IC2-G0 reproduction gate. Power: AC
+both legs (snapshot in the run records); wall clock 22 min (0.6B+adapter) +
+34 min (1.7B).
+
+**IC2-G0 PASSED EXACTLY:** adapter base perm 0.8737 / veto 0.7533 — the
+2026-10-21 record to 4 dp, coverage 1.0. The 1.7B base also reproduced IC-1
+exactly (perm first-line 0.5324/strict 0.5154; veto 0.3612/0.3392).
+
+| decider | task | arm | first-line acc | Δ vs base | McNemar p | discordant (base,arm) | strict acc (co-report) |
+| ------- | ---- | --- | -------------- | --------- | --------- | --------------------- | ---------------------- |
+| 0.6b+adapter | perm | base | **0.8737** | — | — | — | 0.8737 |
+| 0.6b+adapter | perm | fixed | 0.5700 | **−30.38 pp** | 7.2e-24 | (92, 3) | 0.5700 |
+| 0.6b+adapter | perm | random | 0.5802 | **−29.35 pp** | 5.2e-23 | (89, 3) | 0.5802 |
+| 0.6b+adapter | perm | evid | 0.5836 | **−29.01 pp** | 1.0e-22 | (88, 3) | 0.5836 |
+| 0.6b+adapter | veto | base | **0.7533** | — | — | — | 0.7533 |
+| 0.6b+adapter | veto | fixed | 0.7709 | +1.76 pp | 0.64 | (19, 23) | 0.7709 |
+| 0.6b+adapter | veto | random | 0.7445 | −0.88 pp | 0.86 | (16, 14) | 0.7445 |
+| 0.6b+adapter | veto | evid | 0.6652 | **−8.81 pp** | 1.2e-2 | (39, 19) | 0.6652 — **IC2-G3 FAIL** (14.5 % malformed picks) |
+| 1.7b | perm | base | 0.5324 | — | — | — | 0.5154 |
+| 1.7b | perm | fixed | 0.5597 | +2.73 pp | 0.53 | (58, 66) | 0.2935 |
+| 1.7b | perm | random | 0.5290 | −0.34 pp | 1.00 | (55, 54) | 0.3174 |
+| 1.7b | perm | evid | 0.5461 | +1.36 pp | 0.78 | (55, 59) | 0.4369 |
+| 1.7b | veto | base | 0.3612 | — | — | — | 0.3392 |
+| 1.7b | veto | fixed | **0.4185** | **+5.73 pp** | **2.4e-4** | **(0, 13)** | 0.3436 |
+| 1.7b | veto | random | 0.3789 | +1.76 pp | 0.39 | (4, 8) | 0.3436 |
+| 1.7b | veto | evid | 0.2819 | **−7.93 pp** | 7.6e-6 | (18, 0) | 0.2819 |
+
+**Frozen verdict: PASS** — one SIGNAL cell (`1.7b/veto/fixed`), IC2-G3/G6
+clean on it. **IC2-G2 crumb law: REPLICATED** — the exact IC-1 numbers came
+back (+5.73 pp, p=2.4e-4, 13-0) under pre-registration, and `random` did not
+replicate ⇒ the frozen reading: **the CONTENT of the specific procedure
+string matters**, not any-prefix priming. **IC2-G5 harm fired in four
+cells** (adapter perm ×3, adapter veto evid). Inert band (G4): no cell —
+every arm either harms, churns flat with wide CIs (1.7B perm), or signals.
+
+**Mechanism readings (labeled interpretation, not gates):**
+- The evid arm's SELECTION distributions explain its failure: perm picks are
+  near-constant on BOTH deciders (`command_and_context_clean` 289/293
+  adapter, 292/293 base-1.7B — everything "looks clean"), and 1.7B veto
+  picks are constant 227/227 (`operation_destroys_or_truncates_data`) with
+  the answer collapsing to exactly the trivial majority 0.2819. The adapter
+  DID vary its veto picks per item (94/90/33/10) and still lost 8.8 pp —
+  selecting evidence does not help if the second pass cannot use it.
+  Model-selected intent at judgment level is measured-dead in this shape.
+- The fixed arm's win is a FORMAT ANCHOR with content-specificity: the
+  Procedure line converts prose-first answers into label-first answers
+  (outside 5→0 on 1.7B veto), which nets a gain only where the underlying
+  judgment is real (veto base 0.3612 > trivial 0.2819), nets ~0 amid huge
+  churn where judgment is at chance (perm: §18 D1's 124/293 flips), and is
+  catastrophic on a format-trained decider (the adapter's OOD collapse).
+- Reading-tension note (recorded, resolved by the specific law): Part 6's
+  general reading 2 ("fixed/random SIGNAL without evid ⇒ format priming")
+  fired literally, but IC2-G2's MORE SPECIFIC frozen law (fixed ∧ ¬random ⇒
+  content matters) also fired and governs the crumb's interpretation.
+
+**Product law (the durable outcome):** never prepend preamble lines to
+adapter-served decision slots (−30 pp, p≈1e-23, three independent arms).
+The narrow positive — one constant string, one task shape, one cast, on a
+decider still at 0.42 — is a mechanism fact to bank, NOT a product feature.
+
+Non-claims: the SIGNAL cell does not make intent conditioning a product
+mechanism; the perm cells at 1.7B stay descriptive (below-trivial decider);
+strict-vs-first-line divergence persists as a measured artifact class
+(1.7b/perm/fixed: strict 0.2935 vs first-line 0.5597 — the same completions,
+two instruments, and the frozen primary is the first-line by pre-run law).
+Evidence: `bench/nursery/experiments/ic2-judgment-{0.6b_adapter-2026-11-03T09-12-49Z,
+1.7b-2026-11-03T09-25-46Z}/` (run records + full per-item caches) +
+`ic2-judgment-verdict-2026-11-03T09-59-08Z.json`; runner
+`tool/nursery/ic2_judgment.py` (tracked).
+
+## 20. 2026-11-03 — Line SK: skeleton→fill on constrained generation closes WITH DATA (FAIL, no SIGNAL cell) — but the control discrimination is the lane's cleanest yet
+
+Part 7 frozen BEFORE the run (deterministic decompression oracle — the
+blind-rubric judge stays OWED for the open-form tail only, not built, not
+scheduled). Generated corpus: 90 sha-pinned cases (`cac823a7…`, generator
+rule v2 after its pre-freeze audit — plain-word entity ranking promoted
+`nearly`/`always` and was rejected for identifier-first ranking). Deciders:
+1.7B primary, 0.6B scale point, NO adapter (category error after §19's harm
+law). Power: AC, 100 %, both legs (24 min + 15 min). SK-G0 PASSED (sha,
+n, oracle constants all matched the freeze).
+
+| corpus | decider | arm | pass | Δ vs base | McNemar p | discordant (base,arm) |
+| ------ | ------- | --- | ---- | --------- | --------- | --------------------- |
+| generated 90 | 1.7b | base | 0.3444 | — | — | — |
+| generated 90 | 1.7b | skeleton | 0.4333 | **+8.89 pp** | 0.215 | (12, 20) |
+| generated 90 | 1.7b | generic | 0.3444 | **−0.00 pp** | 1.000 | (13, 13) |
+| generated 90 | 0.6b | base | 0.2222 | — | — | — |
+| generated 90 | 0.6b | skeleton | 0.3111 | **+8.89 pp** | 0.185 | (10, 18) |
+| generated 90 | 0.6b | generic | 0.1222 | −10.00 pp | 0.064 | (14, 5) |
+| tracked 10 | 1.7b | base / skeleton / generic | 10/10 · 10/10 · 7/10 | — | — | SK-G2 continuity ✓ at 1.7B |
+| tracked 10 | 0.6b | base / skeleton / generic | 10/10 · 7/10 · 4/10 | — | — | **SK-G2 VIOLATION at 0.6B** (7 < 10−1; recorded two-pass artifact) |
+
+**Frozen verdict: FAIL** — no SIGNAL cell; SK-G5's "neither" branch fired:
+the intent-first line closes WITH DATA on constrained generation as well;
+only the open-form route (owed rubric oracle) remains. TWO independent gate
+facts block any stronger claim, both frozen before the run:
+
+1. **Underpowered trend, not a signal.** skeleton−base = **+8.89 pp on BOTH
+   deciders, identically** (the same 8 of 90 net flips), above the +5 pp
+   margin — but p = 0.215/0.185 at n = 90 (CI ≈ [−3, +21]). The margin was
+   frozen without a power calculation against this n; the trend is real
+   arithmetic and stays DESCRIPTIVE.
+2. **SK-G3 FAIL on both deciders** (skeleton entity coverage 0.304 at 1.7B,
+   0.353 at 0.6B, vs the frozen ≥ 0.40): the pass-1 skeletons do NOT carry
+   the gold entities verbatim — the model paraphrases ("the text lane's
+   bench tool") where the frozen entity rule demands identifier strings
+   (`napbench_text_lane.dart`). By the frozen law a G3 violator's skeleton
+   cells cannot be SIGNAL even if p had cleared. The G3 rule and the entity
+   rule are lexically mismatched — a design defect of the gate, named here,
+   fixed only in a NEW arm.
+
+**The control discrimination (the durable mechanism fact).** `generic`
+(constant pseudo-skeleton, identical two-pass structure) moved 1.7B by
+EXACTLY 0.00 pp (13-13 mirror discordants) and HARMED 0.6B (−10 pp,
+p=0.064): the two-pass STRUCTURE buys nothing by itself — whatever the
++8.89 pp trend is, it rides the skeleton's CONTENT. This is the same
+content-vs-structure discrimination IC-2's fixed/random split produced on
+veto (§19), now replicated in generation shape. Failure-reason breakdown:
+entity recall dominates both arms' failures (base 55, skeleton 42 of ~59-51
+fails); the cap/one-line laws bind rarely — the corpus measures fact
+retention, as designed.
+
+Non-claims: no product claim — the trend is underpowered and G3-blocked;
+the tracked-10 numbers are a continuity check, not a scorecard (both
+deciders at ceiling there, headroom law moot); corpus is one provenance
+family (project-memory prose); pass-1 and pass-2 are the same decider (no
+separate planner). Reopening requires a NEW arm: either n large enough to
+resolve +8.9 pp at p ≤ 0.05 (≈ 350+ cases by the observed discordance), or
+a skeleton-carry criterion that is not lexically mismatched with the entity
+rule (or both), each with its own frozen Part.
+
+Evidence: `bench/nursery/experiments/sk-fill-{1.7b-2026-11-03T10-01-55Z,
+0.6b-2026-11-03T10-25-47Z}/` (records + full per-case caches incl. every
+skeleton text) + `sk-fill-verdict-*.json`; runner `tool/nursery/skeleton_fill.py`;
+generator `tool/nursery/decomp_skeleton_dataset.py` (tracked; the dataset
+itself is gitignored working material, sha-pinned in the run records).

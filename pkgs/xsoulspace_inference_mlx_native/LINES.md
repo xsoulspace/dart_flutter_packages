@@ -714,6 +714,72 @@ row): format-repaired scoring, information-bearing intents + fixed/random
 controls, conditioning a WORKING decider (the confirmed adapter), and the
 generation-shaped route with a new oracle.
 
+### IC-2 (2026-11-03): the judgment-level repair — PASS via one replicated cell
+
+The owner took the replay critique to a full IC-2 (both legs). Part 6 froze
+the three repairs BEFORE the run: first-line extraction as PRIMARY
+(canonical `extract_label_first_line` in `scoring.py`), `fixed`/`random`
+procedure controls, and the CONFIRMED untagged adapter as the 0.6B decider
+under IC2-G0 — which reproduced the 2026-10-21 record EXACTLY
+(0.8737/0.7533). Outcomes (§19 carries the full table):
+
+- **The crumb REPLICATED under pre-registration**: `1.7b/veto/fixed`
+  +5.73 pp first-line, p=2.4e-4, **13-0 one-way repairs** — the exact IC-1
+  numbers; `random` did NOT replicate (+1.76 pp, p=0.39) ⇒ IC2-G2's frozen
+  reading: the CONTENT of the specific procedure string matters, not
+  any-prefix priming.
+- **Model-SELECTED intent is measured-dead at judgment level** (F row):
+  veto −7.9 pp at 1.7B (picks constant 227/227 → trivial-majority
+  collapse) and −8.8 pp at the adapter DESPITE real per-item pick variation
+  — selecting evidence doesn't help a second pass that can't use it.
+- **The product law**: every preamble arm is lethal to the adapter-served
+  perm slot (−29.0…−30.4 pp, p≤1e-22, three independent arms) — never
+  prepend lines to adapter-served decision slots (IC2-G5).
+- Mechanism (labeled interpretation): the constant procedure line is a
+  FORMAT ANCHOR (prose-first → label-first; outside 5→0) whose net value
+  tracks the decider's real judgment: gain where base > trivial (veto),
+  churn-flat where base ≈ chance (perm), collapse where the decider is
+  format-trained (adapter).
+
+The generation-shaped leg left this row for its own: Row O (Line SK,
+Part 7). Full numbers: [`RESULTS-HISTORY.md`](RESULTS-HISTORY.md) §19;
+evidence under `bench/nursery/experiments/ic2-judgment-*-2026-11-03T*`.
+
+## Row O — Line SK: skeleton→fill on constrained generation (CLOSED, F — twice-blocked; the control discrimination is the durable fact)
+
+**The question.** The owner's intent-first proposal in generation shape
+(Part 5 reading 3's named route): pass 1 authors the key facts a one-line
+summary must retain (the skeleton), pass 2 fills conditioned on it — scored
+by the lane's EXISTING deterministic decompression oracle (one line,
+≤ 280 B, ≥ 2-of-5 entity hits), no rubric judge needed for this shape (the
+rubric stays OWED for the open-form tail only).
+
+**The arm.** Part 7 frozen before the run: generated 90-case sha-pinned
+corpus (generator rule v2 — its pre-freeze audit rejected plain-word entity
+ranking, which promoted `nearly`/`always`); arms base/skeleton/generic (the
+generic constant pseudo-skeleton is the two-pass-structure control);
+deciders 1.7B + 0.6B, NO adapter (§19's harm law makes that a category
+error). Runner `tool/nursery/skeleton_fill.py`; oracle mirrors the Dart
+lane's `_runDecompression` including `_answerOf`.
+
+**The outcome (2026-11-03, AC 100 %).** FAIL, no SIGNAL cell — blocked
+TWICE by frozen law: the skeleton−base trend is **+8.89 pp on both deciders
+identically** (above the +5 pp margin) but underpowered at n=90
+(p=0.215/0.185), and SK-G3 failed on both (skeletons carry 0.30/0.35 of
+gold entity STRINGS vs ≥ 0.40 — paraphrase vs identifier-rule lexical
+mismatch, a gate design defect named not hidden). `generic` moved 1.7B by
+EXACTLY 0.00 pp (13-13 mirror discordants) and harmed 0.6B (−10 pp,
+p=0.064). SK-G2 continuity held at 1.7B (10/10), violated at 0.6B (7<10−1,
+recorded artifact).
+
+**What banks.** The content-vs-structure discrimination replicated in a
+SECOND task shape (judgment: §19 fixed/random; generation: skeleton/generic):
+two-pass structure buys nothing by itself; whatever value exists rides the
+conditioning CONTENT. Reopen needs a NEW frozen Part: ≈350+ cases (the pool
+exhausted at 91) and/or a non-lexical skeleton-carry criterion. Full
+numbers: [`RESULTS-HISTORY.md`](RESULTS-HISTORY.md) §20; evidence under
+`bench/nursery/experiments/sk-fill-*-2026-11-03T*`.
+
 ## The standing non-claims of this lane
 
 - Every number here is **one machine, one model, one corpus, one seed, one

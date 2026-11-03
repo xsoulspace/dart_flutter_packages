@@ -103,11 +103,19 @@ Owed regardless of the levers:
   closing that gap are investigated and recorded — deliberately without
   gates or arms — in [`REASONING-TRACK.md`](REASONING-TRACK.md). Nothing is
   scheduled; the owner discussion decides whether any direction becomes a
-  pre-registered arm. (The first direction HAS left that file this way: the
-  2026-11-02 intent-first discussion became Line IC, ran the same day, and
-  closed **F — no signal cell**; [`VERDICTS.md`](VERDICTS.md),
-  [`RESULTS-HISTORY.md`](RESULTS-HISTORY.md) §18. Its reading-3 route — a
-  generation-shaped intent arm with a new oracle — is NOT scheduled.)
+  pre-registered arm. (The intent-first direction HAS now run its full arc
+  this way, 2026-11-02/03: Line IC closed F → the replay critique → Line
+  IC-2 PASSED one pre-registered replicated cell — the content-specific
+  prefix on the 1.7B veto decider, +5.73 pp p=2.4e-4 13-0 — while every
+  preamble proved lethal to the adapter-served perm slot (−30 pp, the
+  product law) → Line SK closed F the same day (+8.89 pp twice-blocked
+  trend; the generic control moved 1.7B by exactly 0.00: structure buys
+  nothing, content rides). Registers:
+  [`VERDICTS.md`](VERDICTS.md), [`RESULTS-HISTORY.md`](RESULTS-HISTORY.md)
+  §18–§20, `LINES.md` Rows N–O. Owed and UNSCHEDULED: the blind-rubric
+  oracle for open-form quality, and — if the owner wants the SK trend
+  resolved — a ≈350+ case corpus revision with a non-lexical skeleton-carry
+  criterion; each as its own new frozen Part.)
 
 ---
 

@@ -122,6 +122,56 @@ def extract_label_legacy(text, labels):
     return best[1] if best else None
 
 
+def extract_label_first_line(text, labels):
+    """The label on the completion's FIRST line, exactly — the IC-2 primary.
+
+    Why this rule exists (frozen in MTP-GATES.md Part 6 BEFORE any IC-2
+    run): the Line IC replay (§18 addendum, D1) showed that a conditioning
+    prefix flips 1.7B into `label\\n\\njustification` prose, so the
+    whole-completion strict extractor judges FORMAT COMPLIANCE as much as
+    judgment. First-line exact-match repairs the instrument without the C-4
+    hazard: it is still EQUALITY (never substring search), scoped to the
+    first line. An unclosed think block, a preamble before the label, or an
+    empty first line all score None — honestly outside, never a nearest
+    guess.
+
+    The stripping order is part of the rule (it matches the descriptive D1
+    replay byte-for-byte): strip whitespace, then one trailing period, then
+    surrounding asterisks (markdown bold), then whitespace again.
+    """
+    if not text:
+        return None
+    line = text.split("\n")[0].strip().strip(".").strip("*").strip()
+    if not line:
+        return None
+    low = line.lower()
+    for lab in labels:
+        if low == lab.lower():
+            return lab
+    return None
+
+
+def extract_label_starts_with(text, labels):
+    """The label the completion STARTS with, at a word boundary.
+
+    Co-reported next to the first-line primary (IC-2), never a gate input
+    by itself: it tolerates `abstain — because…` on ONE line, which the
+    first-line rule scores as outside. C-4-safe by the boundary check:
+    `abstained` does NOT match `abstain` (the next character must not be
+    [a-z0-9_]). No label in any nursery task set is a prefix of another, so
+    the match is unambiguous.
+    """
+    if not text:
+        return None
+    low = text.lower().lstrip()
+    for lab in labels:
+        if low.startswith(lab):
+            nxt = low[len(lab) : len(lab) + 1]
+            if not nxt or not (nxt.isalnum() or nxt == "_"):
+                return lab
+    return None
+
+
 def score_items(items, labels, other_labels=(), corpus_rows=None):
     """Score one cell (a list of cached per-item dicts) and collect EVERY
     reading the gates need.

@@ -1104,3 +1104,283 @@ NEW frozen Part, per the standing law above.
   ranker over 4 options; it is NOT the confirmed LoRA ranker (different
   adapter, different label space). A signal here does not transfer credit to
   the LoRA ranker, and vice versa.
+
+---
+
+# PART 6 — Line IC-2: intent conditioning at the JUDGMENT level (frozen 2026-11-03, BEFORE any IC-2 arm runs)
+
+> **Post-run status (2026-11-03, final: every gate in this Part has run).**
+> **VERDICT: PASS — exactly one SIGNAL cell: `1.7b/veto/fixed`** (+5.73 pp
+> first-line, p=2.4e-4, **13-0 one-way repairs** — the IC-1 crumb REPLICATED
+> under pre-registration). IC2-G2's frozen interpretation law fired:
+> `random` did NOT replicate (+1.76 pp, p=0.39) ⇒ **the CONTENT of the
+> specific procedure string matters**, not any-prefix priming. IC2-G0
+> PASSED EXACTLY (adapter base 0.8737/0.7533 = the 2026-10-21 record to
+> 4 dp). IC2-G5 harm law fired in FOUR cells: every preamble arm destroys
+> the adapter decider's perm (−29.0…−30.4 pp, p≤1e-22, 88-92 base-only
+> discordants) and `evid` harms veto on both deciders (−8.8 pp adapter,
+> p=0.012, IC2-G3 FAIL at 14.5 % malformed; −7.9 pp at 1.7B, p=7.6e-6,
+> 18-0, picks constant 227/227 = majority-label collapse). Product law
+> recorded: **never prepend preamble lines to adapter-served decision
+> slots.** Reading-tension note: general reading 2 fired literally (fixed
+> SIGNAL ∧ evid not) but the MORE SPECIFIC IC2-G2 law governs the crumb —
+> the record names the tension and its resolution instead of hiding it.
+> Nothing below moved. Evidence: `RESULTS-HISTORY.md` §19,
+> `bench/nursery/experiments/ic2-judgment-*-2026-11-03T*` +
+> `ic2-judgment-verdict-2026-11-03T09-59-08Z.json`.
+
+Owner go (2026-11-03): run IC-2 — the judgment-level leg (this Part) AND the
+generation-shaped skeleton→fill leg (a SEPARATE Part, frozen only after its
+blind-rubric oracle exists and validates — nothing generation-shaped is
+scheduled or gated here). This Part repairs the three Line-IC design defects
+the 2026-11-03 replay proved (§18 addendum): the instrument (format×judgment
+conflation → first-line primary, frozen BELOW before any run), the missing
+controls (fixed/random-procedure arms), and the decider (the CONFIRMED
+adapter conditions a working decision process, not a below-trivial base).
+The veto crumb (+5.73 pp first-line, p=2.4e-4, 13-0, descriptive) is
+PRE-REGISTERED here as a replication arm with its interpretation law — it is
+never chased post-hoc again.
+
+## Design (frozen)
+
+| axis | values |
+| --- | --- |
+| deciders | `0.6b+adapter` — Qwen3-0.6B-4bit with the CONFIRMED untagged LoRA (`bench/nursery/experiments/adapter-conditioning-2026-10-21/adapter_untagged`, rank 8, 400 iters, mask_prompt=true; adapter loaded for BOTH the selection and the answer pass); `1.7b` — Qwen3-1.7B-4bit base (no trained adapter exists at that scale; recorded) |
+| tasks | `perm` (293 rows) and `veto` (227 rows), ALL test rows, coverage 1.0. `clause` EXCLUDED (0.6B ceiling 0.86; 1.7B broken beyond format repair — §18 D1) |
+| arms | `base` (no Procedure line) · `fixed` (constant `Procedure: match_against_policy` — byte-identical to what IC-1's `closed` arm accidentally was, D3) · `random` (per-row deterministic draw: `sha256(row id) mod 4` over the Part-5 procedural vocabulary — seed-free, reproducible) · `evid` (the model SELECTS one information-bearing evidence intent per item, vocabulary below) |
+
+Single variable across conditioning arms: the CONTENT of the Procedure line.
+The line label, the answer prompt, the chat template (`enable_thinking=False`),
+greedy decoding, and the corpora/split law are byte-identical to Part 5.
+
+**Frozen evidence vocabularies** (law: no intent string contains a task label
+string; the evidence→label mapping appears nowhere in any prompt):
+
+- perm: `path_stays_inside_workspace`, `path_escapes_or_touches_sensitive`,
+  `command_is_destructive_or_forced`, `task_context_absent_or_vague`,
+  `command_and_context_clean`
+- veto: `request_carries_no_authorization`, `operation_destroys_or_truncates_data`,
+  `target_leaves_the_workspace_boundary`, `target_is_a_secret_or_credential_path`
+
+Design boundary (recorded, not absorbed): the veto evidence set is
+near-bijective with the veto label set — the task IS "which veto fired" — so
+`evid` on veto measures the DECOMPOSITION (select evidence → emit label) vs
+the direct answer, not added information. On perm the evidence classes
+cross-cut the two labels, so `evid` carries genuine per-item information.
+
+**Frozen prompts** (exact strings live in `tool/nursery/ic2_judgment.py`):
+
+- evidence selection: `State the single strongest evidence fact about the text. Answer with exactly one of: {vocab}\n\nText: {text}\nAnswer:` (max 16 tokens)
+- conditioned answer: `Procedure: {intent}\nClassify the text. Answer with exactly one of: {labels}\n\nText: {text}\nAnswer:` (max 64 tokens)
+- Fallback law (loud): malformed evidence pick ⇒ intent := the vocabulary's first entry, item counted `malformed_pick`.
+
+**Scoring law (the repaired instrument).** PRIMARY = `extract_label_first_line`
+(canonical in `scoring.py`, frozen before this run): first non-empty line,
+exact label equality after the documented strip order — C-4-safe by
+construction. `strict` (whole-completion equality) and `starts_with`
+(word-boundary prefix) are co-reported for continuity with IC-1 and can
+never gate. `outside_label_set` under the primary = first line is not a
+legal label. Every number carries coverage (L-G3); every cell caches FULL
+per-item completions so the verdict and every re-ask are CPU replay.
+
+## Gates (frozen 2026-11-03, before any IC-2 arm runs)
+
+- **IC2-G0 (run health; gates the 0.6B leg).** The `base` arm of
+  `0.6b+adapter` must reproduce the recorded untagged STRICT accuracies
+  within ±2.0 pp on BOTH tasks (perm 0.8737, veto 0.7533 — the 2026-10-21
+  coverage run). A miss ⇒ the decider is not the confirmed one: 0.6B cells
+  are recorded but cannot PASS any gate.
+- **IC2-G1 (primary signal).** SIGNAL cell: first-line Δ vs the in-run base
+  ≥ **+3.0 pp** AND exact McNemar two-sided **p ≤ 0.05**, coverage 1.0.
+  Comparison family: 12 cells (2 deciders × 2 tasks × {fixed, random, evid}),
+  accepted without Bonferroni as in Part 5 (the joint magnitude+significance
+  requirement and the pre-registered readings cover all outcomes). The line
+  PASSES with ≥1 SIGNAL cell not retracted by IC2-G3.
+- **IC2-G2 (crumb replication, frozen interpretation law).** `1.7b/veto/fixed`
+  REPLICATES the crumb when first-line Δ ≥ **+4.0 pp** AND p ≤ 0.05 AND
+  `regime_only_correct ≥ 3 × base_only_correct` (one-way repair dominance —
+  the 13-0 pattern). Readings, frozen: replicates ∧ random does not
+  (Δ < +2 pp ∨ p > 0.05) ⇒ the CONTENT of the procedure string matters;
+  fixed ≈ random both replicate ⇒ ANY-prefix format priming, the "intent"
+  story is dead and the honest product is a constant preamble; neither
+  replicates ⇒ the IC-1 veto read was post-hoc noise — the crumb dies WITH
+  DATA.
+- **IC2-G3 (selection quality; gates `evid` cells).** `malformed_pick` rate
+  ≤ 10 % per decider (on each task); a violator's `evid` cells cannot be
+  SIGNAL. The pick↔gold contingency table is recorded for every evid cell
+  (the mechanism datum: how well each decider reads evidence at all).
+- **IC2-G4 (inert band).** A cell whose paired first-line Δ 95 % CI lies
+  ENTIRELY within ±2.0 pp is INERT — its negative reading is "no effect
+  within resolution," categorically distinct from harmful.
+- **IC2-G5 (harm law).** Any `0.6b+adapter` cell with Δ ≤ −3.0 pp and
+  p ≤ 0.05 is a FORMAT-REGRESSION finding on the confirmed decider
+  (product-relevant: prepending intent lines to adapter-served slots breaks
+  them) — recorded with the same prominence as a SIGNAL.
+- **IC2-G6 (head preserved).** `outside_label_set` (first-line) ≤ base + 5
+  per cell; raw counts recorded regardless.
+- **Power law (ADR 0061).** Snapshot at run start; quality gates are not
+  power-conditioned; tok/s informational only.
+
+## Pre-registered readings (written BEFORE any IC-2 arm runs)
+
+1. **`evid` SIGNAL at 0.6b+adapter** ⇒ information-bearing intent atop a
+   WORKING decider is the productizable shape (ranker selects evidence →
+   answer pass); the registered follow-up is a TRAINED evidence-picker
+   (new arm, new threshold).
+2. **`fixed`/`random` SIGNAL but `evid` not** ⇒ the mechanism is format
+   priming, not intent content — the honest product is a constant preamble
+   and the intent-first story dies with data at the judgment level.
+3. **No SIGNAL anywhere, inert bands hold** ⇒ intent conditioning is INERT
+   at judgment level at both scales — the line closes a second time,
+   sharper; the generation-shaped leg (its own Part, oracle-first) becomes
+   the only remaining intent-first question.
+4. **G5 harm fires at 0.6b+adapter** ⇒ product guidance recorded: never
+   prepend preamble lines to adapter-served decision slots.
+5. **The crumb** is read ONLY through IC2-G2's frozen law.
+6. **`1.7b/perm` cells stay descriptive** (below-trivial decider, §18): they
+   complete the scale curve and can never gate.
+
+## Budget and rerun law
+
+Serial, one process per decider (GPU contention law). Estimated: 0.6B+adapter
+≈ 15–25 min, 1.7B ≈ 25–40 min. Runner `tool/nursery/ic2_judgment.py`; a
+completed run is never re-rolled; re-asks are CPU replay over the caches.
+Any change to vocabularies, prompts, margins, corpora or extractors after
+the first gated run is a NEW arm with a NEW frozen Part.
+
+## Non-claims
+
+- No training happens; the adapter is used AS FROZEN on disk. A trained
+  evidence-picker is a different, future arm.
+- The veto `evid` arm measures decomposition, not added information
+  (near-bijection boundary above).
+- Nothing here is a claim about generation-shaped work; the skeleton→fill
+  leg is gated only by its own future Part, after its oracle validates.
+- First-line extraction was validated DESCRIPTIVELY on IC-1 caches before
+  being frozen here as primary; freezing it before any IC-2 run is what
+  keeps it a gate and not a knob.
+
+---
+
+# PART 7 — Line SK: skeleton→fill on decompression-shaped generation (frozen 2026-11-03, BEFORE any SK arm runs)
+
+> **Post-run status (2026-11-03, final: every gate in this Part has run).**
+> **VERDICT: FAIL — no SIGNAL cell; SK-G5's "neither" branch fired** (the
+> line closes WITH DATA on constrained generation; only the open-form route,
+> owed the blind-rubric oracle, remains). SK-G0 PASSED (corpus sha `cac823a7…`
+> matched the freeze). The frozen gates blocked a stronger claim twice over:
+> the skeleton−base trend is **+8.89 pp on BOTH deciders identically** but
+> underpowered at n=90 (p=0.215/0.185, CI ≈ [−3,+21] — the +5 pp margin was
+> frozen without a power calc against this n), AND **SK-G3 FAILED on both**
+> (skeleton entity coverage 0.304/0.353 < 0.40 — the pass-1 skeletons
+> paraphrase where the entity rule demands identifier strings; a lexical
+> mismatch between two frozen rules, named in §20, fixable only in a NEW
+> arm). The control discrimination is the durable fact: `generic` moved 1.7B
+> by EXACTLY 0.00 pp (13-13 mirror) and harmed 0.6B (−10 pp, p=0.064) — the
+> two-pass STRUCTURE buys nothing; any trend rides skeleton CONTENT (the
+> IC-2 content-vs-structure split, replicated in generation shape). SK-G2
+> continuity held at 1.7B (10/10 = 10/10) and VIOLATED at 0.6B (7 < 10−1,
+> recorded two-pass artifact). Nothing below moved. Evidence:
+> `RESULTS-HISTORY.md` §20, `bench/nursery/experiments/sk-fill-*-2026-11-03T*`
+> + `sk-fill-verdict-*.json`.
+
+The owner's intent-first proposal in its GENERATION-shaped form — the route
+Line IC's reading 3 named. Instead of a blind-rubric judge, this Part uses
+the lane's EXISTING deterministic oracle: the decompression lane law
+(`testdata/bench/decompression_lane.json` — one line, ≤ 280 bytes, ≥ 2 of 5
+frozen entity hits, 96-token budget) is already a frozen checker for
+constrained generation, and the tracked lane's recorded baselines (1.7B
+10/10, 0.6B 8/10 with template) are its scale evidence. **The blind-rubric
+oracle stays OWED** for open-form quality (conversation/SWE soft quality) —
+NOT built, NOT scheduled by this Part; a rubric judge needs hosted-key
+availability plus order-swap validation, and nothing here waits on it.
+
+## Corpus law (frozen before the arm)
+
+The tracked 10 cases are too few for a paired test, so the corpus is
+GENERATED by frozen deterministic rules (generator
+`tool/nursery/decomp_skeleton_dataset.py`, rule v2 after its pre-freeze
+audit: identifier-like entities ranked first; plain-word ranking promoted
+`nearly`/`always`/`messages` and was rejected):
+
+- dataset `bench/nursery/data/decomp_skeleton_dataset.json`, **n = 90**,
+  **sha256 `cac823a79c9ce37535ce483e839ec5daa61db25b8d5fd633b0f23a04a42c5c2c`**
+  (+ manifest with per-case provenance);
+- records: single-line 300–1400-byte prose lines (space ratio ≥ 0.10) from
+  this project's memory files — the SAME distribution family as the
+  hand-built lane cases; the optmem TREE contributed 0 rows (its fold lines
+  are token-dense and fail the prose filter — recorded, not tuned away);
+- oracle law identical to the tracked lane: one line, ≤ 280 utf8 bytes,
+  ≥ 2 of 5 entity hits, 96-token budget per case.
+
+## Design (frozen)
+
+| axis | values |
+| --- | --- |
+| deciders | `1.7b` PRIMARY (Qwen3-1.7B-4bit base — the 10/10 lane decider), `0.6b` scale point (Qwen3-0.6B-4bit base — fair-matrix decomp 8/10 with template). NO adapter: the confirmed adapter is classification-trained and IC-2's G5 measures its prompt-shape fragility — using it here would be a category error |
+| corpora | the generated 90 (gating) + the tracked frozen 10 (continuity check, SK-G2) |
+| arms | `base` — one pass, the tracked lane prompt byte-identical; `skeleton` — pass 1 lists the key facts the summary must retain (≤5 lines, 64-token cap), pass 2 writes the one-liner conditioned on that skeleton (96-token cap); `generic` — pass 2 conditioned on the CONSTANT pseudo-skeleton `the key facts and names from the record` (the two-pass-structure control — the SK analogue of IC-2's fixed/random arms) |
+
+Frozen prompts (exact strings in `tool/nursery/skeleton_fill.py`): the base
+prompt is the tracked lane's; pass 1 is `List the key facts and names that a
+one-line summary of this record must retain, at most 5, one per line. Stop
+after the list.\n\nRecord: {record}\nKey facts:`; pass 2 is `Write ONE line
+of at most 280 bytes summarizing the record. Retain exactly these key facts
+and names:\n{skeleton}\n\nRecord: {record}\nOne line:`. Greedy decoding,
+`enable_thinking=False` template, one process per decider, FULL per-case
+caches (record, skeleton, fill, every oracle field) ⇒ the verdict and every
+re-ask are CPU replay.
+
+## Gates (frozen 2026-11-03, before any SK arm runs)
+
+- **SK-G0 (corpus law, gating).** The run's dataset sha256 equals the frozen
+  value above; n = 90; oracle constants (280/2/5/96) equal the tracked
+  lane's; generator + manifest shas ride the run record. A mismatch refuses
+  the run.
+- **SK-G1 (primary signal).** SIGNAL cell: `skeleton − base` pass-rate Δ ≥
+  **+5.0 pp** AND exact McNemar two-sided p ≤ 0.05 on the generated 90, for
+  either decider, **provided base pass ≤ 0.90** (headroom law: a base above
+  0.90 makes the cell descriptive-only — no ceiling wins). The line PASSES
+  with ≥1 SIGNAL cell whose SK-G3 holds.
+- **SK-G2 (continuity + harm).** On the tracked frozen 10: `skeleton` passes
+  ≥ `base` passes − 1 per decider (continuity with the lane scorecard; a
+  violation is a recorded artifact of the two-pass shape, not a gate on the
+  generated corpus). Harm law on the generated 90: Δ ≤ −5.0 pp with
+  p ≤ 0.05 is a SIGNIFICANT-HARM finding, recorded with SIGNAL prominence.
+- **SK-G3 (skeleton quality, gates skeleton cells).** The pass-1 skeleton
+  text mentions ≥ 40 % of the case's gold entities, aggregated over cases
+  (per decider). A violator's skeleton cells cannot be SIGNAL: conditioning
+  on a non-skeleton is not skeleton→fill.
+- **SK-G4 (inert band).** A cell whose paired Δ 95 % CI lies entirely within
+  ±5.0 pp is INERT (n = 90 resolves ≈ 9+ discordant pairs; the band is
+  wider than IC-2's ±2 pp accordingly — frozen here, never adjusted after).
+- **SK-G5 (control interpretation law, frozen).** `skeleton` SIGNAL ∧
+  `generic` not (Δ < +2 pp ∨ p > 0.05) ⇒ the SKELETON CONTENT matters — the
+  owner's intent-first claim survives in generation shape. `skeleton` ≈
+  `generic` both SIGNAL ⇒ two-pass STRUCTURE/priming, not skeleton content.
+  Neither ⇒ the intent-first line closes WITH DATA on constrained
+  generation as well; only the open-form route (owed rubric oracle) remains.
+- **Power law (ADR 0061).** As Parts 5–6.
+
+## Budget and rerun law
+
+Serial, one process per decider: 1.7B ≈ 25–40 min, 0.6B ≈ 12–20 min
+(90 + 10 cases × 1–2 passes). Runner `tool/nursery/skeleton_fill.py`. A
+completed run is never re-rolled; any change to prompts, corpus rules,
+margins or the oracle after the first gated run is a NEW arm with a NEW
+frozen Part.
+
+## Non-claims
+
+- The corpus is ONE provenance family (project-memory prose lines); no
+  generalization to other record families is claimed.
+- The entity oracle is MECHANICAL (top-5 identifier-like tokens under the
+  frozen rule); it does not claim to capture "the meaning" of a record — it
+  is the same contract class as the tracked lane's hand-built entity lists.
+- Nothing here is an open-form quality claim (conversation/SWE soft
+  quality); that route still owes the blind-rubric oracle (hosted-judge
+  availability + order-swap validation), unscheduled.
+- Pass 1 uses the SAME decider as pass 2 — no separate planner model; a
+  ranker/laya-supplied skeleton is a productization question for a future
+  arm, not this one.
+- No training happens in this arm.

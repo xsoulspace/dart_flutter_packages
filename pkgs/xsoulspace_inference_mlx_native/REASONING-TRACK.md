@@ -8,19 +8,24 @@ this file and becomes a pre-registered arm with its frozen gate in
 [`MTP-GATES.md`](MTP-GATES.md) / [`TRAIN-GATES.md`](TRAIN-GATES.md) BEFORE
 any run. Recorded 2026-10-28, branch `ag-c`.
 
-> **Update 2026-11-02:** the owner's intent-first generation proposal
-> ("generate intent, then fill conditioned on it") was discussed and split:
-> claim A (intent conditioning on the AR stack) LEFT this file and became
-> the pre-registered **Line IC** arm ([`MTP-GATES.md`](MTP-GATES.md) Part 5,
-> frozen before any run); claim B (diffusion fill) stays closed on the
-> Stage-0 compute verdict (20–80× vs AR on this machine) and was not
-> re-opened. **Ran the same day and CLOSED: F — no signal cell** (reading 3
-> fired; 0.6B self harms, 0.6B closed degenerate untrained, 1.7B
-> format-collapses under the frozen strict scorer with the legacy content
-> reads flat-or-degenerate). [`VERDICTS.md`](VERDICTS.md) /
-> [`RESULTS-HISTORY.md`](RESULTS-HISTORY.md) §18 / `LINES.md` Row N. The
-> reading-3 route (generation-shaped intent arm, NEW oracle) is NOT
-> scheduled. Directions #1–#6 below are untouched by this result.
+> **Update 2026-11-03 (the arc completed):** the owner ran the replay
+> critique to its end the same day. **Line IC-2** (Part 6) PASSED one
+> pre-registered replicated cell — the content-specific procedure prefix on
+> the 1.7B veto decider (+5.73 pp, p=2.4e-4, 13-0 one-way repairs; the
+> random-prefix control did not replicate ⇒ content, not priming) — while
+> model-selected intent proved harmful and **every preamble proved lethal to
+> the adapter-served perm slot (−30 pp, p≈1e-23: the product law is never
+> prepend lines to adapter-served decision slots)**. **Line SK** (Part 7,
+> skeleton→fill on the deterministic decompression oracle — no rubric judge
+> needed for that shape) closed F: a +8.89 pp trend, identical on both
+> deciders, twice-blocked by its own frozen gates (underpowered at n=90;
+> SK-G3's lexical carry criterion mismatched the entity rule), with the
+> generic-structure control at exactly 0.00 pp. The intent-first question
+> is now measured at judgment level AND constrained-generation level; what
+> remains owed and unscheduled: the blind-rubric oracle for open-form
+> quality, and a properly powered SK rerun (≈350+ cases, non-lexical carry
+> criterion) if the owner wants the trend resolved. §18–§20; VERDICTS ✓/F
+> rows; LINES Rows N–O.
 
 ## Why this file exists
 
