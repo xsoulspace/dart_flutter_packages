@@ -30,6 +30,7 @@ pub mod qwen_fused;
 pub mod qwen_mtp;
 pub mod qwen_prefix;
 pub mod qwen_rank;
+pub mod sampling;
 
 #[cfg(test)]
 pub fn gelu_ref(x: &mlx::Array, s: mlx::Stream) -> mlx::MlxResult<mlx::Array> {
@@ -460,8 +461,27 @@ pub extern "C" fn mlx_native_unload(handle: i64) {
 struct QwenEngine {
     prefixes: Mutex<qwen_prefix::PrefixPool>,
     requests: Mutex<HashMap<i64, Arc<QwenRequestState>>>,
+    /// Streaming sessions keyed by their request id (one id, two maps —
+    /// cancellation reuses the request machinery, state lives here).
+    streams: Mutex<HashMap<i64, Arc<Mutex<QwenStreamState>>>>,
     model: Arc<crate::qwen::Qwen3>,
     tokenizer: crate::bpe::ByteLevelBpe,
+}
+
+/// One streaming generation's shared decode state. The session thread
+/// appends generated ids under the lock; the poll FFI reads slices under
+/// the same lock. Text is NEVER stored here — every poll re-decodes the
+/// full id list (byte-level BPE pieces concatenate across tokens, so
+/// per-token strings would corrupt multibyte characters; full decode of a
+/// completion-length list is microseconds) and the D delta is cut at the
+/// caller's byte watermark on a UTF-8 boundary.
+struct QwenStreamState {
+    prompt_tokens: usize,
+    ids: Vec<i32>,
+    eos_ids: Vec<i32>,
+    done: bool,
+    stop_reason: Option<&'static str>,
+    error: Option<String>,
 }
 
 struct QwenRequestState {
@@ -519,10 +539,53 @@ struct QwenGenerateRequest {
     stop_on_eos: bool,
     #[serde(default)]
     eos_ids: Vec<i32>,
+    /// Opt-in sampling rung (solo generate only; batch/stream stay greedy).
+    /// Absent = the exact greedy path the parity fixtures pin. Validated in
+    /// `qwen_sampling` — invalid values refuse the request, never degrade
+    /// silently.
+    #[serde(default)]
+    temperature: Option<f64>,
+    #[serde(default)]
+    repetition_penalty: Option<f64>,
 }
 
 fn default_max_tokens() -> usize {
     64
+}
+
+/// The request's validated sampling knobs, or None when it carries none
+/// (the byte-identical greedy contract). Invalid values name the refusal.
+fn qwen_sampling(request: &QwenGenerateRequest) -> Result<Option<sampling::SamplingParams>, String> {
+    if request.temperature.is_none() && request.repetition_penalty.is_none() {
+        return Ok(None);
+    }
+    let temperature = request.temperature.unwrap_or(0.0);
+    let repetition_penalty = request.repetition_penalty.unwrap_or(1.0);
+    if !temperature.is_finite() || temperature < 0.0 {
+        return Err(format!("invalid sampling temperature {temperature}"));
+    }
+    if !repetition_penalty.is_finite() || repetition_penalty < 1.0 {
+        return Err(format!(
+            "invalid sampling repetition_penalty {repetition_penalty}"
+        ));
+    }
+    Ok(Some(sampling::SamplingParams {
+        temperature: temperature as f32,
+        repetition_penalty: repetition_penalty as f32,
+    }))
+}
+
+/// Runtime capability probe for the additive request-level sampling ABI
+/// (solo generate entries). Older dylibs lack this symbol and stay usable
+/// through greedy generation (the caller reports the honest warning).
+#[no_mangle]
+pub extern "C" fn mlx_native_qwen_sampling_api_version() -> i32 {
+    1
+}
+
+#[no_mangle]
+pub extern "C" fn mlx_native_lfm2_sampling_api_version() -> i32 {
+    1
 }
 
 #[no_mangle]
@@ -552,6 +615,7 @@ pub extern "C" fn mlx_native_qwen_load(model_dir: *const c_char) -> i64 {
             tokenizer,
             prefixes: Mutex::new(qwen_prefix::PrefixPool::default()),
             requests: Mutex::new(HashMap::new()),
+            streams: Mutex::new(HashMap::new()),
         }),
     );
     handle
@@ -664,6 +728,10 @@ fn qwen_generate(handle: i64, request_id: Option<i64>, request_json: *const c_ch
             Ok(r) => r,
             Err(_) => return fail("unreadable request JSON"),
         };
+    let sampling = match qwen_sampling(&request) {
+        Ok(s) => s,
+        Err(message) => return fail(&message),
+    };
     let Some(_guard) = cancellable_qwen_forward_lock(forward_lock(), cancellation.as_deref())
     else {
         return qwen_cancelled();
@@ -694,6 +762,51 @@ fn qwen_generate(handle: i64, request_id: Option<i64>, request_json: *const c_ch
     } else {
         None
     };
+    if let Some(sp) = sampling {
+        // The sampled rung bypasses the exact-prefix pool: the pool's reuse
+        // law is pinned on greedy streams, so a sampled decode runs on a
+        // fresh cache and leaves the pool's entries untouched.
+        if is_qwen_cancelled(cancellation.as_deref()) {
+            return qwen_cancelled();
+        }
+        let result = match cancellation.as_ref() {
+            Some(state) => engine.model.generate_sampled_cancellable(
+                &prompt_ids,
+                request.max_tokens,
+                stop,
+                stream,
+                Some(&state.cancelled),
+                &sp,
+            ),
+            None => engine
+                .model
+                .generate_sampled(&prompt_ids, request.max_tokens, stop, stream, &sp),
+        };
+        return match result {
+            Ok(ids) => {
+                if is_qwen_cancelled(cancellation.as_deref()) {
+                    return qwen_cancelled();
+                }
+                let text = engine
+                    .tokenizer
+                    .decode(
+                        &ids[prompt_ids.len()..]
+                            .iter()
+                            .map(|&i| i as u32)
+                            .collect::<Vec<_>>(),
+                    )
+                    .unwrap_or_default();
+                ok_json(&serde_json::json!({
+                    "cache_reused_tokens": 0,
+                    "prompt_ids": prompt_ids,
+                    "ids": ids,
+                    "text": text,
+                }))
+            }
+            Err(e) if e.0 == -980 && is_qwen_cancelled(cancellation.as_deref()) => qwen_cancelled(),
+            Err(e) => fail(&format!("generate failed: mlx status {}", e.0)),
+        };
+    }
     let mut prefixes = engine.prefixes.lock().unwrap();
     let result = if let Some(state) = cancellation.as_ref() {
         prefixes.generate_cancellable(
@@ -800,6 +913,58 @@ pub extern "C" fn mlx_native_qwen_clear_cache(handle: i64, actor: *const c_char)
 #[no_mangle]
 pub extern "C" fn mlx_native_qwen_unload(handle: i64) {
     qwen_registry().lock().unwrap().remove(&handle);
+}
+
+/// Runtime capability probe for the additive LoRA-attach ABI. Older dylibs
+/// lack this symbol and stay usable through bare generation — the Dart
+/// layer refuses a lora-bearing request with a NAMED error instead of
+/// silently ignoring the adapter (mirror of the sampling probe).
+#[no_mangle]
+pub extern "C" fn mlx_native_qwen_lora_api_version() -> i32 {
+    1
+}
+
+/// Attach a runtime (unmerged) LoRA adapter to the engine's loaded model:
+/// `mlx_native_qwen_attach_lora(handle, adapter_path, scale)`. The reply is
+/// `{"digest": "<adapter file sha256>", "applied": N}` — the digest an
+/// attach is idempotent on (an unchanged `(digest, scale)` returns the
+/// current state without rebuilding the pair set) — or `{"error": "…"}`.
+/// Attach serializes against generation on the forward lock, and the model's
+/// weight identity folds the adapter digest, so every exact-prefix cache
+/// entry computed under the bare base is dropped by the pool itself (the
+/// Rust-side invalidation — a host cannot forget it).
+///
+/// SAFETY: `adapter_path` must be a valid NUL-terminated UTF-8 C string.
+#[no_mangle]
+pub extern "C" fn mlx_native_qwen_attach_lora(
+    handle: i64,
+    adapter_path: *const c_char,
+    scale: f64,
+) -> *mut c_char {
+    if adapter_path.is_null() {
+        return fail("missing adapter path");
+    }
+    let engine = qwen_registry().lock().unwrap().get(&handle).map(Arc::clone);
+    let Some(engine) = engine else {
+        return fail("unknown handle");
+    };
+    let path = std::path::PathBuf::from(
+        unsafe { CStr::from_ptr(adapter_path) }
+            .to_string_lossy()
+            .to_string(),
+    );
+    let _guard = forward_lock().lock().unwrap();
+    let stream = match gpu() {
+        Ok(stream) => stream,
+        Err(e) => return fail(&format!("stream initialization failed: mlx status {}", e.0)),
+    };
+    match engine.model.attach_lora(&path, scale as f32, stream) {
+        Ok(applied) => match engine.model.active_lora_digest() {
+            Some(digest) => ok_json(&serde_json::json!({ "digest": digest, "applied": applied })),
+            None => fail("attach reported no active adapter"),
+        },
+        Err(message) => fail(&message),
+    }
 }
 
 /// Runtime capability probe for the additive batched-generation ABI. Older
@@ -936,7 +1101,274 @@ pub extern "C" fn mlx_native_qwen_generate_batched(
     }
 }
 
-// ---- nursery weights-splat store (Line I runtime-path seed) ----
+// ---- streaming generation (token deltas over a session) ----
+//
+// Start spawns ONE decode thread running the SAME loop plain greedy runs
+// (`generate_greedy_cached_streaming` — one implementation, so the 64/64
+// parity gates cover streaming by construction) under the same global
+// forward lock, appending generated ids to shared state. Poll returns the
+// caller's delta since its watermarks; free cancels and releases. LAWS:
+// - The prefix pool is NOT consulted (fresh KV per stream, like the fused
+//   batch) — no cache entry can be served stale across paths.
+// - The stream holds the global forward lock for its whole decode, exactly
+//   like a solo generate; batched and solo requests queue behind it.
+// - Cancellation reuses the request machinery: the flag is observed at the
+//   prefill-chunk and decode-step boundaries.
+// - Text is re-decoded from the full id list on every poll (per-token
+//   strings would corrupt multibyte characters — byte-level BPE pieces
+//   concatenate across tokens) and the delta is cut at the CALLER's byte
+//   watermark on a UTF-8 boundary; the final poll flushes the tail lossily
+//   so every byte is delivered exactly once.
+
+#[derive(serde::Deserialize)]
+struct QwenStreamStartRequest {
+    #[serde(default)]
+    prompt: Option<String>,
+    #[serde(default)]
+    prompt_ids: Option<Vec<i32>>,
+    #[serde(default = "default_max_tokens")]
+    max_tokens: usize,
+    #[serde(default)]
+    stop_on_eos: bool,
+    #[serde(default)]
+    eos_ids: Vec<i32>,
+}
+
+enum StreamOutcome {
+    Completed,
+    Cancelled,
+    Failed(String),
+}
+
+/// Capability probe for the additive streaming ABI (older dylibs lack the
+/// symbol; the Dart layer degrades to solo completion instead of failing).
+#[no_mangle]
+pub extern "C" fn mlx_native_qwen_stream_api_version() -> i32 {
+    1
+}
+
+/// Start one streaming greedy generation. Request body = the solo request
+/// shape (`prompt`|`prompt_ids`, `max_tokens`, `stop_on_eos`, `eos_ids`).
+/// Returns the session id — the SAME id as its cancellation request, so a
+/// host cancels through `mlx_native_qwen_request_cancel` — or a negative
+/// code (unknown handle -1, id exhaustion -2, unreadable request -3).
+#[no_mangle]
+pub extern "C" fn mlx_native_qwen_stream_start(handle: i64, request_json: *const c_char) -> i64 {
+    if request_json.is_null() {
+        return -3;
+    }
+    let engine = qwen_registry().lock().unwrap().get(&handle).map(Arc::clone);
+    let Some(engine) = engine else {
+        return -1;
+    };
+    let request: QwenStreamStartRequest =
+        match serde_json::from_slice(unsafe { CStr::from_ptr(request_json) }.to_bytes()) {
+            Ok(r) => r,
+            Err(_) => return -3,
+        };
+    let request_id = QWEN_NEXT_REQUEST.fetch_add(1, Ordering::Relaxed);
+    if request_id <= 0 {
+        return -2;
+    }
+    let request_state = Arc::new(QwenRequestState {
+        cancelled: AtomicBool::new(false),
+    });
+    engine
+        .requests
+        .lock()
+        .unwrap()
+        .insert(request_id, Arc::clone(&request_state));
+    let shared = Arc::new(Mutex::new(QwenStreamState {
+        prompt_tokens: 0,
+        ids: Vec::new(),
+        eos_ids: if request.stop_on_eos {
+            request.eos_ids.clone()
+        } else {
+            Vec::new()
+        },
+        done: false,
+        stop_reason: None,
+        error: None,
+    }));
+    engine
+        .streams
+        .lock()
+        .unwrap()
+        .insert(request_id, Arc::clone(&shared));
+
+    let worker_engine = Arc::clone(&engine);
+    let worker_request = Arc::clone(&request_state);
+    let worker_shared = Arc::clone(&shared);
+    let stop_on_eos = request.stop_on_eos;
+    std::thread::Builder::new()
+        .name("qwen-stream".into())
+        .spawn(move || {
+            // A panic on this thread would silently strand the stream
+            // (done never set, the poller spins forever): catch it and
+            // surface it as the session's error instead.
+            let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
+                || run_qwen_stream(&worker_engine, &worker_request, &worker_shared, &request),
+            ))
+            .unwrap_or_else(|panic| {
+                StreamOutcome::Failed(format!(
+                    "stream worker panicked: {}",
+                    panic
+                        .downcast_ref::<String>()
+                        .cloned()
+                        .or_else(|| panic.downcast_ref::<&str>().map(|s| s.to_string()))
+                        .unwrap_or_else(|| "unknown panic".into())
+                ))
+            });
+            let mut state = worker_shared.lock().unwrap();
+            state.done = true;
+            state.stop_reason = match outcome {
+                StreamOutcome::Completed => {
+                    let hit_stop = stop_on_eos
+                        && state.ids.last().is_some_and(|t| state.eos_ids.contains(t));
+                    Some(if hit_stop { "stop" } else { "max_tokens" })
+                }
+                StreamOutcome::Cancelled => Some("cancelled"),
+                StreamOutcome::Failed(message) => {
+                    state.error = Some(message);
+                    None
+                }
+            };
+        })
+        .expect("spawn qwen stream worker");
+    request_id
+}
+
+fn run_qwen_stream(
+    engine: &Arc<QwenEngine>,
+    request_state: &Arc<QwenRequestState>,
+    shared: &Arc<Mutex<QwenStreamState>>,
+    request: &QwenStreamStartRequest,
+) -> StreamOutcome {
+    let Some(_guard) = cancellable_qwen_forward_lock(forward_lock(), Some(request_state)) else {
+        return StreamOutcome::Cancelled;
+    };
+    let stream = match gpu() {
+        Ok(stream) => stream,
+        Err(e) => return StreamOutcome::Failed(format!("stream init failed: mlx status {}", e.0)),
+    };
+    let prompt_ids: Vec<i32> = if let Some(ids) = &request.prompt_ids {
+        ids.clone()
+    } else if let Some(text) = &request.prompt {
+        match engine.tokenizer.encode(text) {
+            Ok(ids) => ids.into_iter().map(|v| v as i32).collect(),
+            Err(e) => return StreamOutcome::Failed(format!("tokenize failed: {e}")),
+        }
+    } else {
+        return StreamOutcome::Failed("request needs prompt or prompt_ids".into());
+    };
+    shared.lock().unwrap().prompt_tokens = prompt_ids.len();
+    let push_shared = Arc::clone(shared);
+    let stop: Option<&[i32]> = if request.stop_on_eos {
+        Some(&request.eos_ids)
+    } else {
+        None
+    };
+    let result = engine.model.generate_greedy_streaming(
+        &prompt_ids,
+        request.max_tokens,
+        stop,
+        stream,
+        Some(&request_state.cancelled),
+        &mut move |t: i32| {
+            push_shared.lock().unwrap().ids.push(t);
+        },
+    );
+    match result {
+        Ok(_) => StreamOutcome::Completed,
+        Err(e) if e.0 == -980 => StreamOutcome::Cancelled,
+        Err(e) => StreamOutcome::Failed(format!("generate failed: mlx status {}", e.0)),
+    }
+}
+
+/// Poll one streaming session: the delta since the caller's watermarks.
+/// `ids_seen` = generated ids already delivered; `bytes_seen` = decoded
+/// text BYTES already delivered. Response:
+/// `{"error": "…"}` or `{"done": bool, "cancelled": bool, "stop_reason":
+/// "stop"|"max_tokens"|"cancelled", "new_ids": […], "new_text": "…",
+/// "emitted_bytes": N, "prompt_tokens": P, "total_ids": T}`.
+#[no_mangle]
+pub extern "C" fn mlx_native_qwen_stream_poll(
+    handle: i64,
+    session: i64,
+    ids_seen: i64,
+    bytes_seen: i64,
+) -> *mut c_char {
+    let engine = qwen_registry().lock().unwrap().get(&handle).map(Arc::clone);
+    let Some(engine) = engine else {
+        return fail("unknown handle");
+    };
+    let shared = engine.streams.lock().unwrap().get(&session).map(Arc::clone);
+    let Some(shared) = shared else {
+        return fail("unknown session");
+    };
+    let state = shared.lock().unwrap();
+    if let Some(error) = &state.error {
+        return ok_json(&serde_json::json!({ "error": error, "done": true }));
+    }
+    let ids_seen = ids_seen.clamp(0, state.ids.len() as i64) as usize;
+    let new_ids: Vec<i32> = state.ids[ids_seen..].to_vec();
+    let full = engine
+        .tokenizer
+        .decode(&state.ids.iter().map(|&v| v as u32).collect::<Vec<_>>())
+        .unwrap_or_default();
+    let full_bytes = full.as_bytes();
+    let bytes_seen = (bytes_seen.max(0) as usize).min(full_bytes.len());
+    let tail = &full_bytes[bytes_seen..];
+    // A non-done stream may end mid-character (the next id completes it):
+    // emit only up to the last UTF-8 boundary; the rest rides the next
+    // poll. A done stream flushes lossily so every byte is delivered.
+    let (new_text, emitted_bytes) = if state.done {
+        (String::from_utf8_lossy(tail).into_owned(), full_bytes.len())
+    } else {
+        match std::str::from_utf8(tail) {
+            Ok(valid) => (valid.to_string(), full_bytes.len()),
+            Err(e) => (
+                String::from_utf8_lossy(&tail[..e.valid_up_to()]).into_owned(),
+                bytes_seen + e.valid_up_to(),
+            ),
+        }
+    };
+    let payload = serde_json::json!({
+        "done": state.done,
+        "cancelled": state.stop_reason == Some("cancelled"),
+        "stop_reason": state.stop_reason,
+        "new_ids": new_ids,
+        "new_text": new_text,
+        "emitted_bytes": emitted_bytes,
+        "prompt_tokens": state.prompt_tokens,
+        "total_ids": state.ids.len(),
+    });
+    ok_json(&payload)
+}
+
+/// Release one streaming session. Sets the cancellation flag first — an
+/// early free abandons the decode at the next step boundary (the thread
+/// holds its own Arcs and finishes cleanly) — then removes the session
+/// state. Idempotent; -1 for an unknown engine.
+#[no_mangle]
+pub extern "C" fn mlx_native_qwen_stream_free(handle: i64, session: i64) -> i32 {
+    let engine = qwen_registry().lock().unwrap().get(&handle).map(Arc::clone);
+    let Some(engine) = engine else {
+        return -1;
+    };
+    engine.streams.lock().unwrap().remove(&session);
+    // Take the Arc out FIRST: an `if let` scrutinee's mutex guard would
+    // live through the block (Rust 2021 scoping) and the remove below
+    // would deadlock against ITSELF on this very thread.
+    let request = engine.requests.lock().unwrap().get(&session).map(Arc::clone);
+    if let Some(request) = request {
+        request.cancelled.store(true, Ordering::Release);
+        engine.requests.lock().unwrap().remove(&session);
+    }
+    0
+}
+
+
 //
 // The LOAD path of the nursery runtime: open, verify, point-read a packed
 // store (contract nursery.weights-splat.v1, packed by
@@ -1381,6 +1813,10 @@ pub extern "C" fn mlx_native_lfm2_generate(
             Ok(r) => r,
             Err(_) => return fail("unreadable request JSON"),
         };
+    let sampling = match qwen_sampling(&request) {
+        Ok(s) => s,
+        Err(message) => return fail(&message),
+    };
     let _guard = forward_lock().lock().unwrap();
     let stream = match gpu() {
         Ok(stream) => stream,
@@ -1406,10 +1842,19 @@ pub extern "C" fn mlx_native_lfm2_generate(
     } else {
         None
     };
-    match engine
-        .model
-        .generate_greedy(&prompt_ids, request.max_tokens, stop, stream)
-    {
+    let result = match sampling {
+        Some(sp) => engine.model.generate_sampled(
+            &prompt_ids,
+            request.max_tokens,
+            stop,
+            stream,
+            &sp,
+        ),
+        None => engine
+            .model
+            .generate_greedy(&prompt_ids, request.max_tokens, stop, stream),
+    };
+    match result {
         Ok(ids) => {
             let text = engine
                 .tokenizer
@@ -1438,6 +1883,54 @@ pub extern "C" fn mlx_native_lfm2_generate(
 #[no_mangle]
 pub extern "C" fn mlx_native_lfm2_unload(handle: i64) {
     lfm2_registry().lock().unwrap().remove(&handle);
+}
+
+/// Runtime capability probe for the additive LFM2 LoRA-attach ABI (the
+/// qwen probe's twin). Older dylibs lack this symbol and stay usable
+/// through bare generation — the Dart layer refuses a lora-bearing request
+/// with a NAMED error instead of silently ignoring the adapter.
+#[no_mangle]
+pub extern "C" fn mlx_native_lfm2_lora_api_version() -> i32 {
+    1
+}
+
+/// Attach a runtime (unmerged) LoRA adapter to the LFM2 engine's loaded
+/// model — the same wire as `mlx_native_qwen_attach_lora`:
+/// `{"digest": …, "applied": N}` or `{"error": …}`. Idempotent on
+/// (adapter digest, scale); LFM2 keeps no cross-request prefix pool (fresh
+/// KV per request), so there is nothing stale to invalidate Rust-side.
+///
+/// SAFETY: `adapter_path` must be a valid NUL-terminated UTF-8 C string.
+#[no_mangle]
+pub extern "C" fn mlx_native_lfm2_attach_lora(
+    handle: i64,
+    adapter_path: *const c_char,
+    scale: f64,
+) -> *mut c_char {
+    if adapter_path.is_null() {
+        return fail("missing adapter path");
+    }
+    let engine = lfm2_registry().lock().unwrap().get(&handle).map(Arc::clone);
+    let Some(engine) = engine else {
+        return fail("unknown handle");
+    };
+    let path = std::path::PathBuf::from(
+        unsafe { CStr::from_ptr(adapter_path) }
+            .to_string_lossy()
+            .to_string(),
+    );
+    let _guard = forward_lock().lock().unwrap();
+    let stream = match gpu() {
+        Ok(stream) => stream,
+        Err(e) => return fail(&format!("stream initialization failed: mlx status {}", e.0)),
+    };
+    match engine.model.attach_lora(&path, scale as f32, stream) {
+        Ok(applied) => match engine.model.active_lora_digest() {
+            Some(digest) => ok_json(&serde_json::json!({ "digest": digest, "applied": applied })),
+            None => fail("attach reported no active adapter"),
+        },
+        Err(message) => fail(&message),
+    }
 }
 
 /// NFC (canonical composed) normalization — the checkpoint tokenizer's

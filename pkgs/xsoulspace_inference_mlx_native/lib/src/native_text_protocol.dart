@@ -289,3 +289,45 @@ InferenceResult<InferenceResponse> nativeTextNormalizationRefusal({
     },
   );
 }
+
+/// One successful runtime-LoRA attach: the adapter file's sha256 [digest]
+/// (the identity the engine folds into its weight identity — prefix caches
+/// key on it Rust-side) and how many adapter pairs the engine applied.
+final class NativeLoraAttachment {
+  const NativeLoraAttachment({required this.digest, required this.applied});
+
+  final String digest;
+  final int applied;
+
+  @override
+  String toString() => 'NativeLoraAttachment($digest, $applied pairs)';
+}
+
+/// Raised when a request names a LoRA adapter but the loaded dylib predates
+/// the attach ABI (no `*_lora_api_version` symbol). A lora-bearing request
+/// fails with this NAMED error — never a silent greedy fallback pretending
+/// the adapter was honored (ADR 0059: map or refuse, never silently pretend).
+final class NativeLoraAttachUnavailable implements Exception {
+  const NativeLoraAttachUnavailable();
+
+  @override
+  String toString() => 'native dylib lacks the lora attach ABI';
+}
+
+/// The runtime-LoRA attach capability a native text client exposes to hosts
+/// that serialize attach→generate themselves (the LA brain isolate's engine
+/// queue). A client that does not implement this interface names its refusal
+/// at the host (`lora_unsupported_engine`); one that does may still refuse a
+/// particular dylib via [loraAttachSupported] (`lora_abi_missing`).
+abstract interface class LoraAttachableInferenceClient
+    implements InferenceClient {
+  /// Whether the loaded dylib carries the attach ABI (a static probe — no
+  /// engine needs to be loaded to answer it).
+  bool get loraAttachSupported;
+
+  /// Attaches (or re-confirms) the runtime adapter at [adapterPath] on this
+  /// client's engine. Throws [NativeLoraAttachUnavailable] when the dylib
+  /// lacks the ABI, [StateError] when the engine is not loaded, and the
+  /// native refusal message on an adapter the engine will not apply.
+  Future<NativeLoraAttachment> attachLora(String adapterPath, {double scale});
+}

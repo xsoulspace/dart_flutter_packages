@@ -74,7 +74,9 @@ void main() {
       coalesceWindow: const Duration(milliseconds: 300),
       maxBatchSize: 8,
     );
-    final off = LayaQwenChatServer(engine: engine);
+    // The explicit coalescing-OFF reference (Duration.zero): the default
+    // window is ON since the owner's 2026-10-28 flip.
+    final off = LayaQwenChatServer(engine: engine, coalesceWindow: Duration.zero);
     await on.start();
     await off.start();
     addTearDown(on.stop);
@@ -150,5 +152,32 @@ void main() {
     );
 
     expect(soloBodies.length, prompts.length);
+  });
+
+  // The owner's 2026-10-28 default flip, gated: a DEFAULT-constructed
+  // server coalesces (the window is on), and Duration.zero is the explicit
+  // coalescing-OFF escape hatch. Construction-only — no GPU traffic.
+  test('default flip: the window is on by default, zero disables', () async {
+    final NativeQwenTextEngine engine;
+    try {
+      engine = await NativeQwenTextEngine.load();
+    } on Object catch (error) {
+      return markTestSkipped('native qwen unavailable: $error');
+    }
+    addTearDown(engine.dispose);
+    if (!engine.supportsBatchGeneration) {
+      return markTestSkipped('native dylib lacks the batched ABI');
+    }
+    expect(
+      LayaQwenChatServer(engine: engine).coalescingActive,
+      isTrue,
+      reason: 'the default coalescing window is ON (owner decision)',
+    );
+    expect(
+      LayaQwenChatServer(engine: engine, coalesceWindow: Duration.zero)
+          .coalescingActive,
+      isFalse,
+      reason: 'Duration.zero is the explicit coalescing-OFF wire',
+    );
   });
 }

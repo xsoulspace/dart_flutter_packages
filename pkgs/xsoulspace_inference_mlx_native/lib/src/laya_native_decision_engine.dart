@@ -520,6 +520,107 @@ String? resolveQwenSnapshotDir(String? override) {
   return null;
 }
 
+/// One mlx-community Qwen3 variant discovered under the HF hub cache.
+final class CachedQwen3Snapshot {
+  const CachedQwen3Snapshot({
+    required this.refName,
+    required this.paramLabel,
+    required this.snapshotDir,
+  });
+
+  /// Ref-friendly lowercase name, e.g. `qwen3-1.7b` (the trailing `4bit`
+  /// quant tag is dropped — the default quant stays unnamed; other quants
+  /// keep theirs, e.g. `qwen3-0.6b-bf16`, so distinct checkpoints never
+  /// collide).
+  final String refName;
+
+  /// Human parameter count parsed from the checkpoint name, e.g. `1.7B`;
+  /// the raw name when no size token is present.
+  final String paramLabel;
+
+  /// The snapshot directory (contains `config.json`).
+  final String snapshotDir;
+}
+
+/// Derives a [CachedQwen3Snapshot] from one `models--mlx-community--<Name>`
+/// hub-cache directory, or null when the name is not a Qwen3 text cast or
+/// no complete snapshot (config.json) is checked out.
+CachedQwen3Snapshot? cachedQwen3SnapshotFromDir(String dirPath) {
+  final base = dirPath.split(Platform.pathSeparator).last;
+  const prefix = 'models--mlx-community--Qwen3-';
+  if (!base.startsWith(prefix)) return null;
+  var model = base.substring(prefix.length); // e.g. `1.7B-4bit`, `0.6B-bf16`
+  final snapshots = Directory('$dirPath/snapshots');
+  if (!snapshots.existsSync()) return null;
+  String? dir;
+  for (final snap in snapshots.listSync()) {
+    if (snap is Directory && File('${snap.path}/config.json').existsSync()) {
+      dir = snap.path;
+      break;
+    }
+  }
+  if (dir == null) return null;
+  final quantMatch = RegExp(r'-(4bit|8bit|bf16|fp16|iq\w+|q\w+)$')
+      .firstMatch(model.toLowerCase());
+  var quantTag = '';
+  if (quantMatch != null && quantMatch.group(1) != '4bit') {
+    quantTag = '-${quantMatch.group(1)}';
+  }
+  if (quantMatch != null) {
+    model = model.substring(0, model.length - quantMatch.group(0)!.length);
+  }
+  final sizeMatch = RegExp(r'(\d+(?:\.\d+)?)b', caseSensitive: false)
+      .firstMatch(model);
+  final paramLabel = sizeMatch == null
+      ? model
+      : '${sizeMatch.group(1)}B';
+  return CachedQwen3Snapshot(
+    refName:
+        'qwen3-${model.toLowerCase().replaceAll('_', '-')}$quantTag'
+            .replaceAll(RegExp(r'-+'), '-'),
+    paramLabel: paramLabel,
+    snapshotDir: dir,
+  );
+}
+
+/// Every cached mlx-community Qwen3 variant under the HF hub cache,
+/// sorted by ref name. Empty when the cache is absent. Never downloads;
+/// a missing HOME or hub directory simply names nothing. [hubRoot]
+/// overrides the hub directory (tests).
+List<CachedQwen3Snapshot> listCachedQwen3Snapshots({String? hubRoot}) {
+  final root =
+      hubRoot ??
+      () {
+        final home = Platform.environment['HOME'];
+        return home == null ? null : '$home/.cache/huggingface/hub';
+      }();
+  if (root == null) return const <CachedQwen3Snapshot>[];
+  final hub = Directory(root);
+  if (!hub.existsSync()) return const <CachedQwen3Snapshot>[];
+  final found = <CachedQwen3Snapshot>[];
+  final seen = <String>{};
+  final dirs = hub.listSync().map((e) => e.path).toList()..sort();
+  for (final dirPath in dirs) {
+    final snapshot = cachedQwen3SnapshotFromDir(dirPath);
+    if (snapshot == null) continue;
+    if (seen.add(snapshot.refName)) found.add(snapshot);
+  }
+  return found;
+}
+
+/// Resolves a specific named Qwen3 variant, e.g. `qwen3-1.7b`, against the
+/// hub-cache scan ([listCachedQwen3Snapshots]). Null when no cached
+/// snapshot names that variant (callers skip honestly — never download).
+/// [hubRoot] overrides the hub directory (tests).
+String? resolveQwen3SnapshotVariant(String variant, {String? hubRoot}) {
+  final name = variant.trim().toLowerCase();
+  if (name.isEmpty) return null;
+  for (final snapshot in listCachedQwen3Snapshots(hubRoot: hubRoot)) {
+    if (snapshot.refName == name) return snapshot.snapshotDir;
+  }
+  return null;
+}
+
 Pointer<Uint8> _toNative(String text) {
   final bytes = utf8.encode(text);
   final pointer = malloc<Uint8>(bytes.length + 1);

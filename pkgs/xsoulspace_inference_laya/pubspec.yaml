@@ -19,6 +19,9 @@ dependencies:
   xsoulspace_inference_mlx_native:
     path: ../xsoulspace_inference_mlx_native
   http: ^1.6.0
+  # The perm-gate escalation store hashes question payloads (sha256) —
+  # raw payloads never need to persist.
+  crypto: ^3.0.0
   # The serve skeleton (process lifecycle, health-gated loopback runtime,
   # wire-server plumbing) is the shared local-serve core; laya composes it
   # instead of owning a private copy.

@@ -107,6 +107,11 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     /// The optional request seed (carrier only — the provider maps it or
     /// reports that it cannot honor it; nothing here claims determinism).
     int? seed,
+
+    /// HF/CTRL-style repetition penalty over distinct seen tokens (prompt
+    /// + generated). Null or 1.0 = off. Providers map it or report the
+    /// honest warning; nothing here silently pretends.
+    double? repetitionPenalty,
   }) => InferenceRequest._(
     _buildRequestMap(
       prompt: prompt,
@@ -126,6 +131,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
       reasoningEffort: reasoningEffort,
       includeReasoning: includeReasoning,
       seed: seed,
+      repetitionPenalty: repetitionPenalty,
     ),
   );
   factory InferenceRequest.structured({
@@ -146,6 +152,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     String? reasoningEffort,
     bool? includeReasoning,
     int? seed,
+    double? repetitionPenalty,
   }) => InferenceRequest._(
     _buildRequestMap(
       prompt: prompt,
@@ -165,6 +172,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
       reasoningEffort: reasoningEffort,
       includeReasoning: includeReasoning,
       seed: seed,
+      repetitionPenalty: repetitionPenalty,
     ),
   );
 
@@ -224,6 +232,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     required String? reasoningEffort,
     required bool? includeReasoning,
     required int? seed,
+    required double? repetitionPenalty,
   }) => <String, dynamic>{
     'task': task.name,
     'prompt': prompt,
@@ -245,6 +254,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     'reasoning_effort': ?reasoningEffort,
     'include_reasoning': ?includeReasoning,
     'seed': ?seed,
+    'repetition_penalty': ?repetitionPenalty,
   };
 
   String get prompt => jsonDecodeString(value['prompt']);
@@ -300,6 +310,14 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     final int seed => seed,
     _ => null,
   };
+
+  /// The requested repetition penalty, or null (= off / provider default).
+  /// 1.0 is a real value and reads back as 1.0 — same no-op as null, but
+  /// carried explicitly.
+  double? get repetitionPenalty => switch (value['repetition_penalty']) {
+    final num penalty => penalty.toDouble(),
+    _ => null,
+  };
   List<ChatMessage> get messages => <ChatMessage>[
     for (final json in jsonDecodeListAs<Map<String, dynamic>>(
       value['messages'],
@@ -317,6 +335,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     reasoningEffort: reasoningEffort,
     includeReasoning: includeReasoning,
     seed: seed,
+    repetitionPenalty: repetitionPenalty,
   );
 
   /// Derives a request with the given fields replaced (ADR 0059 — set-if-
@@ -339,6 +358,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     String? reasoningEffort,
     bool? includeReasoning,
     int? seed,
+    double? repetitionPenalty,
   }) => InferenceRequest._(
     _buildRequestMap(
       prompt: prompt ?? this.prompt,
@@ -358,6 +378,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
       reasoningEffort: reasoningEffort ?? this.reasoningEffort,
       includeReasoning: includeReasoning ?? this.includeReasoning,
       seed: seed ?? this.seed,
+      repetitionPenalty: repetitionPenalty ?? this.repetitionPenalty,
     ),
   );
 }

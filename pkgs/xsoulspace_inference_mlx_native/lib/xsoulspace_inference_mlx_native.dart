@@ -10,4 +10,5 @@ export 'src/laya_native_qwen_chat_template.dart';
 export 'src/laya_native_qwen_client.dart';
 export 'src/laya_prompt.dart';
 export 'src/mlx_native_text_client.dart';
+export 'src/native_text_protocol.dart';
 export 'src/power_facts.dart';

@@ -1,7 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io'
-    show ContentType, HttpServer, HttpRequest, InternetAddress, HttpStatus;
+    show
+        ContentType,
+        HttpServer,
+        HttpRequest,
+        HttpResponse,
+        InternetAddress,
+        HttpStatus;
 
 /// One decoded loopback request, handed to a [LoopbackRoute].
 ///
@@ -34,6 +40,50 @@ final class LoopbackReply {
 typedef LoopbackRoute =
     Future<LoopbackReply?> Function(LoopbackRequest request);
 
+/// A streaming route's write end. [open] commits the status and content
+/// type (an SSE `text/event-stream` by default); [data] writes one
+/// `data:` frame with a JSON payload; [raw] writes verbatim text (SSE's
+/// terminator lines); [close] ends the response.
+///
+/// Contract: a route that serves the request opens the sink, writes, and
+/// closes it, then returns true. A route that declines returns false
+/// WITHOUT opening — the normal route table answers instead. Returning
+/// false after opening is a contract violation; the server closes the
+/// sink defensively and answers nothing further.
+final class LoopbackStreamSink {
+  LoopbackStreamSink(this._response);
+
+  final HttpResponse _response;
+  var _opened = false;
+
+  bool get isOpen => _opened;
+
+  Future<void> open({String contentType = 'text/event-stream'}) async {
+    _opened = true;
+    _response.headers.contentType = ContentType.parse(contentType);
+    _response.headers.set('cache-control', 'no-cache');
+    await _response.flush();
+  }
+
+  void data(Object? payload) {
+    _response.write('data: ${jsonEncode(payload)}\n\n');
+  }
+
+  void raw(String text) {
+    _response.write(text);
+  }
+
+  Future<void> close() async {
+    await _response.close();
+  }
+}
+
+/// Streams one [LoopbackRequest] through a [LoopbackStreamSink]; returns
+/// true when it served the request, false to decline (the normal route
+/// table answers instead).
+typedef LoopbackStreamRoute =
+    Future<bool> Function(LoopbackRequest request, LoopbackStreamSink sink);
+
 /// A loopback JSON wire server skeleton in pure Dart.
 ///
 /// Owns the plumbing every local model server shares — loopback bind,
@@ -50,6 +100,7 @@ typedef LoopbackRoute =
 final class LoopbackJsonServer {
   LoopbackJsonServer({
     LoopbackRoute? route,
+    this.streamRoute,
     this.apiKey,
     this.address,
     this.port = 0,
@@ -85,6 +136,11 @@ final class LoopbackJsonServer {
   // A named parameter cannot spell the private initializing formal.
   // ignore: prefer_initializing_formals
   final LoopbackRoute _route;
+
+  /// Optional streaming route, tried before [_route]. A request it serves
+  /// never reaches the JSON route; admission counting covers streamed
+  /// responses for their whole life (the route completes on close).
+  final LoopbackStreamRoute? streamRoute;
 
   HttpServer? _server;
   var _requestCounter = 0;
@@ -212,6 +268,24 @@ final class LoopbackJsonServer {
           return;
         }
         body = decoded.cast<String, Object?>();
+      }
+    }
+    final streamRoute = this.streamRoute;
+    if (streamRoute != null) {
+      final sink = LoopbackStreamSink(request.response);
+      final served = await streamRoute(
+        LoopbackRequest(method: method, path: path, jsonBody: body),
+        sink,
+      );
+      if (served) {
+        _requestCounter++;
+        return;
+      }
+      if (sink.isOpen) {
+        // Declined after opening: the contract violation case — close
+        // defensively; the normal route cannot answer a committed response.
+        await sink.close();
+        return;
       }
     }
     LoopbackReply? reply;

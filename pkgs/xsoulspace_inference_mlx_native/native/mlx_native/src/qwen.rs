@@ -210,14 +210,20 @@ pub struct Qwen3 {
     /// (see `qwen_prefix`). It is the CHECKPOINT's digest at load; a merged
     /// adapter produces a different model and therefore a different identity
     /// — and so does a RUNTIME adapter (see `attach_lora`).
-    weights_id: String,
+    /// RwLock-wrapped: the C-ABI attach (`mlx_native_qwen_attach_lora`)
+    /// receives only `&Arc<Qwen3>` — the engine registry hands out shared
+    /// handles — so the adapter state mutates through interior mutability
+    /// instead of an exclusive borrow. The forward lock serializes attach
+    /// against in-flight generation at the FFI layer; these locks are the
+    /// memory-safety story, not the ordering story.
+    weights_id: std::sync::RwLock<String>,
     /// A runtime (unmerged) LoRA, applied inside `linear` at every forward.
     /// `None` until `attach_lora`. While present, the DECLARED-PLAN path is
     /// refused (the plan builder does not emit the delta ops — a plan forward
     /// under an adapter would be the silent-no-apply failure mode), so every
     /// entry point routes through `forward_impl`, where the delta is
     /// structural.
-    runtime_lora: Option<crate::lora::RuntimeLora>,
+    runtime_lora: std::sync::RwLock<Option<crate::lora::RuntimeLora>>,
 }
 
 /// Acceptance counters for one speculative greedy decode run (ADR 0057
@@ -555,8 +561,8 @@ impl Qwen3 {
             norm: st.take_any("model.norm.weight")?,
             cfg,
             table: BindingTable::baseline(),
-            weights_id,
-            runtime_lora: None,
+            weights_id: std::sync::RwLock::new(weights_id),
+            runtime_lora: std::sync::RwLock::new(None),
         })
     }
 
@@ -566,7 +572,7 @@ impl Qwen3 {
     /// this is what the cache keys on. Two models with the same identity are
     /// the same model; two with different identities are not.
     pub fn weight_identity(&self) -> String {
-        self.weights_id.clone()
+        self.weights_id.read().unwrap().clone()
     }
 
     /// Attach a RUNTIME (unmerged) LoRA adapter.
@@ -589,7 +595,26 @@ impl Qwen3 {
     ///     exists to prevent). Perf claims measured through this surface are
     ///     imperative-path numbers, and the throughput levers (plan prefill,
     ///     fused batch) are NOT claimed under an adapter.
-    pub fn attach_lora(&mut self, path: &Path, scale: f32, s: Stream) -> Result<usize, String> {
+    ///
+    /// Attach is IDEMPOTENT on (adapter digest, scale): the file is read and
+    /// hashed first, and an unchanged pair returns immediately without
+    /// rebuilding the runtime pair set — the digest-keyed skip the FFI host
+    /// (and any caller that re-attaches before each generate) leans on.
+    /// A changed file (new digest) or a new scale re-attaches for real.
+    ///
+    /// Takes `&self` (see the field docs): the registry shares the engine by
+    /// `Arc`, so mutation rides the interior locks.
+    pub fn attach_lora(&self, path: &Path, scale: f32, s: Stream) -> Result<usize, String> {
+        let bytes = std::fs::read(path).map_err(|e| format!("read adapter: {e}"))?;
+        let digest = crate::nursery::sha256_hex(&bytes);
+        {
+            let active = self.runtime_lora.read().unwrap();
+            if let Some(rt) = active.as_ref() {
+                if rt.digest == digest && rt.scale == scale {
+                    return Ok(rt.len());
+                }
+            }
+        }
         let adapter = crate::lora::LoraAdapter::load_auto(path, scale, s)?;
         // Every target must name one of this model's linear modules. The
         // model's weights are stored under the checkpoint names WITHOUT the
@@ -608,17 +633,28 @@ impl Qwen3 {
         }
         let runtime = crate::lora::RuntimeLora::from_adapter(&adapter, Dtype::BFloat16, s)?;
         let applied = runtime.len();
-        self.weights_id = crate::nursery::sha256_hex(
-            format!("{}:runtime-lora:{}", self.weights_id, runtime.digest).as_bytes(),
+        let mut weights = self.weights_id.write().unwrap();
+        *weights = crate::nursery::sha256_hex(
+            format!("{}:runtime-lora:{}", *weights, runtime.digest).as_bytes(),
         );
-        self.runtime_lora = Some(runtime);
+        *self.runtime_lora.write().unwrap() = Some(runtime);
         Ok(applied)
     }
 
     /// Whether a runtime adapter is attached (and therefore which perf
     /// claims this model's forwards can carry).
     pub fn has_runtime_lora(&self) -> bool {
-        self.runtime_lora.is_some()
+        self.runtime_lora.read().unwrap().is_some()
+    }
+
+    /// The attached adapter's file digest (`None` = the bare base) — the
+    /// identity an attach reply reports so a host can track state per engine.
+    pub fn active_lora_digest(&self) -> Option<String> {
+        self.runtime_lora
+            .read()
+            .unwrap()
+            .as_ref()
+            .map(|rt| rt.digest.clone())
     }
 
     /// The checkpoint name of every linear module this model has.
@@ -648,7 +684,7 @@ impl Qwen3 {
     /// Plan mode, gated by the adapter law: a model with a runtime adapter
     /// runs the imperative walk, whose delta is structural.
     fn plan_enabled(&self) -> bool {
-        qwen_plan_mode() && self.runtime_lora.is_none()
+        qwen_plan_mode() && self.runtime_lora.read().unwrap().is_none()
     }
 
     // ---- op composites (the mlx-lm reference, op for op) ----
@@ -685,8 +721,10 @@ impl Qwen3 {
         // scale is applied to the product, as the reference does. These ops
         // deliberately do NOT go through the binding table — they ride the
         // arrays, so no plan cache can ever serve a forward that dropped
-        // them.
-        match &self.runtime_lora {
+        // them. (Read-locked snapshot of the adapter slot; the forward lock
+        // at the FFI keeps a swap from landing mid-forward.)
+        let lora = self.runtime_lora.read().unwrap();
+        match lora.as_ref() {
             None => Ok(y),
             Some(rt) => match rt.by_target.get(&format!("{module}.weight")) {
                 None => Ok(y),
@@ -1932,6 +1970,32 @@ impl Qwen3 {
         )
     }
 
+    /// Fresh-cache streaming entry for the streaming session: the SAME
+    /// decode loop, with the cache created here. The session never consults
+    /// the prefix pool (fresh KV per stream, like the fused batch).
+    pub(crate) fn generate_greedy_streaming(
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: Stream,
+        cancelled: Option<&AtomicBool>,
+        on_token: &mut impl FnMut(i32),
+    ) -> MlxResult<Vec<i32>> {
+        let mut cache = KvCache::new(self.cfg.layers);
+        self.generate_greedy_cached_streaming(
+            prompt_ids,
+            max_tokens,
+            stop,
+            s,
+            &mut cache,
+            cancelled,
+            on_token,
+            None,
+            &mut crate::sampling::XorShift64::seeded_from_clock(),
+        )
+    }
+
     /// Continue from an exact, already computed prefix. Caller owns isolation
     /// and must align cache.offset with the supplied prompt's token prefix.
     pub(crate) fn generate_greedy_cached(
@@ -1953,6 +2017,82 @@ impl Qwen3 {
         s: Stream,
         cache: &mut KvCache,
         cancelled: Option<&AtomicBool>,
+    ) -> MlxResult<Vec<i32>> {
+        self.generate_greedy_cached_streaming(
+            prompt_ids,
+            max_tokens,
+            stop,
+            s,
+            cache,
+            cancelled,
+            &mut |_| {},
+            None,
+            &mut crate::sampling::XorShift64::seeded_from_clock(),
+        )
+    }
+
+    /// The opt-in sampled rung (see `crate::sampling`): fresh cache (never
+    /// the exact-prefix pool — the pool's reuse law is pinned on greedy
+    /// streams), same chunked prefill, same EOS stop; each step samples
+    /// over host-read logits instead of the GPU argmax. Absent sampling
+    /// fields never reach here, so the parity paths stay byte-identical.
+    pub fn generate_sampled(
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: Stream,
+        params: &crate::sampling::SamplingParams,
+    ) -> MlxResult<Vec<i32>> {
+        self.generate_sampled_cancellable(prompt_ids, max_tokens, stop, s, None, params)
+    }
+
+    pub(crate) fn generate_sampled_cancellable(
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: Stream,
+        cancelled: Option<&AtomicBool>,
+        params: &crate::sampling::SamplingParams,
+    ) -> MlxResult<Vec<i32>> {
+        let mut cache = KvCache::new(self.cfg.layers);
+        let mut rng = crate::sampling::XorShift64::seeded_from_clock();
+        self.generate_greedy_cached_streaming(
+            prompt_ids,
+            max_tokens,
+            stop,
+            s,
+            &mut cache,
+            cancelled,
+            &mut |_| {},
+            Some(params),
+            &mut rng,
+        )
+    }
+
+    /// The ONE decode loop behind plain greedy and streaming generation —
+    /// the streaming session observes every generated token through
+    /// [on_token] and this path stays the exact loop the 64/64 parity gates
+    /// pin (same chunked prefill, same argmax readback, same EOS stop).
+    /// A parity regression here is a streaming regression by construction.
+    /// [on_token] receives each GENERATED token id in emission order (the
+    /// prompt ids are not replayed through it).
+    /// `sampling` is None on every greedy call site (parity, benches, the
+    /// prefix pool); `Some` switches the per-step readback from argmax to
+    /// the sampler (`crate::sampling`) and nothing else. `rng` is only
+    /// read on the sampled branch — greedy callers pass a throwaway.
+    pub(crate) fn generate_greedy_cached_streaming(
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: Stream,
+        cache: &mut KvCache,
+        cancelled: Option<&AtomicBool>,
+        mut on_token: impl FnMut(i32),
+        sampling: Option<&crate::sampling::SamplingParams>,
+        rng: &mut crate::sampling::XorShift64,
     ) -> MlxResult<Vec<i32>> {
         check_cancelled(cancelled)?;
         if prompt_ids.is_empty() || cache.offset >= prompt_ids.len() {
@@ -1990,17 +2130,32 @@ impl Qwen3 {
         }
 
         // Each step feeds one token and yields the argmax (readback through
-        // f32: token ids up to ~152k are exact in f32).
+        // f32: token ids up to ~152k are exact in f32). The sampled rung
+        // reads the FULL logits back instead (penalty + draw happen on the
+        // host — see crate::sampling); greedy call sites never take that
+        // branch, so their readback stays the one-float argmax.
         let mut next: i32 = rest[0];
         for _ in 0..max_tokens {
             check_cancelled(cancelled)?;
             let tokens = Array::from_data_i32(&[next], &[1, 1])?;
             let logits = self.forward_step(&tokens, cache, s)?;
-            let am = logits.argmax_axis(-1, false, s)?;
-            let f = am.astype(Dtype::Float32, s)?;
-            let v = f.to_f32_vec(s)?;
-            let t = v.first().copied().ok_or(MlxError(-978))? as i32;
+            let t = match sampling {
+                None => {
+                    let am = logits.argmax_axis(-1, false, s)?;
+                    let f = am.astype(Dtype::Float32, s)?;
+                    let v = f.to_f32_vec(s)?;
+                    v.first().copied().ok_or(MlxError(-978))? as i32
+                }
+                Some(params) => {
+                    let f = logits.astype(Dtype::Float32, s)?;
+                    let mut v = f.to_f32_vec(s)?;
+                    // The penalty window is HF semantics: prompt + generated
+                    // so far (`out` holds exactly that).
+                    crate::sampling::sample_next(&mut v, &out, params, rng)
+                }
+            };
             next = t;
+            on_token(t);
             out.push(t);
             if stop.is_some_and(|ids| ids.contains(&t)) {
                 break;

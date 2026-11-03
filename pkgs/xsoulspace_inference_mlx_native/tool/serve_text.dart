@@ -10,11 +10,15 @@
 // reproduces. The default engine is lfm2 — the measured production cast
 // (instruct quality at the best latency per quality, ADR 0057 evidence);
 // qwen is the quality cast, and --thinking flips Qwen3's thinking switch
-// on. --coalesce-ms turns on the qwen server's fused-batch coalescing
-// window (opt-in: concurrent requests inside the window are served as ONE
-// fused batch — decision answers stay byte-exact, free-form streams may
-// tie-flip under the kernel floor; measured in
-// bench/nursery/experiments/RESULTS-wire-batch-2026-10-27.md).
+// on. The qwen server's fused-batch coalescing window is ON by default
+// (owner decision 2026-10-28, informed by the W-G1/G2/G3 wire evidence in
+// bench/nursery/experiments/RESULTS-wire-batch-2026-10-27.md): concurrent
+// requests inside the window are served as ONE fused batch — decision
+// answers stay byte-exact, free-form streams may tie-flip under the
+// kernel floor — a lone request still routes solo, and --coalesce-ms=0
+// serves the legacy coalescing-OFF wire. Streaming: any request body with
+// "stream": true is served as OpenAI-style SSE chunks (solo path; a dylib
+// without the streaming ABI degrades to the completion shape).
 // Ctrl-C stops the server.
 import 'dart:async';
 import 'dart:io';
@@ -26,7 +30,7 @@ Future<void> main(List<String> args) async {
   var port = 8765;
   var raw = false;
   var thinking = false;
-  var coalesceMs = 0;
+  var coalesceMs = 15;
   var maxBatch = 8;
   for (var i = 0; i < args.length; i++) {
     final arg = args[i];
@@ -68,12 +72,21 @@ Future<void> main(List<String> args) async {
       useTemplate: !raw,
       thinking: thinking,
       port: port,
-      coalesceWindow: coalesceMs > 0 ? Duration(milliseconds: coalesceMs) : null,
+      coalesceWindow: coalesceMs > 0
+          ? Duration(milliseconds: coalesceMs)
+          : Duration.zero,
       maxBatchSize: maxBatch,
     );
     await server.start();
     stdout.writeln(
-      _banner('qwen', raw, server.url, thinking: thinking, coalesceMs: coalesceMs),
+      _banner(
+        'qwen',
+        raw,
+        server.url,
+        thinking: thinking,
+        coalesceMs: coalesceMs,
+        coalescingActive: server.coalescingActive,
+      ),
     );
     served = _untilInterrupted(server.stop);
   } else {
@@ -89,11 +102,12 @@ String _banner(
   Uri url, {
   bool thinking = false,
   int coalesceMs = 0,
+  bool coalescingActive = false,
 }) =>
     'serving ${raw ? 'raw' : 'template+EOS'} $engine'
     '${thinking ? ' (thinking on)' : ''}'
-    '${coalesceMs > 0 ? ' (fused-batch coalescing: ${coalesceMs}ms window)' : ''} on '
-    '$url/v1/chat/completions (health: $url/health)';
+    '${coalescingActive ? ' (fused-batch coalescing: ${coalesceMs}ms window)' : ''}'
+    ' on $url/v1/chat/completions (health: $url/health)';
 
 /// Completes when SIGINT/SIGTERM arrives, after [stop] runs once.
 Future<void> _untilInterrupted(Future<void> Function() stop) {

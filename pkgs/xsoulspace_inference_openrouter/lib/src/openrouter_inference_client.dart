@@ -234,6 +234,11 @@ class OpenRouterInferenceClient
       'messages': messages,
       if (request.maxTokens != null) 'max_tokens': request.maxTokens,
       if (request.temperature != null) 'temperature': request.temperature,
+      // OpenRouter documents `repetition_penalty` as a top-level model
+      // param: mapped when requested, absent otherwise (null = byte-
+      // identical old body). The upstream model may ignore it; that is the
+      // provider's business, not a silent drop here.
+      'repetition_penalty': ?request.repetitionPenalty,
       // OpenRouter's chat completions API is OpenAI-compatible and accepts
       // the top-level integer `seed`: the seed is mapped to the wire, never
       // dropped (ADR 0059 — map or refuse). The upstream model may still
@@ -459,6 +464,16 @@ class OpenRouterInferenceClient
         safeError: safeError,
         transport: transport,
       );
+      // The OUTCOME diagnostic (ADR 0119 runtime health): the request
+      // diagnostic above only proves a send; the composition root needs
+      // the settled verdict to mark a palette entry ok/failed at runtime.
+      _notifyTransportDiagnostic(<String, Object?>{
+        'type': 'openrouter.result',
+        'ok': diagnosticOutcome == 'completed',
+        if (diagnosticOutcome != null) 'outcome': diagnosticOutcome,
+        'model': model,
+        if (diagnosticHttpStatus != null) 'http_status': diagnosticHttpStatus,
+      });
     }
   }
 

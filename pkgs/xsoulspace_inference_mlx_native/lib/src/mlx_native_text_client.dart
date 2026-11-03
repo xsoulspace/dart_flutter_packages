@@ -24,13 +24,18 @@ String _stripEosLiteral(String text) => text
 
 /// One normalized completion from either driver (the two engines expose
 /// identically-shaped completions; this signature is the seam that lets
-/// one client serve both casts, eager or lazy).
+/// one client serve both casts, eager or lazy). `temperature` and
+/// `repetitionPenalty` are the opt-in sampling rung: null keeps the
+/// byte-identical greedy path, non-null rides the request when the dylib
+/// has the sampling ABI (checked via the engines' static probes).
 typedef _Generate =
     Future<({List<int> promptIds, List<int> ids, String text})> Function({
       required String prompt,
       required int maxTokens,
       required bool stopOnEos,
       required List<int> eosIds,
+      double? temperature,
+      double? repetitionPenalty,
     });
 
 typedef _Render = String Function({
@@ -53,11 +58,15 @@ typedef _Render = String Function({
 ///
 /// Capability honesty, mirroring `MlxLocalTextClient`: `id` names the
 /// cast; [InferenceTask.text] and [InferenceTask.implicitlyStructuredText]
-/// are supported; the engines decode greedily, so a non-zero request
-/// temperature lands in [InferenceResult.warnings] instead of being
-/// silently pretended; a request seed is echoed in the response meta and
-/// reported in the same warnings (the greedy draw is deterministic by
-/// construction, not seed-derived); tool rendering is a template fact —
+/// are supported; the engines decode greedily UNLESS the request carries
+/// sampling fields and the dylib has the sampling ABI (temperature
+/// sampling + HF/CTRL repetition penalty over prompt+generated tokens;
+/// temperature 0 stays greedy over the penalized logits). A sampling
+/// request on an older dylib lands in [InferenceResult.warnings] instead
+/// of being silently pretended; a request seed is echoed in the response
+/// meta and reported in the same warnings (the greedy draw is
+/// deterministic by construction, the sampled draw is clock-seeded —
+/// neither is seed-derived); tool rendering is a template fact —
 /// both casts render a [ToolRegistry] into their fixture-gated template
 /// (ADR 0058 tools rung), and the Qwen's delimited JSON answer is
 /// normalized into typed tool calls with its raw source retained.
@@ -85,7 +94,7 @@ typedef _Render = String Function({
 /// never a socket error, never a hang, never a crash (ADR 0059 palette
 /// law). Dispatch rides the engines' `generateAsync` (isolate escape) —
 /// a long decode never blocks the calling isolate.
-final class MlxNativeTextClient implements InferenceClient {
+final class MlxNativeTextClient implements LoraAttachableInferenceClient {
   MlxNativeTextClient._({
     required this._id,
     required this._eosIds,
@@ -97,6 +106,9 @@ final class MlxNativeTextClient implements InferenceClient {
     required this.defaultMaxTokens,
     required this.defaultTemperature,
     required this.toolSyntax,
+    required this.samplingSupported,
+    required this.loraAttachProbe,
+    this._attachLora,
     this._loadEngine,
     this._qwenEngine,
     this._qwenCacheScope,
@@ -122,6 +134,8 @@ final class MlxNativeTextClient implements InferenceClient {
           required int maxTokens,
           required bool stopOnEos,
           required List<int> eosIds,
+          double? temperature,
+          double? repetitionPenalty,
         }) async {
           final completion = await engine.generateAsync(
             prompt: prompt,
@@ -129,6 +143,8 @@ final class MlxNativeTextClient implements InferenceClient {
             maxTokens: maxTokens,
             stopOnEos: stopOnEos,
             eosIds: eosIds,
+            temperature: temperature,
+            repetitionPenalty: repetitionPenalty,
           );
           return _toRecord(
             completion.promptIds,
@@ -143,6 +159,13 @@ final class MlxNativeTextClient implements InferenceClient {
     defaultMaxTokens: defaultMaxTokens,
     defaultTemperature: defaultTemperature,
     toolSyntax: toolSyntax,
+    samplingSupported: () => NativeQwenTextEngine.samplingApiSupported,
+    loraAttachProbe: () => NativeQwenTextEngine.loraApiSupported,
+    attachLora:
+        (adapterPath, {scale = 1.0}) async => engine.attachLora(
+          adapterPath,
+          scale: scale,
+        ),
     qwenEngine: () => engine,
     qwenCacheScope: cacheScope,
   );
@@ -165,12 +188,16 @@ final class MlxNativeTextClient implements InferenceClient {
           required int maxTokens,
           required bool stopOnEos,
           required List<int> eosIds,
+          double? temperature,
+          double? repetitionPenalty,
         }) async {
           final completion = await engine.generateAsync(
             prompt: prompt,
             maxTokens: maxTokens,
             stopOnEos: stopOnEos,
             eosIds: eosIds,
+            temperature: temperature,
+            repetitionPenalty: repetitionPenalty,
           );
           return _toRecord(
             completion.promptIds,
@@ -185,6 +212,13 @@ final class MlxNativeTextClient implements InferenceClient {
     defaultMaxTokens: defaultMaxTokens,
     defaultTemperature: defaultTemperature,
     toolSyntax: toolSyntax,
+    samplingSupported: () => NativeLfm2TextEngine.samplingApiSupported,
+    loraAttachProbe: () => NativeLfm2TextEngine.loraApiSupported,
+    attachLora:
+        (adapterPath, {scale = 1.0}) async => engine.attachLora(
+          adapterPath,
+          scale: scale,
+        ),
   );
 
   /// The lazy Qwen3 cast: the weight load happens on the first [load]
@@ -211,6 +245,9 @@ final class MlxNativeTextClient implements InferenceClient {
       defaultMaxTokens: defaultMaxTokens,
       defaultTemperature: defaultTemperature,
       toolSyntax: toolSyntax,
+      samplingSupported: () => NativeQwenTextEngine.samplingApiSupported,
+      loraAttachProbe: () => NativeQwenTextEngine.loraApiSupported,
+      attachLora: _boxedQwenAttachLora(() => engine),
       loadEngine: () async {
         engine = await NativeQwenTextEngine.load(snapshotDir: snapshotDir);
       },
@@ -249,6 +286,9 @@ final class MlxNativeTextClient implements InferenceClient {
       defaultMaxTokens: defaultMaxTokens,
       defaultTemperature: defaultTemperature,
       toolSyntax: toolSyntax,
+      samplingSupported: () => NativeLfm2TextEngine.samplingApiSupported,
+      loraAttachProbe: () => NativeLfm2TextEngine.loraApiSupported,
+      attachLora: _boxedLfmAttachLora(() => engine),
       loadEngine: () async {
         engine = await NativeLfm2TextEngine.load(snapshotDir: snapshotDir);
       },
@@ -271,6 +311,8 @@ final class MlxNativeTextClient implements InferenceClient {
         required int maxTokens,
         required bool stopOnEos,
         required List<int> eosIds,
+        double? temperature,
+        double? repetitionPenalty,
       }) async {
         final engine = engineBox();
         if (engine == null) {
@@ -281,6 +323,8 @@ final class MlxNativeTextClient implements InferenceClient {
           maxTokens: maxTokens,
           stopOnEos: stopOnEos,
           eosIds: eosIds,
+          temperature: temperature,
+          repetitionPenalty: repetitionPenalty,
         );
         return _toRecord(completion.promptIds, completion.ids, completion.text);
       };
@@ -293,6 +337,8 @@ final class MlxNativeTextClient implements InferenceClient {
         required int maxTokens,
         required bool stopOnEos,
         required List<int> eosIds,
+        double? temperature,
+        double? repetitionPenalty,
       }) async {
         final engine = engineBox();
         if (engine == null) {
@@ -303,8 +349,34 @@ final class MlxNativeTextClient implements InferenceClient {
           maxTokens: maxTokens,
           stopOnEos: stopOnEos,
           eosIds: eosIds,
+          temperature: temperature,
+          repetitionPenalty: repetitionPenalty,
         );
         return _toRecord(completion.promptIds, completion.ids, completion.text);
+      };
+
+  /// The lazy qwen cast's attach closure: same box discipline as
+  /// [_boxedQwenGenerate] — [attachLora] refuses before the box is filled
+  /// (the caller loads first; the weights land once per client lifetime).
+  static Future<NativeLoraAttachment> Function(String, {double scale})
+  _boxedQwenAttachLora(NativeQwenTextEngine? Function() engineBox) =>
+      (adapterPath, {scale = 1.0}) async {
+        final engine = engineBox();
+        if (engine == null) {
+          throw StateError('native engine not loaded for this client');
+        }
+        return engine.attachLora(adapterPath, scale: scale);
+      };
+
+  /// The lazy LFM2 cast's attach closure: see [_boxedQwenAttachLora].
+  static Future<NativeLoraAttachment> Function(String, {double scale})
+  _boxedLfmAttachLora(NativeLfm2TextEngine? Function() engineBox) =>
+      (adapterPath, {scale = 1.0}) async {
+        final engine = engineBox();
+        if (engine == null) {
+          throw StateError('native engine not loaded for this client');
+        }
+        return engine.attachLora(adapterPath, scale: scale);
       };
 
   /// Qwen's fixture-gated ChatML render: the request's `messages` when
@@ -403,6 +475,25 @@ final class MlxNativeTextClient implements InferenceClient {
   final String model;
   final int defaultMaxTokens;
   final double defaultTemperature;
+
+  /// Whether the loaded dylib carries the opt-in sampling ABI (solo
+  /// generate temperature + repetition penalty). Static engine probe —
+  /// the client consults it to keep the honesty warning exact.
+  final bool Function() samplingSupported;
+
+  /// The cast's attach-ABI probe: whether the loaded dylib carries the
+  /// runtime-LoRA attach ABI (static — answers before any engine is
+  /// loaded). [loraAttachSupported] reads it, so a host can refuse a
+  /// lora-bearing request with the named `lora_abi_missing` error instead
+  /// of discovering it mid-generate.
+  final bool Function() loraAttachProbe;
+
+  /// The per-cast attach closure (eager casts close over a loaded engine,
+  /// lazy casts over the nullable box their loader fills). Null never
+  /// happens for the built-in casts; the public [attachLora] still names
+  /// the refusal rather than crashing.
+  final Future<NativeLoraAttachment> Function(String adapterPath, {double scale})?
+  _attachLora;
 
   /// Explicit checkpoint/finetune syntax; null refuses unqualified envelopes.
   final ToolCallSyntax? toolSyntax;
@@ -512,20 +603,33 @@ final class MlxNativeTextClient implements InferenceClient {
     }
     final warnings = <String>[];
     final temperature = request.temperature ?? defaultTemperature;
-    if (temperature != 0.0) {
+    final repetitionPenalty = request.repetitionPenalty;
+    final samplingRequested =
+        temperature != 0.0 ||
+        (repetitionPenalty != null && repetitionPenalty != 1.0);
+    if (samplingRequested && !samplingSupported()) {
+      // Honest degradation on a dylib without the sampling ABI: the
+      // request keys are ignored by the old native decoder, so the greedy
+      // draw answers and the warning says exactly that (ADR 0059 — map or
+      // refuse, never silently pretend).
       warnings.add(
-        'mlx_native decodes greedily; temperature $temperature ignored',
+        'mlx_native dylib predates the sampling ABI; decodes greedily — '
+        'temperature $temperature'
+        '${repetitionPenalty == null ? '' : ', repetitionPenalty $repetitionPenalty'} '
+        'ignored',
       );
     }
     final seed = request.seed;
     if (seed != null) {
-      // NOT HONOURED as a draw: the native engines decode greedily
-      // (argmax), so the answer is already reproducible and the seed
-      // cannot move it. It is echoed in the meta and reported as a
-      // warning (ADR 0059 — map or refuse, never silently drop).
+      // NOT HONOURED as a draw: the greedy path is deterministic by
+      // construction, and the sampled rung draws from a clock-seeded
+      // process-local generator. Either way the seed cannot move the
+      // answer; it is echoed in the meta and reported (ADR 0059 — map or
+      // refuse, never silently drop).
       warnings.add(
-        'mlx_native decodes greedily; seed $seed recorded but the draw is '
-        'deterministic-by-construction, not seed-derived',
+        'mlx_native does not derive its draw from the seed; seed $seed '
+        'recorded but the answer is deterministic-by-construction (greedy) '
+        'or clock-seeded (sampled), not seed-derived',
       );
     }
     final requestThinking = request.thinking;
@@ -586,6 +690,8 @@ final class MlxNativeTextClient implements InferenceClient {
         maxTokens: maxTokens,
         stopOnEos: true,
         eosIds: _eosIds(),
+        temperature: temperature,
+        repetitionPenalty: repetitionPenalty,
       );
     } on NativeQwenRequestCancelled {
       return InferenceResult.fail(
@@ -664,8 +770,45 @@ final class MlxNativeTextClient implements InferenceClient {
     );
   }
 
-  /// Creates a request-cancellable view of this Qwen client. The view shares
-  /// the same lazy engine and weights while keeping cancellation request IDs
+  @override
+  bool get loraAttachSupported => loraAttachProbe();
+
+  /// Attaches (or re-confirms) a runtime LoRA adapter on this client's
+  /// engine — the seam the LA brain isolate's serialized attach command
+  /// drives. Lazy casts load their weights first (the attach needs a live
+  /// engine). Named refusals, never silent ignores: the named
+  /// [NativeLoraAttachUnavailable] when the dylib predates the attach ABI,
+  /// a [StateError] when the engine cannot load or the cast has no attach
+  /// surface, and the engine's own refusal message when the adapter targets
+  /// modules the checkpoint does not have.
+  @override
+  Future<NativeLoraAttachment> attachLora(
+    String adapterPath, {
+    double scale = 1.0,
+  }) async {
+    if (_disposed) {
+      throw StateError('the native engine client was disposed');
+    }
+    if (!isAvailable) {
+      await load();
+      if (!isAvailable) {
+        throw StateError(
+          'native engine not loaded for this client '
+          '(${_loadError ?? 'weights absent or load deferred'})',
+        );
+      }
+    }
+    if (!loraAttachProbe()) {
+      throw const NativeLoraAttachUnavailable();
+    }
+    final attach = _attachLora;
+    if (attach == null) {
+      throw StateError('mlx_native attach_lora_unsupported_cast');
+    }
+    return attach(adapterPath, scale: scale);
+  }
+
+  /// Creates a request-cancellable view of this Qwen client. The view shares  /// the same lazy engine and weights while keeping cancellation request IDs
   /// local to that view, so sibling routers cannot cancel one another.
   CancellableInferenceClient cancellableQwenScope() =>
       _NativeQwenInferenceScope(this);
@@ -754,6 +897,8 @@ final class _NativeQwenInferenceScope implements CancellableInferenceClient {
             required int maxTokens,
             required bool stopOnEos,
             required List<int> eosIds,
+            double? temperature,
+            double? repetitionPenalty,
           }) async {
             if (_closed) {
               throw StateError('cancellable native Qwen scope is closed');
@@ -774,6 +919,8 @@ final class _NativeQwenInferenceScope implements CancellableInferenceClient {
               stopOnEos: stopOnEos,
               eosIds: eosIds,
               cacheScope: _base._qwenCacheScope,
+              temperature: temperature,
+              repetitionPenalty: repetitionPenalty,
             );
             try {
               final result = await completionFuture;

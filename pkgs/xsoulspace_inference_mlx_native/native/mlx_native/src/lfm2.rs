@@ -178,6 +178,16 @@ pub struct Lfm2 {
     layers: Vec<Lfm2Layer>,
     embedding_norm: Array,
     table: BindingTable,
+    /// The identity of the WEIGHTS this model runs (the checkpoint's
+    /// digest at load; a runtime adapter's digest folds in at attach —
+    /// the qwen contract, ported). RwLock-wrapped: the C-ABI attach
+    /// (`mlx_native_lfm2_attach_lora`) receives only `&Arc<Lfm2>` from the
+    /// engine registry, so adapter state mutates through interior
+    /// mutability; the forward lock at the FFI layer serializes attach
+    /// against in-flight generation — these locks are memory safety, not
+    /// the ordering law.
+    weights_id: std::sync::RwLock<String>,
+    runtime_lora: std::sync::RwLock<Option<crate::lora::RuntimeLora>>,
 }
 
 /// Per-layer cache: full-attention layers carry a qwen3-style KV pair
@@ -353,11 +363,36 @@ fn grow(
     Ok(())
 }
 
+/// The checkpoint projection suffixes a runtime-LoRA adapter may target on
+/// a layer of `kind` — the engine's linear-slot vocabulary, shared by
+/// `Lfm2::is_linear_module` and its test. The conv kernel itself is NOT a
+/// linear slot (a depthwise conv, not a projection), and neither are the
+/// norms — an adapter naming them is refused, never skipped.
+fn layer_linear_projections(kind: LayerKind) -> &'static [&'static str] {
+    match kind {
+        LayerKind::Attn => &[
+            "self_attn.q_proj",
+            "self_attn.k_proj",
+            "self_attn.v_proj",
+            "self_attn.out_proj",
+            "feed_forward.w1",
+            "feed_forward.w2",
+            "feed_forward.w3",
+        ],
+        LayerKind::Conv => &[
+            "conv.in_proj",
+            "conv.out_proj",
+            "feed_forward.w1",
+            "feed_forward.w2",
+            "feed_forward.w3",
+        ],
+    }
+}
+
 /// The declared forward plan is the DEFAULT path (ADR 0054 R6, promoted
 /// after the bit-parity gate): `LAYA_LFM2_PLAN=0` reverts to the imperative
 /// walk for A/B — the same pattern as the qwen step plan.
-fn lfm2_plan_mode() -> bool {
-    use std::sync::OnceLock;
+fn lfm2_plan_mode() -> bool {    use std::sync::OnceLock;
     static ON: OnceLock<bool> = OnceLock::new();
     *ON.get_or_init(|| {
         std::env::var_os("LAYA_LFM2_PLAN")
@@ -380,6 +415,119 @@ impl Lfm2 {
     /// `Lfm2Cache::reserve`), mirroring `Qwen3::table`.
     pub fn table(&self) -> &crate::bindings::BindingTable {
         &self.table
+    }
+
+    /// The identity of the weights this model runs (the qwen contract,
+    /// ported): a prefix cache is only valid under the weights that produced
+    /// it. LFM2 keeps no cross-request prefix pool (fresh KV per request),
+    /// but the identity still pins cache keys and attach replies.
+    pub fn weight_identity(&self) -> String {
+        self.weights_id.read().unwrap().clone()
+    }
+
+    /// Attach a RUNTIME (unmerged) LoRA adapter — the port of
+    /// `Qwen3::attach_lora` (the construction is engine-generic per
+    /// `lora.rs`: `RuntimeLora::from_adapter` never sees the model). The
+    /// LFM2-specific parts: the module vocabulary this engine answers for
+    /// (`is_linear_module`) and the multimodal container prefix — an
+    /// adapter trained on the `language_model.`-wrapped 2.6B conversion
+    /// names its targets `language_model.model.layers.…`; those are
+    /// stripped here, once, before validation, so one adapter file serves
+    /// both checkpoint wraps.
+    ///
+    /// The contract, identical to qwen's: every target must name a linear
+    /// module this model has (a missing target is a hard error, never a
+    /// silent skip); the weight identity folds the adapter digest; the
+    /// declared-plan path is DISABLED while an adapter is attached (the
+    /// plan does not emit the delta ops). Idempotent on
+    /// (adapter digest, scale) — the digest-keyed skip the FFI host leans
+    /// on. Takes `&self`: mutation rides the interior locks (see the field
+    /// docs).
+    pub fn attach_lora(&self, path: &Path, scale: f32, s: Stream) -> Result<usize, String> {
+        let bytes = std::fs::read(path).map_err(|e| format!("read adapter: {e}"))?;
+        let digest = crate::nursery::sha256_hex(&bytes);
+        {
+            let active = self.runtime_lora.read().unwrap();
+            if let Some(rt) = active.as_ref() {
+                if rt.digest == digest && rt.scale == scale {
+                    return Ok(rt.len());
+                }
+            }
+        }
+        let mut adapter = crate::lora::LoraAdapter::load_auto(path, scale, s)?;
+        // Normalize the multimodal wrap before validation: `language_model.`
+        // prefixes the 2.6B conversion's weights, so it prefixes the
+        // adapter's targets too.
+        for pair in &mut adapter.pairs {
+            pair.target = pair
+                .target
+                .strip_prefix("language_model.")
+                .map(str::to_string)
+                .unwrap_or_else(|| pair.target.clone());
+        }
+        for pair in &adapter.pairs {
+            let Some(module) = pair.target.strip_suffix(".weight") else {
+                return Err(format!("adapter target {} has no .weight suffix", pair.target));
+            };
+            if !self.is_linear_module(module) {
+                return Err(format!(
+                    "adapter targets {} which this model does not have (embeddings, \
+                     conv kernels and norms are not runtime-LoRA targets)",
+                    pair.target
+                ));
+            }
+        }
+        let runtime = crate::lora::RuntimeLora::from_adapter(&adapter, Dtype::BFloat16, s)?;
+        let applied = runtime.len();
+        let mut weights = self.weights_id.write().unwrap();
+        *weights = crate::nursery::sha256_hex(
+            format!("{}:runtime-lora:{}", *weights, runtime.digest).as_bytes(),
+        );
+        *self.runtime_lora.write().unwrap() = Some(runtime);
+        Ok(applied)
+    }
+
+    /// Whether a runtime adapter is attached (and therefore which perf
+    /// claims this model's forwards can carry).
+    pub fn has_runtime_lora(&self) -> bool {
+        self.runtime_lora.read().unwrap().is_some()
+    }
+
+    /// The attached adapter's file digest (`None` = the bare base) — the
+    /// identity an attach reply reports so a host can track state per engine.
+    pub fn active_lora_digest(&self) -> Option<String> {
+        self.runtime_lora
+            .read()
+            .unwrap()
+            .as_ref()
+            .map(|rt| rt.digest.clone())
+    }
+
+    /// The checkpoint name of every linear module this model has — the
+    /// adapter-target vocabulary (`model.layers.{li}.…`, matching the
+    /// unwrapped checkpoint names the weights are stored under).
+    fn is_linear_module(&self, module: &str) -> bool {
+        let Some(rest) = module.strip_prefix("model.layers.") else {
+            return false;
+        };
+        let Some((li, proj)) = rest.split_once('.') else {
+            return false;
+        };
+        let Ok(li) = li.parse::<usize>() else {
+            return false;
+        };
+        if li >= self.cfg.layers {
+            return false;
+        }
+        let projections = layer_linear_projections(self.cfg.layer_types[li]);
+        projections.contains(&proj)
+    }
+
+    /// The declared plan is refused while a runtime adapter is attached:
+    /// the plan does not emit the delta ops, so a plan forward under an
+    /// adapter would be the silent-no-apply failure mode.
+    fn plan_enabled(&self) -> bool {
+        lfm2_plan_mode() && self.runtime_lora.read().unwrap().is_none()
     }
 
     pub fn load(dir: &Path) -> MlxResult<Lfm2> {
@@ -504,17 +652,45 @@ impl Lfm2 {
             });
         }
 
+        // The weight identity is the CHECKPOINT's digest (the qwen
+        // contract, ported): the bytes that produced these weights. A
+        // runtime adapter produces a different model and therefore folds a
+        // different identity at attach.
+        let weights_id = {
+            let bytes =
+                std::fs::read(dir.join("model.safetensors")).map_err(|_| MlxError(-12))?;
+            crate::nursery::sha256_hex(&bytes)
+        };
+
         Ok(Lfm2 {
             cfg,
             embed: weight(&format!("{prefix}model.embed_tokens"))?,
             layers,
             embedding_norm: st.take_any(&format!("{prefix}model.embedding_norm.weight"))?,
             table: BindingTable::baseline(),
+            weights_id: std::sync::RwLock::new(weights_id),
+            runtime_lora: std::sync::RwLock::new(None),
         })
     }
 
-    fn linear(&self, name: &str, w: &Weight, x: &Array, s: Stream) -> MlxResult<Array> {
-        match w {
+    /// One linear. `module` is the weight's CHECKPOINT name (without the
+    /// `.weight` suffix — e.g. `model.layers.3.self_attn.q_proj`); the
+    /// runtime-LoRA delta keys on it. The delta: y + scale·((x·a_t)·b_t) —
+    /// the mlx_lm LoRALinear reference, op for op (the pair was cast once,
+    /// at attach; the scale rides the product). These ops deliberately do
+    /// NOT go through the binding table — they ride the arrays, so no plan
+    /// cache can ever serve a forward that dropped them. (Read-locked
+    /// adapter snapshot; the forward lock at the FFI keeps a swap from
+    /// landing mid-forward.)
+    fn linear(
+        &self,
+        name: &str,
+        module: &str,
+        w: &Weight,
+        x: &Array,
+        s: Stream,
+    ) -> MlxResult<Array> {
+        let y = match w {
             Weight::Quant(q) => eval1(
                 &self.table,
                 name,
@@ -526,7 +702,7 @@ impl Lfm2 {
                 },
                 &[x, &q.w, &q.scales, &q.biases],
                 s,
-            ),
+            )?,
             Weight::Plain(w) => {
                 let wt = eval1(
                     &self.table,
@@ -536,8 +712,21 @@ impl Lfm2 {
                     &[w],
                     s,
                 )?;
-                eval1(&self.table, name, "l.linear", Op::Matmul, &[x, &wt], s)
+                eval1(&self.table, name, "l.linear", Op::Matmul, &[x, &wt], s)?
             }
+        };
+        let lora = self.runtime_lora.read().unwrap();
+        match lora.as_ref() {
+            None => Ok(y),
+            Some(rt) => match rt.by_target.get(&format!("{module}.weight")) {
+                None => Ok(y),
+                Some((a_t, b_t)) => {
+                    let za = x.matmul(a_t, s)?;
+                    let zb = za.matmul(b_t, s)?;
+                    let scaled = zb.mul(&Array::scalar_f32(rt.scale), s)?;
+                    y.add(&scaled, s)
+                }
+            },
         }
     }
 
@@ -649,7 +838,7 @@ impl Lfm2 {
         cache: &mut Lfm2Cache,
         s: Stream,
     ) -> MlxResult<Array> {
-        self.hidden_states(tokens, cache, lfm2_plan_mode(), s)
+        self.hidden_states(tokens, cache, self.plan_enabled(), s)
     }
 
     /// One forward pass on an explicit path: `use_plan` runs the declared
@@ -684,12 +873,15 @@ impl Lfm2 {
 
         for (li, layer) in self.layers.iter().enumerate() {
             let g = format!("l.l{li:02}");
+            // The layer's CHECKPOINT name prefix — the runtime-LoRA delta
+            // keys every linear on it (the adapter's target vocabulary).
+            let p = format!("model.layers.{li}");
             let normed = self.rms(&format!("{g}.op_norm"), &h, &layer.operator_norm, s)?;
             let r = match (layer.kind, &layer.attn, &layer.conv) {
                 (LayerKind::Attn, Some(attn), _) => {
-                    let q = self.linear(&format!("{g}.q"), &attn.q, &normed, s)?;
-                    let k = self.linear(&format!("{g}.k"), &attn.k, &normed, s)?;
-                    let v = self.linear(&format!("{g}.v"), &attn.v, &normed, s)?;
+                    let q = self.linear(&format!("{g}.q"), &format!("{p}.self_attn.q_proj"), &attn.q, &normed, s)?;
+                    let k = self.linear(&format!("{g}.k"), &format!("{p}.self_attn.k_proj"), &attn.k, &normed, s)?;
+                    let v = self.linear(&format!("{g}.v"), &format!("{p}.self_attn.v_proj"), &attn.v, &normed, s)?;
                     let qh = eval1(&self.table, &format!("{g}.q_h"), &g, Op::Reshape { shape: vec![1, l, n_h, d] }, &[&q], s)?;
                     let kh = eval1(&self.table, &format!("{g}.k_h"), &g, Op::Reshape { shape: vec![1, l, n_kv, d] }, &[&k], s)?;
                     let vh = eval1(&self.table, &format!("{g}.v_h"), &g, Op::Reshape { shape: vec![1, l, n_kv, d] }, &[&v], s)?;
@@ -725,13 +917,19 @@ impl Lfm2 {
                     )?;
                     let att_t = eval1(&self.table, &format!("{g}.att_t"), &g, Op::Transpose { axes: vec![0, 2, 1, 3] }, &[&att], s)?;
                     let att_r = eval1(&self.table, &format!("{g}.att_r"), &g, Op::Reshape { shape: vec![1, l, n_h * d] }, &[&att_t], s)?;
-                    self.linear(&format!("{g}.o"), &attn.o, &att_r, s)?
+                    self.linear(&format!("{g}.o"), &format!("{p}.self_attn.out_proj"), &attn.o, &att_r, s)?
                 }
                 (LayerKind::Conv, _, Some(conv)) => {
                     // Reference ShortConv: BCx = in_proj(x); B,C,x = split;
                     // Bx = B*x; Bx = concat(state, Bx); state = Bx[:, -2:];
                     // y = C * conv1d(Bx); out_proj(y).
-                    let bcx = self.linear(&format!("{g}.in_proj"), &conv.in_proj, &normed, s)?;
+                    let bcx = self.linear(
+                        &format!("{g}.in_proj"),
+                        &format!("{p}.conv.in_proj"),
+                        &conv.in_proj,
+                        &normed,
+                        s,
+                    )?;
                     let parts = {
                         let node = Node {
                             name: format!("{g}.split"),
@@ -804,19 +1002,25 @@ impl Lfm2 {
                         s,
                     )?;
                     let y = eval1(&self.table, &format!("{g}.gate"), &g, Bin(BinKind::Mul), &[c, &conv_out], s)?;
-                    let r = self.linear(&format!("{g}.out_proj"), &conv.out_proj, &y, s)?;
+                    let r = self.linear(
+                        &format!("{g}.out_proj"),
+                        &format!("{p}.conv.out_proj"),
+                        &conv.out_proj,
+                        &y,
+                        s,
+                    )?;
                     r
                 }
                 _ => return Err(MlxError(-9711)),
             };
             let h1 = eval1(&self.table, &format!("{g}.res1"), &g, Bin(BinKind::Add), &[&h, &r], s)?;
             let ff_in = self.rms(&format!("{g}.ffn_norm"), &h1, &layer.ffn_norm, s)?;
-            let g1 = self.linear(&format!("{g}.w1"), &layer.w1, &ff_in, s)?;
-            let g3 = self.linear(&format!("{g}.w3"), &layer.w3, &ff_in, s)?;
+            let g1 = self.linear(&format!("{g}.w1"), &format!("{p}.feed_forward.w1"), &layer.w1, &ff_in, s)?;
+            let g3 = self.linear(&format!("{g}.w3"), &format!("{p}.feed_forward.w3"), &layer.w3, &ff_in, s)?;
             let sig = eval1(&self.table, &format!("{g}.sig"), &g, Op::Unary { kind: UnaryKind::Sigmoid }, &[&g1], s)?;
             let silu = eval1(&self.table, &format!("{g}.silu"), &g, Bin(BinKind::Mul), &[&g1, &sig], s)?;
             let ff = eval1(&self.table, &format!("{g}.ff_in"), &g, Bin(BinKind::Mul), &[&silu, &g3], s)?;
-            let g2 = self.linear(&format!("{g}.w2"), &layer.w2, &ff, s)?;
+            let g2 = self.linear(&format!("{g}.w2"), &format!("{p}.feed_forward.w2"), &layer.w2, &ff, s)?;
             h = eval1(&self.table, &format!("{g}.res2"), &g, Bin(BinKind::Add), &[&h1, &g2], s)?;
         }
         let t = self.rms("l.embedding_norm", &h, &self.embedding_norm, s)?;
@@ -833,7 +1037,7 @@ impl Lfm2 {
         cache: &mut Lfm2Cache,
         s: Stream,
     ) -> MlxResult<Array> {
-        self.step_logits(tokens, cache, lfm2_plan_mode(), s)
+        self.step_logits(tokens, cache, self.plan_enabled(), s)
     }
 
     /// The decode step on an explicit path: `use_plan` runs the declared
@@ -852,7 +1056,10 @@ impl Lfm2 {
             return self.forward_plan(tokens, cache, true, s);
         }
         let t = self.forward_hidden_impl(tokens, cache, s)?;
-        let logits = self.linear("l.lm_head", &self.embed, &t, s)?;
+        // The tied-embedding head is not a runtime-LoRA target (refused at
+        // attach), so its module name deliberately falls outside
+        // `is_linear_module`'s vocabulary — the delta lookup just misses.
+        let logits = self.linear("l.lm_head", "model.lm_head", &self.embed, &t, s)?;
         Ok(logits)
     }
 
@@ -1175,6 +1382,44 @@ impl Lfm2 {
         stop: Option<&[i32]>,
         s: Stream,
     ) -> MlxResult<Vec<i32>> {
+        self.decode(
+            prompt_ids,
+            max_tokens,
+            stop,
+            s,
+            None,
+            &mut crate::sampling::XorShift64::seeded_from_clock(),
+        )
+    }
+
+    /// The opt-in sampled rung (see `crate::sampling`): the SAME loop as
+    /// [generate_greedy] with the per-step readback switched from the GPU
+    /// argmax to the host sampler. Absent sampling fields never reach
+    /// here, so the parity paths stay byte-identical.
+    pub fn generate_sampled(
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: Stream,
+        params: &crate::sampling::SamplingParams,
+    ) -> MlxResult<Vec<i32>> {
+        let mut rng = crate::sampling::XorShift64::seeded_from_clock();
+        self.decode(prompt_ids, max_tokens, stop, s, Some(params), &mut rng)
+    }
+
+    /// The ONE decode loop behind greedy and sampled generation;
+    /// `sampling: None` is the exact loop the parity fixtures pin. `rng`
+    /// is only read on the sampled branch.
+    fn decode(
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: Stream,
+        sampling: Option<&crate::sampling::SamplingParams>,
+        rng: &mut crate::sampling::XorShift64,
+    ) -> MlxResult<Vec<i32>> {
         if prompt_ids.is_empty() {
             return Err(MlxError(-9713));
         }
@@ -1201,10 +1446,19 @@ impl Lfm2 {
         for _ in 0..max_tokens {
             let tokens = Array::from_data_i32(&[next], &[1, 1])?;
             let logits = self.forward_step(&tokens, &mut cache, s)?;
-            let am = logits.argmax_axis(-1, false, s)?;
-            let f = am.astype(Dtype::Float32, s)?;
-            let v = f.to_f32_vec(s)?;
-            let t = v.first().copied().ok_or(MlxError(-9712))? as i32;
+            let t = match sampling {
+                None => {
+                    let am = logits.argmax_axis(-1, false, s)?;
+                    let f = am.astype(Dtype::Float32, s)?;
+                    let v = f.to_f32_vec(s)?;
+                    v.first().copied().ok_or(MlxError(-9712))? as i32
+                }
+                Some(params) => {
+                    let f = logits.astype(Dtype::Float32, s)?;
+                    let mut v = f.to_f32_vec(s)?;
+                    crate::sampling::sample_next(&mut v, &out, params, rng)
+                }
+            };
             next = t;
             out.push(t);
             if stop.is_some_and(|ids| ids.contains(&t)) {
@@ -1215,3 +1469,67 @@ impl Lfm2 {
     }
 }
 
+
+/// The attach surface's pure vocabulary law (no GPU): an adapter may target
+/// exactly the linear slots of the layer kind it lands on, and nothing else
+/// — a target the model does not have is a refusal, never a silent skip.
+#[cfg(test)]
+mod lora_tests {
+    use super::*;
+
+    fn accepts(kind: LayerKind, module: &str) -> bool {
+        let Some(rest) = module.strip_prefix("model.layers.7.") else {
+            return false;
+        };
+        layer_linear_projections(kind).contains(&rest)
+    }
+
+    #[test]
+    fn attention_layers_accept_their_projections() {
+        assert!(accepts(LayerKind::Attn, "model.layers.7.self_attn.q_proj"));
+        assert!(accepts(LayerKind::Attn, "model.layers.7.self_attn.k_proj"));
+        assert!(accepts(LayerKind::Attn, "model.layers.7.self_attn.v_proj"));
+        assert!(accepts(LayerKind::Attn, "model.layers.7.self_attn.out_proj"));
+        assert!(accepts(LayerKind::Attn, "model.layers.7.feed_forward.w1"));
+        assert!(accepts(LayerKind::Attn, "model.layers.7.feed_forward.w2"));
+        assert!(accepts(LayerKind::Attn, "model.layers.7.feed_forward.w3"));
+    }
+
+    #[test]
+    fn conv_layers_accept_conv_projections_but_not_attention_slots() {
+        assert!(accepts(LayerKind::Conv, "model.layers.7.conv.in_proj"));
+        assert!(accepts(LayerKind::Conv, "model.layers.7.conv.out_proj"));
+        assert!(accepts(LayerKind::Conv, "model.layers.7.feed_forward.w3"));
+        assert!(!accepts(LayerKind::Conv, "model.layers.7.self_attn.q_proj"));
+    }
+
+    #[test]
+    fn non_linear_targets_are_refused() {
+        // Norms, the conv kernel, the embedding table, and the lm head are
+        // not runtime-LoRA slots on this engine.
+        assert!(!accepts(LayerKind::Attn, "model.layers.7.operator_norm"));
+        assert!(!accepts(LayerKind::Attn, "model.layers.7.ffn_norm"));
+        assert!(!accepts(LayerKind::Conv, "model.layers.7.conv.conv"));
+        assert!(!accepts(LayerKind::Attn, "model.embed_tokens"));
+        assert!(!accepts(LayerKind::Attn, "model.lm_head"));
+    }
+
+    #[test]
+    fn foreign_prefixes_and_bad_indices_are_refused() {
+        assert!(!accepts(LayerKind::Attn, "layers.7.self_attn.q_proj"));
+        assert!(!accepts(LayerKind::Attn, "model.layers.x.self_attn.q_proj"));
+        // The index bound itself (layers count) is the model's concern; the
+        // free vocabulary only answers the name shape.
+    }
+
+    #[test]
+    fn language_model_wrap_strips_to_checkpoint_names() {
+        // The 2.6B multimodal wrap prefixes targets; attach strips it once
+        // before validation, so the stripped form must be the accepted form.
+        let wrapped = "language_model.model.layers.7.self_attn.q_proj";
+        let stripped = wrapped
+            .strip_prefix("language_model.")
+            .unwrap_or(wrapped);
+        assert!(accepts(LayerKind::Attn, stripped));
+    }
+}

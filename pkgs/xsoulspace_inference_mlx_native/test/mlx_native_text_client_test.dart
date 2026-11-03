@@ -116,8 +116,13 @@ void main() {
       InferenceRequest(prompt: 'x', maxTokens: 2, temperature: 0.7),
     );
     expect(greedy.success, isTrue);
-    expect(greedy.warnings, hasLength(1),
-        reason: 'greedy-only engines must warn, never silently pretend');
+    if (NativeLfm2TextEngine.samplingApiSupported) {
+      // The sampling rung honors the temperature: no greedy claim.
+      expect(greedy.warnings.where((w) => w.contains('greedily')), isEmpty);
+    } else {
+      expect(greedy.warnings, hasLength(1),
+          reason: 'greedy-only engines must warn, never silently pretend');
+    }
 
     final wrongTask = await client.infer(
       InferenceRequest.speechToText(

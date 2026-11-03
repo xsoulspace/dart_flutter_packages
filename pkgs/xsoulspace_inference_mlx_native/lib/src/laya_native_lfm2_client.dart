@@ -7,6 +7,8 @@ import 'package:ffi/ffi.dart';
 import 'package:xsoulspace_inference_local_serve/xsoulspace_inference_local_serve.dart';
 
 import 'laya_native_decision_engine.dart';
+import 'native_text_protocol.dart'
+    show NativeLoraAttachUnavailable, NativeLoraAttachment;
 import 'laya_native_lfm2_chat_template.dart';
 
 // Native bindings over the LFM2 hybrid short-conv/GQA engine (ADR 0055
@@ -32,6 +34,12 @@ external Pointer<Uint8> _lfm2Generate(int handle, Pointer<Uint8> requestJson);
 )
 external void _lfm2Unload(int handle);
 
+@Native<Int32 Function()>(
+  symbol: 'mlx_native_lfm2_sampling_api_version',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
+)
+external int _lfm2SamplingApiVersion();
+
 @Native<Pointer<Uint8> Function(Int64)>(
   symbol: 'mlx_native_lfm2_special_ids',
   assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
@@ -43,6 +51,25 @@ external Pointer<Uint8> _lfm2SpecialIds(int handle);
   assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
 )
 external Pointer<Uint8> _lfm2LastLoadError();
+
+@Native<Int32 Function()>(
+  symbol: 'mlx_native_lfm2_lora_api_version',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
+)
+external int _lfm2LoraApiVersion();
+
+/// Reply: `{"digest": …, "applied": N}` or `{"error": …}` (attach is
+/// idempotent on (digest, scale) Rust-side; the forward lock serializes it
+/// against in-flight generation).
+@Native<Pointer<Uint8> Function(Int64, Pointer<Uint8>, Double)>(
+  symbol: 'mlx_native_lfm2_attach_lora',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
+)
+external Pointer<Uint8> _lfm2AttachLora(
+  int handle,
+  Pointer<Uint8> adapterPath,
+  double scale,
+);
 
 /// The checkpoint's special-token ids, resolved from its own tokenizer at
 /// load (never guessed across checkpoints — the low-id-special LFM2.5-1.2B
@@ -117,6 +144,73 @@ final class NativeLfm2TextEngine {
   final int _handle;
   final String snapshotDir;
 
+  /// Runtime capability probe for the opt-in sampling ABI (solo generate:
+  /// request-level temperature + repetition penalty). Static — the probe
+  /// needs no loaded engine, only the dylib. Older dylibs lack the symbol
+  /// and stay usable through greedy generation (callers warn honestly).
+  static bool get samplingApiSupported {
+    try {
+      return _lfm2SamplingApiVersion() == 1;
+    } on ArgumentError {
+      return false;
+    }
+  }
+
+  /// Runtime capability probe for the additive LoRA-attach ABI (the LFM2
+  /// port of the qwen engine's runtime adapter surface). Static — the probe
+  /// needs no loaded engine, only the dylib. A lora-bearing request on an
+  /// older dylib refuses with the named [NativeLoraAttachUnavailable] — it
+  /// never silently decodes without the adapter.
+  static bool get loraApiSupported {
+    try {
+      return _lfm2LoraApiVersion() == 1;
+    } on ArgumentError {
+      return false;
+    }
+  }
+
+  /// Attaches (or re-confirms) a RUNTIME (unmerged) LoRA adapter — the
+  /// qwen engine's attach contract, ported: every later decode computes
+  /// `y = x·Wᵀ + scale·((x·a_t)·b_t)` inside the linear slots the adapter
+  /// targets (attention projections on attention layers, conv in/out
+  /// projections on conv blocks, the feed-forward triple everywhere); a
+  /// target the model does not have is a native refusal, never a silent
+  /// skip. Idempotent Rust-side on (adapter digest, scale); LFM2 keeps no
+  /// cross-request prefix pool (fresh KV per request), so there is nothing
+  /// stale to invalidate. The declared-plan path is refused while an
+  /// adapter is attached (the engine's own gate).
+  NativeLoraAttachment attachLora(String adapterPath, {double scale = 1.0}) =>
+      attachLoraByHandle(_handle, adapterPath, scale: scale);
+
+  /// The [attachLora] FFI body, keyed by the process-global engine handle —
+  /// the handle lives inside the dylib, so ANY isolate (in this process,
+  /// after [load] opened the asset) can attach with it. Throws the named
+  /// [NativeLoraAttachUnavailable] when the dylib predates the ABI.
+  static NativeLoraAttachment attachLoraByHandle(
+    int handle,
+    String adapterPath, {
+    double scale = 1.0,
+  }) {
+    if (!loraApiSupported) {
+      throw const NativeLoraAttachUnavailable();
+    }
+    final pathNative = toNativeUtf8(adapterPath);
+    try {
+      final reply = _lfm2AttachLora(handle, pathNative, scale);
+      final payload = fromNativeUtf8(reply);
+      final json = jsonDecode(payload) as Map<String, dynamic>;
+      if (json['error'] != null) {
+        throw StateError('laya lfm2 attach lora failed: ${json['error']}');
+      }
+      return NativeLoraAttachment(
+        digest: json['digest'] as String,
+        applied: json['applied'] as int,
+      );
+    } finally {
+      malloc.free(pathNative);
+    }
+  }
+
   /// Loads the cached snapshot: [snapshotDir], else `LFM2_SNAPSHOT`, else
   /// the LiquidAI LFM2.5-1.2B checkout under the HF hub cache (never
   /// downloads).
@@ -167,19 +261,26 @@ final class NativeLfm2TextEngine {
     );
   }
 
-  /// Greedy decode. Supply [prompt] (tokenized by the checkpoint BPE, with
-  /// `<|startoftext|>` prepended natively) or explicit [promptIds];
-  /// [maxTokens] caps the generated length. [stopOnEos] is strictly
-  /// opt-in (native default OFF — the parity fixtures pin streams that run
-  /// through EOS): when true, generation breaks right after emitting any
-  /// id in [eosIds], keeping that EOS token itself (HF convention — the
-  /// chat server stops at `<|im_end|>`/`<|endoftext|>` this way).
+  /// Greedy decode by default; opt-in sampled decode when [temperature] or
+  /// [repetitionPenalty] is supplied (native sampling rung — needs
+  /// [samplingApiSupported]). Supply [prompt] (tokenized by the checkpoint
+  /// BPE, with `<|startoftext|>` prepended natively) or explicit
+  /// [promptIds]; [maxTokens] caps the generated length. [stopOnEos] is
+  /// strictly opt-in (native default OFF — the parity fixtures pin streams
+  /// that run through EOS): when true, generation breaks right after
+  /// emitting any id in [eosIds], keeping that EOS token itself (HF
+  /// convention — the chat server stops at `<|im_end|>`/`<|endoftext|>`
+  /// this way).
   NativeLfm2Completion generate({
     String? prompt,
     List<int>? promptIds,
     int maxTokens = 64,
     bool stopOnEos = false,
     List<int>? eosIds,
+    double? temperature,
+    double? repetitionPenalty,
+    String? loraPath,
+    double loraScale = 1.0,
   }) =>
       generateByHandle(
         _handle,
@@ -188,12 +289,34 @@ final class NativeLfm2TextEngine {
         maxTokens: maxTokens,
         stopOnEos: stopOnEos,
         eosIds: eosIds,
+        temperature: temperature,
+        repetitionPenalty: repetitionPenalty,
+        loraPath: loraPath,
+        loraScale: loraScale,
       );
 
   /// The [generate] FFI body, keyed by the process-global engine handle —
   /// the handle lives inside the dylib, so ANY isolate (in this process,
   /// after [load] opened the asset) can drive the engine with it. The
   /// native side creates its MLX stream per call on the calling thread.
+  /// [temperature]/[repetitionPenalty] ride the request JSON only when
+  /// non-null: old request shapes stay byte-identical, and a dylib without
+  /// the sampling ABI ignores the unknown keys (the caller warns).
+  /// The [generate] FFI body, keyed by the process-global engine handle —
+  /// the handle lives inside the dylib, so ANY isolate (in this process,
+  /// after [load] opened the asset) can drive the engine with it. The
+  /// native side creates its MLX stream per call on the calling thread.
+  /// [temperature]/[repetitionPenalty] ride the request JSON only when
+  /// non-null: old request shapes stay byte-identical, and a dylib without
+  /// the sampling ABI ignores the unknown keys (the caller warns).
+  ///
+  /// [loraPath] is the ADDITIVE runtime-adapter knob (the qwen engine's
+  /// contract, ported): null keeps the byte-identical bare-base path;
+  /// non-null attaches FIRST (same isolate, under the native forward lock
+  /// — the attach→generate pairing is explicit) and throws the named
+  /// [NativeLoraAttachUnavailable] when the dylib predates the ABI — never
+  /// a silent bare-base decode. Attach is idempotent Rust-side on
+  /// (digest, scale), so passing the same adapter on every call is cheap.
   static NativeLfm2Completion generateByHandle(
     int handle, {
     String? prompt,
@@ -201,13 +324,22 @@ final class NativeLfm2TextEngine {
     int maxTokens = 64,
     bool stopOnEos = false,
     List<int>? eosIds,
+    double? temperature,
+    double? repetitionPenalty,
+    String? loraPath,
+    double loraScale = 1.0,
   }) {
+    if (loraPath != null) {
+      attachLoraByHandle(handle, loraPath, scale: loraScale);
+    }
     final request = jsonEncode(<String, Object?>{
       'prompt': ?prompt,
       'prompt_ids': ?promptIds,
       'max_tokens': maxTokens,
       'stop_on_eos': stopOnEos,
       'eos_ids': ?eosIds,
+      'temperature': ?temperature,
+      'repetition_penalty': ?repetitionPenalty,
     });
     final requestNative = toNativeUtf8(request);
     final reply = _lfm2Generate(handle, requestNative);
@@ -230,13 +362,18 @@ final class NativeLfm2TextEngine {
   /// [NativeLfm2TextEngine.generateByHandle] in a fresh isolate capturing
   /// only the int handle plus plain sendable args, so a long decode never
   /// blocks the calling isolate (e.g. the UI). Generation itself is
-  /// unchanged — same native serialization, same greedy path.
+  /// unchanged — same native serialization, greedy unless sampling params
+  /// are supplied.
   Future<NativeLfm2Completion> generateAsync({
     String? prompt,
     List<int>? promptIds,
     int maxTokens = 64,
     bool stopOnEos = false,
     List<int>? eosIds,
+    double? temperature,
+    double? repetitionPenalty,
+    String? loraPath,
+    double loraScale = 1.0,
   }) {
     final handle = _handle;
     return Isolate.run(
@@ -247,6 +384,10 @@ final class NativeLfm2TextEngine {
         maxTokens: maxTokens,
         stopOnEos: stopOnEos,
         eosIds: eosIds,
+        temperature: temperature,
+        repetitionPenalty: repetitionPenalty,
+        loraPath: loraPath,
+        loraScale: loraScale,
       ),
     );
   }

@@ -19,6 +19,7 @@ class GenerationOptions {
     this.reasoningEffort,
     this.includeReasoning,
     this.seed,
+    this.repetitionPenalty,
   });
 
   factory GenerationOptions.fromJson(Map<String, dynamic> json) =>
@@ -46,6 +47,10 @@ class GenerationOptions {
         },
         seed: switch (json['seed']) {
           final int seed => seed,
+          _ => null,
+        },
+        repetitionPenalty: switch (json['repetition_penalty']) {
+          final num penalty => penalty.toDouble(),
           _ => null,
         },
       );
@@ -79,6 +84,12 @@ class GenerationOptions {
   /// null means "no seed requested".
   final int? seed;
 
+  /// HF/CTRL-style repetition penalty over distinct seen tokens (prompt
+  /// + generated). Null or 1.0 = off (the provider's own default).
+  /// Providers map it or report the honest warning; nothing here claims
+  /// the value moves a provider that ignores it.
+  final double? repetitionPenalty;
+
   GenerationOptions copyWith({
     int? maxTokens,
     double? temperature,
@@ -87,6 +98,7 @@ class GenerationOptions {
     String? reasoningEffort,
     bool? includeReasoning,
     int? seed,
+    double? repetitionPenalty,
   }) => GenerationOptions(
     maxTokens: maxTokens ?? this.maxTokens,
     temperature: temperature ?? this.temperature,
@@ -95,6 +107,7 @@ class GenerationOptions {
     reasoningEffort: reasoningEffort ?? this.reasoningEffort,
     includeReasoning: includeReasoning ?? this.includeReasoning,
     seed: seed ?? this.seed,
+    repetitionPenalty: repetitionPenalty ?? this.repetitionPenalty,
   );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -105,5 +118,6 @@ class GenerationOptions {
     'reasoning_effort': ?reasoningEffort,
     'include_reasoning': ?includeReasoning,
     'seed': ?seed,
+    'repetition_penalty': ?repetitionPenalty,
   };
 }
