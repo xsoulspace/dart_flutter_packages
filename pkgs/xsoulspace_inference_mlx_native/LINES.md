@@ -645,6 +645,75 @@ on and they decide nothing about whether the adapter is worth training.
   law, and what IS worth porting, are in
   [`PYTHON-BOUNDARY.md`](PYTHON-BOUNDARY.md).
 
+## Row N — Line IC: intent conditioning on the AR stack (CLOSED, F — no signal cell)
+
+**The question (owner's 2026-11-02 proposal).** Generate an *intent* first,
+then fill the completion conditioned on it ("kinda like diffusion"). Split
+before anything ran: **claim A** — intent conditioning helps on the existing
+AR stack, no training, no architecture change (THIS row); **claim B** —
+diffusion fill as the mechanism — NOT re-opened (Stage-0 verdict:
+compute-bound 20–80× on this machine; `bench/stage0_diffusion_probe/`).
+
+**The arm.** Gates IC-G1..G5 frozen in [`MTP-GATES.md`](MTP-GATES.md) Part 5
+BEFORE any run. A 2×2 scale curve — {`closed` (pick 1 of 4 procedural
+intents), `self` (author a ≤48-token procedure)} × {Qwen3-0.6B-4bit,
+Qwen3-1.7B-4bit} — plus per-cast in-run `base` arms, on the K' rails (perm
+PRIMARY at coverage 1.0, veto secondary, clause descriptive-only 150 rows;
+same split law, strict scorer from `scoring.py`, greedy, one process per
+cast, full completion caches). Runner: `tool/nursery/intent_conditioning.py`
+(new, tracked); verdict is CPU replay over the cached records.
+
+**The measured outcome (2026-11-02, AC +1.2–1.3 A charge current).**
+**FAIL — no SIGNAL cell; pre-registered reading 3 fired.** 0.6B `closed` is
+degenerate (71 % malformed intent picks — the base model writes prose
+instead of choosing; IC-G4 FAIL) and flat on accuracy; 0.6B `self` is
+significantly HARMFUL (perm −5.8 pp, p=1.5e-5, 17-0 discordant — reading 4,
+the thinking-hurts-at-0.6B echo). 1.7B collapses under strict in both
+regimes (perm −22.5/−35.5 pp, p≤3e-9): the Procedure line flips 1.7B into
+`label\n\njustification` prose (outside 145/206). The legacy content reads
+were computed for the record and are flat-or-degenerate too (closed@1.7B
+perm legacy 0.5597 == the trivial majority exactly) — the format confound
+does not hide a win. Baselines reproduced the 2026-10-21 record EXACTLY
+(0.4403/0.2511/0.8600) — greedy determinism across 11 days.
+
+**What banks from the row (facts, not hopes).**
+- Closed-intent SELECTION is scale-gated untrained: 6.1 % malformed at 1.7B
+  vs 71 % at 0.6B — the same format-compliance gap the trained LoRA ranker
+  closes at 0.6B.
+- 1.7B base beats 0.6B base on judgment cells (perm 0.5154 vs 0.4403, veto
+  0.3392 vs 0.2511) but collapses on clause format compliance (0.1067 vs
+  0.8600): strict accuracy at 1.7B is format-bound on that task — any future
+  1.7B closed-set arm owes a format-compliance control.
+- A prompt line that changes answer FORMAT changes what a strict scorer
+  measures; the frozen-scorer law held (no post-hoc swap), and the diagnosis
+  is recorded instead.
+
+**Reopen conditions (new evidence class only):** a generation-shaped task
+with a NEW oracle (reading 3's named route; NOT scheduled), or a TRAINED
+intent adapter (new arm, new frozen threshold). Full numbers:
+[`RESULTS-HISTORY.md`](RESULTS-HISTORY.md) §18; evidence under
+`bench/nursery/experiments/intent-conditioning-*-2026-11-02T*` (gitignored
+working material; the run records + per-item caches + verdict json live
+there).
+
+**Post-run replay (2026-11-03, descriptive; §18 addendum).** The owner asked
+for the experiment's criticism, and the caches answered three of them on
+CPU (`tool/nursery/ic_replay.py`): (D1) the 1.7B strict collapse is largely
+FORMAT artifact — under first-line extraction the judgment-level deltas go
+flat (+2.7/+1.0 pp ns, with 124/293-item churn on a below-trivial base
+decider), while the 0.6B self harm survives (−5.8 pp, p=1.5e-5) — so the
+0.6B closure is solid and the 1.7B closure is format-conditional; the one
+clean positive anywhere is 1.7B closed on veto (+5.73 pp first-line,
+p=2.4e-4, 13-0 discordant — the cell where the base is above trivial);
+(D2) zero answer leaks in self intents — the manipulation was clean; (D3)
+the closed arm was an accidental CONSTANT-PREFIX control (pick top-share
+0.92–1.00) — the intent vocabulary carried ≈0 bits/item, so "does the RIGHT
+intent help" was never actually tested. These reads are post-hoc and can
+never reopen the frozen verdict; they define the IC-2 design (VERDICTS.md O
+row): format-repaired scoring, information-bearing intents + fixed/random
+controls, conditioning a WORKING decider (the confirmed adapter), and the
+generation-shaped route with a new oracle.
+
 ## The standing non-claims of this lane
 
 - Every number here is **one machine, one model, one corpus, one seed, one

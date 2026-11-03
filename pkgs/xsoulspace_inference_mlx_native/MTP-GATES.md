@@ -938,3 +938,169 @@ by anything in this section. Any future arm that uses a noise init, a markov
 embedding, a confidence head, or multi-layer features must be **REGISTERED as
 a new arm with its own frozen threshold BEFORE it runs**, exactly as Parts 1–4
 did — a threshold written after seeing data is a knob.
+
+---
+
+# PART 5 — Line IC: intent conditioning on the AR stack (frozen 2026-11-02, BEFORE any IC arm runs)
+
+> **Post-run status (2026-11-02, final: every gate in this Part has run).**
+> **VERDICT: FAIL — no SIGNAL cell; pre-registered reading 3 fired** (and
+> reading 4 with it: self at 0.6B harms). Per cell: 0.6B/closed IC-G4 FAIL
+> (71 % malformed picks) and flat (perm −0.34 pp, p=1.0); 0.6B/self
+> significantly harmful (perm −5.80 pp, p=1.5e-5; clause −18.7 pp
+> descriptive); 1.7B/closed perm −22.53 pp (p=3.0e-9), 1.7B/self perm
+> −35.50 pp (p=3.3e-19) and veto −10.57 pp (p=1.2e-7) — a Procedure line
+> flips 1.7B into `label\n\njustification` prose (outside 145/206), and the
+> frozen strict scorer judged it as written (no post-hoc swap); the legacy
+> content reads are flat-or-degenerate too (closed@1.7B perm legacy 0.5597
+> == the trivial majority), so the format confound hides no win. IC-G5 FAIL
+> in all four regime cells. Intent conditioning closes WITH DATA on
+> closed-set decision shapes; claim B stays closed (Stage-0); the
+> generation-shaped route (NEW oracle) is NOT scheduled. Baselines
+> reproduced the 2026-10-21 record exactly (0.4403/0.2511/0.8600). Power:
+> AC, +1.29/+1.21 A charge current, battery 56→70 %. Evidence:
+> `RESULTS-HISTORY.md` §18, `LINES.md` Row N,
+> `bench/nursery/experiments/intent-conditioning-*-2026-11-02T*` (run
+> records, per-item caches, verdict json). Nothing below moved.
+
+## The question, and what is NOT being re-asked
+
+The owner's proposal (2026-11-02 session): instead of generating only the
+next token, generate an **intent** first, then fill the completion conditioned
+on it — "kinda like diffusion." It splits into two claims:
+
+- **Claim A — intent conditioning helps**: an explicit intent/procedure line,
+  authored by the model or selected from a closed set, improves the answer at
+  0.6B/1.7B scale. This is testable on the EXISTING AR stack with NO training
+  and NO architecture change. **This Part freezes that arm.**
+- **Claim B — diffusion fill beats AR fill**: masked-diffusion decoding as
+  the fill mechanism. **NOT re-opened.** The Stage-0 probe already verdicted
+  it on this machine: compute-bound 20–80× vs AR, gate was ≥2× AR effective
+  tok/s AND non-inferior quality (`bench/stage0_diffusion_probe/RESULTS.md`;
+  FINDINGS-AND-DISCUSSION §4/§6: "the right PROPERTY at the wrong desk").
+  Claim B stays closed unless Claim A shows a signal so large that the
+  throughput verdict becomes the only thing standing in the way — and even
+  then the reopen is a NEW registered arm, not a rerun.
+
+Lineage note (recorded, not a claim): plan/intent-then-fill is the PLAID
+(plan-then-diffusion) shape; the AR-only version tested here is
+plan-conditioned decoding, and the self-authored regime is CoT-before-answer,
+which the lane's own fair matrix measured as HURTING at 0.6B in thinking-mode
+form (2/1/0). The IC arm asks whether a SHORT PROCEDURAL intent (≤48 tokens,
+no thinking template) behaves differently from thinking mode. That is a real
+open question, not a settled one.
+
+## Design (frozen)
+
+A 2×2 scale curve plus per-cast baselines, all on the K' rails (same corpora,
+same split law, same chat template with `enable_thinking=False`, same strict
+scorer from `scoring.py`, greedy decoding, one process per cast, base arm
+scored on the SAME items as the intent arms so the paired test is exact).
+
+| axis | values |
+| --- | --- |
+| casts | `mlx-community/Qwen3-0.6B-4bit`, `mlx-community/Qwen3-1.7B-4bit` (both already local; no downloads) |
+| regimes | `base` (the frozen BASE_PROMPT, unconditioned), `closed` (pass 1: model picks one of 4 procedural intents, strict extraction; pass 2: answer conditioned on it), `self` (pass 1: model authors a ≤48-token procedure; pass 2: answer conditioned on it) |
+| tasks | `perm` (PRIMARY, all test rows, coverage 1.0), `veto` (secondary, all test rows), `clause` (DESCRIPTIVE ONLY — first 150 test rows, coverage-limited, never a gate input by L-G3; the perm-shaped intent vocabulary is a known mismatch on clause and that is recorded, not fixed) |
+
+Cells: 2 casts × 3 regimes × 3 tasks = 18, plus the intent pass of every
+`closed`/`self` cell. Every cell caches per-item completions (the fast_score
+law: re-asking a scoring question never needs the GPU again).
+
+**Frozen intent vocabulary (closed regime, shared across tasks — the option
+list is task-agnostic by design, mirroring the `shared`-arm finding that the
+mechanism is the input text, not task identity):**
+
+1. `match_against_policy` — compare the text against the governing rules or allowed prefixes
+2. `scan_for_risk_markers` — look for destructive, traversal, or sensitive markers
+3. `check_scope_boundaries` — verify paths, grants and workspace scope stay inside bounds
+4. `assess_reversibility` — judge whether the action is bounded and reversible
+
+Vocabulary law: no intent string contains any task label (`allow_once`,
+`abstain`, `no_grant`, `destructive_op`, `outside_workspace`, `secret_path`,
+`fact`, `done`, `open`, `action`) as an exact match; the intents are
+PROCEDURAL (how to decide), never OUTCOME (what to answer). On `veto` the
+procedures partially correlate with the label set by nature of the task —
+recorded as a design boundary of the secondary task, not silently absorbed.
+
+**Frozen prompts** (exact strings live in `tool/nursery/intent_conditioning.py`
+and may not change after the first gated run; the base/answer prompt is
+byte-identical to the K' BASE_PROMPT except for the inserted procedure line):
+
+- closed intent pass: `Choose the procedure for deciding about the text. Answer with exactly one of: {vocab}\n\nText: {text}\nAnswer:` (max 16 tokens)
+- self intent pass: `Write one short sentence describing the procedure you will use to classify the text below, then stop.\n\nText: {text}\nProcedure:` (max 48 tokens)
+- intent-conditioned answer pass: `Procedure: {intent}\nClassify the text. Answer with exactly one of: {labels}\n\nText: {text}\nAnswer:` (max 64 tokens)
+
+**Frozen fallback rules** (loud, never silent):
+
+- closed pass emits no exact vocabulary match ⇒ intent := `match_against_policy` (the vocabulary's first entry), item counted as `malformed_pick`.
+- self pass emits empty text ⇒ answer pass runs WITHOUT the procedure line, item counted as `degenerate_intent`.
+
+## Gates (frozen 2026-11-02, before any IC arm runs)
+
+- **IC-G1 (primary signal).** A cell is a SIGNAL cell when, on `perm` at
+  coverage 1.0: `Δ = strict_acc(regime) − strict_acc(base)` on the same items
+  is **≥ +5.0 pp** AND exact McNemar two-sided **p ≤ 0.05** AND the same
+  regime×cast has `Δ_veto ≥ −3.0 pp`. The line PASSES if at least one of the
+  four regime×cast cells is a SIGNAL cell. Four cells at α = 0.05 with a
+  joint +5 pp requirement is the accepted comparison family (no Bonferroni;
+  the pre-registered readings below cover all outcomes either way).
+- **IC-G2 (veto safety net, gating).** No SIGNAL regime×cast may drop veto
+  strict accuracy by more than 3.0 pp vs its own in-run base. (This is the
+  veto clause of IC-G1, stated once; a cell that fails it is not a SIGNAL
+  cell even if perm clears +5 pp.)
+- **IC-G3 (clause, descriptive).** Recorded for every cell; coverage-limited
+  to 150 rows ⇒ NOT a gate input in either direction (L-G3). Its only use:
+  a damage reading for the record.
+- **IC-G4 (intent quality, gating for the regime it describes).**
+  `self`: unique normalized intents ≥ 5 AND no single intent > 90% of items,
+  per cast (on perm). `closed`: `malformed_pick` rate ≤ 10% per cast (on
+  perm). A regime that violates IC-G4 cannot be a SIGNAL cell — a degenerate
+  intent is not intent conditioning.
+- **IC-G5 (closed head preserved, gating for SIGNAL cells).**
+  `outside_label_set(intent cell) ≤ outside_label_set(base cell) + 2` on perm
+  and veto.
+- **Power law (ADR 0061).** Power snapshot recorded at run start. These are
+  quality gates, not perf gates, so battery does not condition them; any
+  tok/s numbers in the record are informational and carry the power state.
+
+## Pre-registered readings (written BEFORE any IC arm runs)
+
+1. **`closed` signals at 0.6B** ⇒ intent-as-closed-set-selection is the
+   productizable shape (ranker/laya supplies the intent); next step is a
+   productization discussion, not training.
+2. **`self` signals at 1.7B only** ⇒ intent authoring is scale-gated at this
+   task shape; consistent with decomp 10/10 at 1.7B and thinking-hurts at
+   0.6B.
+3. **No SIGNAL cell anywhere** ⇒ intent conditioning closes WITH DATA on
+   closed-set decision shapes; claim B stays closed (Stage-0); the remaining
+   intent-first route is a generation-shaped arm (swe/decomp), which needs a
+   NEW oracle and is NOT scheduled by this Part.
+4. **`self` at 0.6B harms** (expected reading, matches thinking-at-0.6B):
+   recorded as confirmation that free-form preambles are scale-gated; it
+   does not affect the other cells' readings.
+5. **Both regimes signal at both casts** ⇒ strongest reading: the mechanism
+   is the procedure line itself; follow-up is whether a TRAINED intent
+   vocabulary beats the frozen one (a NEW arm, not this one).
+
+## Budget and rerun law
+
+One run per cast, serial (GPU contention law). Estimated wall clock:
+0.6B ≈ 15–25 min, 1.7B ≈ 30–50 min on AC. A crashed run reruns from
+scratch; a completed run is never re-rolled — re-asking a scoring question
+uses the cached completions on CPU (fast_score law). Any change to prompts,
+vocabulary, margins or corpora after the first gated run is a NEW arm with a
+NEW frozen Part, per the standing law above.
+
+## Non-claims
+
+- This arm measures intent conditioning on CLOSED-SET decision shapes with
+  frozen oracles. It does not measure open-form generation quality, and a
+  null result here does not close intent-first for generation-shaped work
+  (reading 3 names that route explicitly).
+- No training happens in this arm. A positive result is not a claim that a
+  trained intent adapter would be better — that is a separate registered arm.
+- The `closed` regime's intent selection at 0.6B uses the base model as a
+  ranker over 4 options; it is NOT the confirmed LoRA ranker (different
+  adapter, different label space). A signal here does not transfer credit to
+  the LoRA ranker, and vice versa.

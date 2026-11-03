@@ -1,202 +1,121 @@
 # ROADMAP — the adapter/acceleration lane (mlx_native)
 
-**This file is the single entry point for "what is closed and what is open"
-in the MTP/LoRA/acceleration lane.** The registers it distills:
+**This file is the live queue: what is OPEN, what is deliberately NOT
+scheduled, and what is deferred to discussion.** It holds no closed
+experiments. The registers it points at:
 
-- [`VERDICTS.md`](VERDICTS.md) — the full verdict tables (F/C/O/V/✓), the
-  contract for what each verdict class may claim.
-- [`LINES.md`](LINES.md) — the per-line ledger (Rows A..M) with evidence.
-- [`MTP-GATES.md`](MTP-GATES.md) — the frozen gates (nothing here moves one).
-- [`EXPERIMENT-PLAN.md`](EXPERIMENT-PLAN.md) — the cost model and the plan.
+- [`VERDICTS.md`](VERDICTS.md) — the closed register: every completed or
+  retired experiment, ONCE, with its verdict class and evidence pointer
+  (F / C / V / O / ✓).
+- [`RESULTS-HISTORY.md`](RESULTS-HISTORY.md) — the dated tabulation of every
+  recorded measurement (§1–§16; the day-by-day history).
+- [`LINES.md`](LINES.md) — the row-level ledger; [`MTP-GATES.md`](MTP-GATES.md)
+  — the frozen gates (nothing here moves one);
+  [`EXPERIMENT-PLAN.md`](EXPERIMENT-PLAN.md) — the cost model and the plan.
 
-A closed experiment lives ONCE, here, with its verdict and its evidence
-pointer. A ledger row is not re-argued because a newer document summarized it
-differently; when documents disagree, the cited artifact wins.
-
----
-
-## CLOSED EXPERIMENTS (extracted — verdict, why, evidence)
-
-### The adapter line (Rows K/K'/M): DECIDED — the adapter is load-bearing
-
-| experiment | verdict | the measured why | evidence |
-| ---------- | ------- | ---------------- | -------- |
-| Adapter capability | **CONFIRMED** | +0.31 perm / +0.47 veto over matched trivial, coverage 1.0, strict scoring | `LINES.md` Rows K/M |
-| The `Task:` tag as the mechanism (K''-G1) | **FAIL** | paired vs untagged: perm Δ −0.053 (p=0.185), veto Δ −0.007 (p=1.0) | `MTP-GATES.md` Part 3 |
-| A SET of per-task swappable adapters | **FAIL** | single-task adapter damages the other task below trivial (0.1733 vs 0.2733, p<0.001) — interference is the unconditional prior | `LINES.md` Row K |
-| Format-only explanation (L-G2 noise control) | **MISS** | random-label adapter: 0.5392/0.2511 vs thresholds 0.7737/0.6533; veto collapses to one majority label | `RESULTS-noise-2026-10-26.md` |
-| Few-shot control (L-G1) | **FAIL** | 8 exemplars buy +0.03/+0.05 vs the adapter's +0.31/+0.47 | `LINES.md` Row M |
-| Constrained ranking of the BASE's labels (L-G6) | **FAIL** | ranked(base) == base on perm — a DECISION failure; the base ranks, wrongly. Two native scorer bugs found and fixed en route (stable-lse max add-back; probability-vs-logprob eos) | `RESULTS-tier-c-repairs-2026-10-26.md` |
-| Third, dissimilar task (L-G7) | **PASS** | shared 1.0000 = untagged 1.0000 on the third cell, leak 0, completions 204/204 identical; shared still costs −0.089 on the close pair's perm cell | `RESULTS-third-2026-10-26.md` |
-| Shared answer space, cost (L-G5) | **FAIL cold, recovered warm** | +22 tok/request, +55 % cold prefill wall; at a 2048+-token shared prefix a warm pool serves 100 % hits (32–43 ms vs ~1880 ms) | `RESULTS-fused-tier-a-2026-10-26.md` §L-G5 |
-| Arm determinism | **MEASURED: NOT run-deterministic** | two identical runs: distinct adapter sha256s; score band ±0.05–0.11; L-G2's MISS stable | `RESULTS-tier-c-repairs-2026-10-26.md` §1 |
-| Seed contract E2E | **CLOSED** | `test/mlx_native_seed_e2e_test.dart` pins reproducibility, meta echo, honesty warning | Tier C |
-
-### The acceleration program (Row M / Tier A): the levers are bought
-
-| experiment | verdict | the measured why | evidence |
-| ---------- | ------- | ---------------- | -------- |
-| MTP as speed (Line J) | **CLOSED on physics** | body(8)/body(1) = 2.0–3.5 vs the 1.50 NOT-FLAT gate; no MTP arm is bought at any acceptance | `LINES.md` Row J |
-| Fused batched decode (Tier A) | **BUILT, GATED, MEASURED** | labels exact across solo/B8/B16; co-batch invariance 0.0; solo-join floor 0.071 vs defect control 0.60; **1.93× @ B8, 3.19× @ B16**; the 5.39× projection retired | `RESULTS-fused-tier-a-2026-10-26.md` |
-| Fused rank economics | **CONDITIONAL** | 0.80× of sequential at K=4 (prefix-once + cache fan-out), 1.03× at K=2 | same |
-| Bit-identity as the batch precondition | **RETIRED** | the batch dim moves the bits; the standing bar is decision-level invariance + no short-row defect | `MTP-GATES.md` Part 4 post-run note |
-| Prefix-cache weight identity (Row L) | **LANDED** | engine-owned digest; stale entries dropped; test-locked | `qwen.rs::weight_identity` |
-
-### The mechanism lines that closed earlier
-
-| experiment | verdict | why (one line) | evidence |
-| ---------- | ------- | -------------- | -------- |
-| Draft-model speculative decode | **CONDITIONAL-FAIL** | 0.42–0.75× native at 1:2.8; needs ≥4:1 pairing | spec-decode record |
-| Emergent MoE route persistence (Line I) | **FAIL** | plateaued ~0.34; only window>1 passes by construction | `TRAIN-GATES.md` |
-| Paged-MoE expert store on 16 GB (Line B) | **FAIL** | 42.5 % hit rate → 0.33 tok/s, I/O-bound | `stage1_paged_moe/RESULTS.md` |
-| Route-ahead prefetch (Line C) | **FAIL** | 0.4 % route persistence — no locality to prefetch | `bench/LINES_PLAN.md` |
-| Device mesh M1/phones (Line F) | **CONDITIONAL** | needs ~50× bytes/token drop | `bench/LINES_PLAN.md` |
-| `LAYA_COMPILE` default | **CONDITIONAL** | 6.6 s first trace; daemon-class workloads only | R6 record |
-| LFM2.5-2.6B as production cast | **FAIL** | under the 1.2B on every lane at 19–33 tok/s | ADR 0058 evidence |
+A closed experiment lives ONCE — as a verdict row in VERDICTS.md and a dated
+measurement in RESULTS-HISTORY.md. It does not also live here; the queue
+below links to them instead of restating them. When documents disagree, the
+cited artifact wins.
 
 ---
 
-## THE OPEN ROADMAP (ordered by what it can unlock)
+## THE OPEN QUEUE
 
-1. **Nursery RUNG-1 (PERM-GATE-1) — attempts 5–7 RAN 2026-10-27/28; the
-   dense line CLOSED WITH DATA and its readout lever CLOSED with it
-   (attempt 7); the rung stays open at two PRE-REGISTERED, battery-
-   gated levers.** (Ledger note: "42.8M" was a misnomer — that is
-   rung1-scale, the MoE trunk; the dense-perm trunks measure
-   16,006,656 params, the band BOTTOM. History records keep their
-   original names; this annotation is the correction.) The acceptance
-   harness
-   (`tool/nursery/slots/perm_gate_1/`) was fully exercised with two
-   pre-registered attempts (predictions written before training, the
-   margin decision rule and its TAU-selection rule frozen on the corpus
-   eval split before any frozen case was scored):
-   - **Attempt 5 (dense-perm-c)** — corpus v3 (v2 + a 600-row granted-
-     veto slice + a 500-row granted-safe slice, law unchanged, frozen-
-     case disjoint) + warm start from attempt 4 at lr 5e-4, plus the
-     margin rule (`allow_once` iff margin > TAU; TAU=0 is attempt 2's
-     argmax). **0.667 agreement, ZERO unsafe** — the margin mechanism
-     solved the safety failure (3 → 0) but no frozen case's allow-margin
-     cleared TAU=2.0, so the candidate degenerated to all-abstain.
-   - **Attempt 6 (dense-perm-d)** — from scratch, attempt 4's recipe on
-     v3, 1700 steps. **0.667 / 0 unsafe at TAU=1.75; eval argmax 0.6021**
-     — under the pre-registered 0.75 line bar: the 42.8M dense line
-     closes. Its measured ceiling: attempt 4's **0.722 (argmax, 3
-     unsafe)**; the safety/agreement frontier is mapped — 0 unsafe via
-     calibration costs agreement down to baseline.
-   - Standing shipped behavior unchanged: ALL-ABSTAIN (0.667 / 0 unsafe)
-     — still the best zero-unsafe operating point and the live data
-     collector. Fixtures: `dense-perm-c/` + `dense-perm-d/` RUN-RECORDs
-     (prediction/observed, margin sweeps, verdicts), corpus v3 manifest
-     (3000 rows, 0 frozen-case collisions).
-   - **Attempt 7 (perm-slot-dense, 2026-10-28)** — the slot-head MLP
-     readout over stepwise states on the FROZEN attempt-4 trunk (never
-     tried on the dense line). 7a (lr 5e-3) diverged to NaN — recorded,
-     preserved, and the trainer now carries train_rung0's finite guard;
-     7b (lr 1e-3, amended before any frozen case was scored) trained
-     finite and STILL converged to all-abstain: flat margin sweep, every
-     eval row ≤ 0 margin at every TAU 0→8; frozen 12/18 = 0.667 / 0
-     unsafe at the selected TAU=0.0 — **the pre-registered FAIL
-     condition met exactly; the readout lever closes for the dense
-     trunk with data.** Also measured and excluded from all rows: the
-     corpus law's compound-command hole (`dart test && rm -rf /` is
-     allow_once by prefix match) — an operator-review finding.
-   - **Staged next levers — each pre-registered with its own
-     PREDICTION.md before any run, both battery-gated on 2026-10-28**
-     (the measured 0.5–0.7 %/min drain prices dense-perm-e at ~2.6 h):
-     **dense-perm-e** = capacity, hidden 896, 48,655,488 params (3.04×
-     the closed line, under the 50M band top), attempt-6 recipe
-     verbatim, own line rule (closes if eval argmax < 0.70 AND frozen
-     zero-unsafe < 0.722); **dense-perm-f** = boundary data, corpus v4
-     (v3 + a 600-row hard near-miss slice at every measured law
-     boundary), curriculum stage 2 from dense-perm-c at lr 5e-4. Launch
-     commands live in the rung jsons. Real labeled examples from live
-     all-abstain escalations remain the cheapest future data — the
-     shipped behavior collects them whenever it runs. Live-slot half of
-     RUNG-1 acceptance (the real permission_gate.v1 answer quality)
-     remains a separate, later record — never assumed.
-2. **A CI gate — LIVE AND GREEN at its clean-clone truth (2026-10-27;
-   first run 40486026348 named the blockers, re-scoped run 40486871329
-   PASSED, `native-compile` 30 s).** `.github/workflows/mlx_native_gate.yml` — the file MOVED
-   from `.github/archite_workflows/` (which GitHub Actions never reads; it
-   had never triggered a single run — paid-for lesson recorded in the file
-   header), now triggering on pushes to main/master AND `ag-c`. The first
-   real run named TWO blockers, both pre-existing repo conditions:
-   (a) the DART leg cannot run on a clean clone at all — the workspace
-   root's dependency_overrides point whole package families at machine-
-   private checkouts (absolute `/Users/antonio/...` paths), so `pub get`
-   fails for every workspace package; publishing or vendoring them is an
-   OWNER decision. Until then `flutter test` is local-only (green here:
-   42 pass / 1 skip / 0 fail).
-   (b) `cargo test` needs the machine-local cmake-built MLX/mlxc static
-   libraries (build.rs refuses loudly without them) — the REAL test gate
-   stays local on AC; CI runs the honest compile gate
-   (`cargo check --release --all-targets` against named stub dirs).
-   The former local red ("request-level thinking") is DISPOSED: budget
-   128 → 768 with the assertion set unchanged — full local battery 42
-   pass / 1 honest skip / 0 fail.
+### 1. Nursery RUNG-1 (PERM-GATE-1) — open at exactly two staged levers
 
-### Closed 2026-10-27, later the same day (was open this morning)
+Attempts 4–7 ran and closed with data: the dense line's measured ceiling is
+attempt 4's **0.722 agreement (argmax, 3 unsafe)**; every calibrated
+operating point (label-head margin, slot-head MLP margin) degenerates to
+**all-abstain (0.667 / 0 unsafe)** — representation binds, not calibration;
+the readout lever closed with data on 2026-10-28. History:
+[`RESULTS-HISTORY.md`](RESULTS-HISTORY.md) §14–§16; RUN-RECORDs under
+`bench/nursery/experiments/` (gitignored). Ledger note: the dense-perm
+trunks measure **16,006,656 params** (band bottom); "42.8M" was a misnomer
+for rung1-scale MoE — annotated in §16, history not rewritten.
 
-- **Tracked fixture for the adapter-format gate** (EXPERIMENT-PLAN §5.3):
-  `tests/mlx_lm_artifact_merge.rs` gained a second gate,
-  `the_artifact_format_gate_runs_anywhere_on_a_tracked_synthetic_adapter`
-  — a synthetic mlx-lm safetensors built IN-TEST with known dyadic values
-  at the TRUE on-disk orientation (`lora_a` [in,r] / `lora_b` [r,out]),
-  so every clone with a Metal device runs the full reader law: load_auto
-  detection, the transpose verified by VALUE (an orientation error flips
-  the expected numbers), the exact merge delta `1 + scale·B@A` per pair,
-  full `apply_to`, the missing-target refusal, the unmatched-`lora_a`
-  refusal, and the no-LoRA-tensors refusal. The trained-artifact gate
-  still proves the trainer's bytes where `bench/` exists and still skips
-  loudly elsewhere. Both gates green locally (2/2).
+Still open — each lever pre-registered with its own `PREDICTION.md`,
+battery-gated (the measured 0.5–0.7 %/min drain prices dense-perm-e at
+~2.6 h), launch commands in the rung jsons; no recipe decisions remain
+open:
 
-### Closed 2026-10-27, earlier the same day (was open this morning)
+- **dense-perm-e** (capacity): hidden 896, **48,655,488 params** (3.04× the
+  closed 16M dense line, under the 50M band top); attempt-6 recipe verbatim
+  on corpus v3. Line rule: closes if eval argmax < 0.70 AND frozen
+  zero-unsafe agreement < 0.722.
+- **dense-perm-f** (boundary data): corpus **v4** (v3 + a 600-row balanced
+  hard near-miss slice at every measured law boundary; 3600 rows, 0
+  frozen-case collisions); curriculum stage 2 from dense-perm-c, lr 5e-4,
+  850 steps.
 
-- **Product wiring of the fused batch (Tier A at the wire)** — LANDED and
-  GATED: `mlx_native_qwen_generate_batched` FFI (+ api-version probe,
-  older dylibs degrade to solo), `NativeQwenTextEngine.generateBatch/
-  generateBatchAsync`, and an OPT-IN coalescing window in
-  `LayaQwenChatServer` (null window = the wire is byte-identical to the
-  pre-change solo path; window on = concurrent requests within it are
-  served as ONE fused batch, size-1 windows route solo, failed batches
-  fall back per-row, counted). **W-G1/G2/G3 all PASS on the first run**
-  (six heterogeneous classification answers byte-equal solo at the wire;
-  the batch actually formed, zero fallback; a lone request untouched) —
-  bars frozen before the run in
-  `bench/nursery/experiments/RESULTS-wire-batch-2026-10-27.md`. Free-form
-  streams keep the engine gate's recorded tie-flip freedom (agreement
-  reported, never gated) — which is WHY the window is opt-in; flipping
-  the product default is an owner decision this evidence now informs.
-  Gate: `test/mlx_native_qwen_batch_wire_test.dart`.
+Owed regardless of the levers:
 
-### Closed 2026-10-27 (was open when this file was created)
+- **The live-slot half of RUNG-1 acceptance** — the live slot is now
+  **BUILT** (2026-10-28): `LayaPermGateV1` in the laya product ships the
+  measured all-abstain law (the gate never allows — zero-unsafe by
+  construction, gate-tested against the tracked frozen 18) and appends
+  every real question to an append-only escalation store the host labels
+  with `recordOutcome`. What remains owed is the RECORD itself: real
+  `permission_gate.v1` answer quality, computed from accumulated labeled
+  outcomes once the gate runs in a host — never assumed.
+- **Live escalations as data** — the collector above is that mechanism;
+  `labeledCount` on the store is the acceptance metric in the making.
+  (Git-LFS answer, recorded 2026-10-28: none needed — the artifacts the
+  slot needs are tiny (slot harness 212 KB, already tracked; heads ~130 KB;
+  adapters ~5.5 MB; corpus JSONLs a few MB — all far under git's 100 MB
+  limit). The 61 MB dense-trunk checkpoints fit plain git but bloat it;
+  LFS becomes worth considering only if checkpoint versioning multiplies.
+  Model snapshots stay runtime-downloaded by design and never enter git.)
+- **Parked finding for operator review** — the measured corpus-law hole
+  (`dart test && rm -rf /` allows by prefix match; `;` chaining happens to
+  fail it); excluded from all training rows; §16.
 
-- **The native-surface capability number** (the last owed Tier-C repair,
-  V-r): `Qwen3::attach_lora` — runtime LoRA on the 4-bit base, the
-  no-confound mirror of the python path. **N-G1: PASS perm (0.8976, native
-  ABOVE python's 0.8737) / FAIL veto (0.6828, −0.02 beyond the margin)** at
-  the frozen bars; coverage 1.0, leak 0, +0.3379/+0.4009 over matched
-  trivial. The V-r row is closed: the number exists on the shipping surface
-  and says "carries on perm, short on veto". Gate:
-  `tests/qwen_runtime_lora.rs` (attach/refuse/logits-move/in-set/rank);
-  readings: `bench/nursery/experiments/RESULTS-native-surface-2026-10-27.md`.
-- **ranked(adapter) (Tier B-5)**: **R-G1 PASS both tasks** — ranked matches
-  generated within 0.009 under the adapter, 0 illegal labels by
-  construction, 0.71× generation cost on perm even on the imperative path.
-  The "model as ranker over a closed vocabulary" product shape is
-  measured-viable.
-- **The L-G6 veto residual** (became a gate input today): LOCALIZED —
-  tokenization identical (0/908), scoring math identical, per-label sums
-  differ median 0.27 nats (the bf16-vs-fp16 activation-dtype class), and
-  mean normalization turns that band into argmax flips on exactly the
-  near-tied `secret_path`/`no_grant` pair (all 91 disagreements). Verdict
-  invariant. Sum-norm is the engine-robust normalization (80 % agreement).
+### 2. CI — live and green at its honest scope; owner decisions block the rest
 
-### Deliberately NOT scheduled (and why)
+- The lane gate (`.github/workflows/mlx_native_gate.yml`) is GREEN at its
+  clean-clone truth (re-scoped run 40486871329, `native-compile` 30 s): the
+  honest compile gate on macos-14. `cargo test` needs machine-local
+  MLX/mlxc static libs (build.rs refuses loudly) — the real test gate stays
+  local on AC by design; the Dart battery runs green locally (42 pass /
+  1 honest skip / 0 fail).
+- **Owner decision 1 — dependency pins.** PR #7's git/pub.dev pins retired
+  the machine-private-override blocker (`flutter pub get` passes on a
+  clone), but `test_core 0.6.21` does not compile against the pinned
+  `test_api 0.7.13`, so the repo-wide test workflows fail at compile. Pin
+  alignment is owner review (§13, §15).
+- ~~Owner decision 2 — the coalescing default~~ **DECIDED 2026-10-28 (by
+  the owner), implemented and gated:** the fused-batch coalescing window
+  defaults ON (15 ms; `Duration.zero` / `--coalesce-ms=0` is the explicit
+  solo escape hatch); the default-flip gate is in the wire-test file.
+  Token streaming landed the same day (OpenAI-style SSE at the chat wire,
+  token-exact to the completion path — `RESULTS-HISTORY.md` §17).
+- One pre-existing battery red was stash-proven non-regression on
+  2026-10-28 (`mlx_native_lazy_client_test`: `Isolate.resolvePackageUriSync`
+  unsupported in the load path — a toolchain drift since the 10-27 green
+  run); its own disposition is owed, unrelated to this session's surfaces.
 
-| item | why |
-| ---- | --- |
-| Any MTP-shaped arm on this hardware | Line J closed on physics; new hardware requires a NEW registered arm |
-| More mechanism arms (tag, option list, task count) | the attribution is measured at both ends; re-running it is not a new question |
-| The veto residual as a standalone cleanup | not a gate input until ranked(adapter) makes it one (it now has) |
-| 4-bit dequant→merge→requant | no consumer; requant error ≈ the adapter delta (K-G4) |
+### 3. Deferred — awaiting owner discussion
+
+- **The reasoning track.** The lane has a capability track (generative
+  work: Qwen3-0.6B + one shared untagged adapter, consumed as a ranker) and
+  a decision track (laya + the perm head). It has NO reasoning capability,
+  and every recorded attempt at the local casts is negative. Directions for
+  closing that gap are investigated and recorded — deliberately without
+  gates or arms — in [`REASONING-TRACK.md`](REASONING-TRACK.md). Nothing is
+  scheduled; the owner discussion decides whether any direction becomes a
+  pre-registered arm. (The first direction HAS left that file this way: the
+  2026-11-02 intent-first discussion became Line IC, ran the same day, and
+  closed **F — no signal cell**; [`VERDICTS.md`](VERDICTS.md),
+  [`RESULTS-HISTORY.md`](RESULTS-HISTORY.md) §18. Its reading-3 route — a
+  generation-shaped intent arm with a new oracle — is NOT scheduled.)
+
+---
+
+## Deliberately NOT scheduled (and why)
+
+| item                                                | why                                                                                                            |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Any MTP-shaped arm on this hardware                  | Line J closed on physics; new hardware requires a NEW registered arm                                            |
+| More mechanism arms (tag, option list, task count)   | the attribution is measured at both ends; re-running it is not a new question                                   |
+| The veto residual as a standalone cleanup            | not a gate input until ranked(adapter) makes it one (it now has)                                                |
+| 4-bit dequant→merge→requant                          | no consumer; requant error ≈ the adapter delta (K-G4)                                                           |

@@ -82,10 +82,11 @@ and what it costs).
 > `Qwen3::attach_lora` (runtime LoRA on the 4-bit base, the no-confound
 > option), together with Tier B-5, ranked(adapter). Readings and frozen
 > bars: `bench/nursery/experiments/RESULTS-native-surface-2026-10-27.md`.
-> **The closed-experiment register and the live open list now live in
-> [`ROADMAP.md`](ROADMAP.md)**; the remaining open items are the veto
-> residual cross-read (a gate input once ranking is), the product wiring of
-> the fused batch, RUNG-1 (PERM-GATE-1), and a CI gate.
+> **The live open list lives in [`ROADMAP.md`](ROADMAP.md); the closed
+> register lives in [`VERDICTS.md`](VERDICTS.md), with the dated tabulation
+> in [`RESULTS-HISTORY.md`](RESULTS-HISTORY.md)** (the 2026-10-28 split).
+> The open items named here are since closed or re-scoped — today's queue is
+> ROADMAP.md.
 
 ---
 

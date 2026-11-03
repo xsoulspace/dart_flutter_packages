@@ -267,3 +267,162 @@ Non-claims: fixture-half only; attempt 7 ran on battery (recorded; no
 throughput claims); a FAIL is a verdict with data. The two staged
 levers carry their own PREDICTION.md files and launch the moment the
 power gate opens — no recipe decisions remain open.
+
+## 17. 2026-10-28 — three product surfaces landed: the batch default flips ON, token streaming, and the live perm-gate slot (UNCOMMITTED)
+
+| result | value | class | evidence |
+| ------ | ----- | ----- | -------- |
+| Owner decision 2 executed: fused-batch coalescing defaults ON | `LayaQwenChatServer` window defaults to **15 ms** (`defaultCoalesceWindow`); `Duration.zero` / `--coalesce-ms=0` is the explicit solo escape hatch; a dylib without the batched ABI degrades to solo either way; `coalescingActive` getter + construction gate: default coalesces, zero disables | ✓ gate (default flip; the W-G1/G2/G3 wire law unchanged) | `test/mlx_native_qwen_batch_wire_test.dart` (updated OFF reference + new flip gate); `tool/serve_text.dart` |
+| Token streaming — engine | `mlx_native_qwen_stream_{api_version,start,poll,free}`: one decode thread running the SAME greedy loop (refactored `generate_greedy_cached_streaming` — one implementation, the 64/64 parity gates cover streaming by construction), cancellation reuses the request machinery; poll returns deltas cut at UTF-8 boundaries at the caller's byte watermark; the prefix pool is NOT consulted (fresh KV per stream); stream holds the global forward lock for its decode | ✓ gate | `native/mlx_native/src/{lib.rs,qwen.rs}` |
+| Token streaming — Dart + wire | `NativeQwenTextEngine.generateStream` (delta stream, subscription-cancel → native cancel at the next step boundary); `LoopbackJsonServer` gained an optional stream route (`LoopbackStreamSink`); `LayaQwenChatServer` serves OpenAI-style SSE chunks for `"stream": true` (solo path only; EOS literals never ride the wire; a streaming-less dylib degrades to the completion shape) | ✓ gates **ST-G1** (joined deltas token-exact vs the completion path, ids equal) + **ST-G2** (SSE content == completion answer, finish_reason stop, `[DONE]`) — both PASS | `test/mlx_native_qwen_stream_test.dart`; `lib/src/laya_native_qwen_client.dart`; `xsoulspace_inference_local_serve` |
+| The live perm-gate slot (RUNG-1) | `LayaPermGateV1` (laya product): the measured all-abstain law — **the gate never allows** (zero-unsafe by construction) — plus an append-only escalation store (sha256 question digests, raw payloads never persisted); host labels via `recordOutcome(allowed|denied)`; `labeledCount` = the acceptance metric in the making | ✓ gates **PG-G1** (never-allow incl. the measured corpus-law hole) + **PG-G2** (the tracked frozen 18 all abstain through the live slot — the LAW live, NOT an agreement claim) + **PG-G3** (append-only, digest-stable, reopen-stable) — all PASS | `xsoulspace_inference_laya/lib/src/laya_perm_gate.dart` + test |
+| Git-LFS question answered | **No LFS needed**: slot harness 212 KB (already tracked), heads ~130 KB, adapters ~5.5 MB, corpora a few MB — all far under git's 100 MB limit; the 61 MB dense-trunk checkpoints fit plain git (bloat, not blockage); model snapshots stay runtime-downloaded, never in git | ✓ arithmetic from measured artifact sizes | `bench/nursery/runs/*/checkpoint`, `bench/nursery/experiments/adapter-*` |
+| Native gates | cargo lib 30/30 + qwen parity 3/3 (the refactored shared decode loop stays token-exact) + artifact merge 2/2 | ✓ | `cargo test --release` |
+| Dart batteries | local_serve 27/27; laya 23 pass / 1 pre-existing skip; mlx_native SERIAL battery **34 pass / 11 skip / 1 fail** — the 11 skips are the LFM2-snapshot-dependent client gates (the lfm2 snapshot is absent from the machine cache today: honest skips, not regressions; every qwen-path gate ran and passed, incl. the new stream, SSE-wire and default-flip gates), the 1 fail is the stash-proven pre-existing lazy-client red (below) | ✓ / noted | this session |
+| Pre-existing red, stash-proven | `mlx_native_lazy_client_test` fails IDENTICALLY on the stashed pre-change tree: `Isolate.resolvePackageUriSync` unsupported in the load path — a toolchain drift since the 10-27 green run; disposition owed (not this session's regression) | noted (disposition owed) | `git stash` run, 2026-10-28 |
+| **Paid-for deadlock (the session's defect)** | `mlx_native_qwen_stream_free` self-deadlocked: in Rust 2021 an `if let` scrutinee's `MutexGuard` lives through the whole block, so free locked `engine.requests` in the scrutinee and locked it AGAIN inside — the SAME thread, forever, with no other thread involved. Symptoms: the battery hung ~40 min at ~3 % CPU; `sample` showed a mutex wait attributed to `stream_free + 1000` and a worker thread parked in pthread bootstrap (never scheduled). Diagnosis chain: `sample` → `atos` → `nm -n` PC attribution (nearest-export names LIE at +offsets; `nm -n` bounding is the truth). Fixed by taking the Arc out before the block; stream gates PASS in 4 s after the fix | ✓ lesson + fixed | `lib.rs::mlx_native_qwen_stream_free`; the fix comment carries the law |
+
+Non-claims: battery → AC during the run (71 %→100 % charging; the pmset
+snapshot rides the test stdout) — and every gate here is an IDENTITY gate
+(token-exactness, byte-equality, store append-only), power-independent by
+construction; no throughput claim is made for streaming or the batch
+default. Streaming keeps the serving non-claims: solo-path only, no
+prefix-pool consult, no cross-request KV reuse; the fused batch keeps
+completion semantics (a batch has no per-row token order to stream). The
+live perm-gate slot claims the LAW (never allow) and the COLLECTOR, not
+quality: real `permission_gate.v1` answer quality is written only from
+accumulated labeled outcomes.
+
+## 18. 2026-11-02 — Line IC: intent conditioning on the AR stack closes WITH DATA (no signal cell); the 2×2 scale curve measured
+
+The owner's intent-first generation proposal ("generate intent, then fill
+conditioned on it — kinda like diffusion") was split on 2026-11-02: claim A
+(intent conditioning on the existing AR stack, no training) became the
+pre-registered Line IC arm — gates IC-G1..G5 frozen in `MTP-GATES.md` Part 5
+BEFORE any run; claim B (diffusion fill) was NOT re-opened (the Stage-0 probe
+already verdicted it compute-bound 20–80× on this machine). Runner:
+`tool/nursery/intent_conditioning.py` (K' rails: same corpora, split law,
+chat template, strict scorer from `scoring.py`, greedy, one process per cast,
+full completion caches ⇒ CPU replay). Power: AC, +1.29/+1.21 A charge current
+(real supply, not the 8 W trickle), battery 56→70 % during the runs; quality
+gates are not power-conditioned (ADR 0061). Wall clock: 0.6B 24 min, 1.7B
+72 min.
+
+**Rails validation:** all three 0.6B base cells reproduce the recorded
+2026-10-21/26 numbers EXACTLY (perm 0.4403, veto 0.2511, clause 0.8600) —
+greedy determinism across 11 days.
+
+| cast | regime | perm strict (Δ vs in-run base, McNemar p) | veto strict (Δ, p) | clause strict (DESCRIPTIVE, 150 rows, coverage 0.254 ⇒ never a gate input) | IC-G4 |
+| ---- | ------ | ------------------------------------------ | ------------------ | --------------------------------------------------------------------------- | ----- |
+| 0.6B | base   | **0.4403** (outside 0) | **0.2511** (outside 0) | **0.8600** (outside 0) | — |
+| 0.6B | closed | 0.4369 (−0.34 pp, p=1.0; outside 5) | 0.2599 (+0.88 pp, p=0.81) | 0.8267 (outside 4) | **FAIL** — malformed picks 71 % (perm), 100 % (veto), 99 % (clause): the base 0.6B writes prose instead of choosing from the 4-intent vocabulary |
+| 0.6B | self   | 0.3823 (**−5.80 pp, p=1.5e-5**, 17-0 discordant; outside 44) | 0.2555 (+0.44 pp, p=1.0; outside 14) | 0.6733 (**−18.7 pp**, p=1.5e-8; outside 14) | pass (unique 279/293, top share 1.4 %) — non-degenerate but paraphrase-shaped, and harmful |
+| 1.7B | base   | **0.5154** (outside 16) | **0.3392** (outside 10) | **0.1067** (outside 39) | — |
+| 1.7B | closed | 0.2901 (**−22.53 pp, p=3.0e-9**; outside 145) | 0.3436 (+0.44 pp, p=1.0; outside 20) | 0.0267 (outside 132) | pass (malformed 6.1 %) — the 1.7B CAN select closed intents untrained |
+| 1.7B | self   | 0.1604 (**−35.50 pp, p=3.3e-19**; outside 206) | 0.2335 (**−10.57 pp, p=1.2e-7**; outside 85) | 0.0400 (outside 113) | pass (unique 232/293, top share 10.9 %) |
+
+**Frozen verdict: FAIL — no SIGNAL cell** (IC-G1 never met: no perm cell has
+Δ ≥ +5 pp with p ≤ 0.05 and veto ≥ −3 pp; every regime cell also fails IC-G5's
+outside-label slack). Pre-registered **reading 3 fired**: intent conditioning
+closes WITH DATA on closed-set decision shapes; claim B stays closed; the
+remaining intent-first route is a generation-shaped arm with a NEW oracle —
+NOT scheduled. Reading 4 also fired (self at 0.6B harms, mirroring
+thinking-hurts-at-0.6B).
+
+**The format-shift diagnosis (recorded, does NOT move the verdict).** The
+1.7B strict collapses are largely FORMAT, not judgment: with a Procedure line
+in the prompt, 1.7B answers `label\n\njustification…` (the 145/206 outside
+cells predominantly begin with a legal label). The frozen gate is strict and
+stays strict — a scorer swapped after seeing data is a knob. The legacy
+(content-level substring) reads were computed for the record: they are
+flat-or-degenerate too — closed@1.7B perm legacy **0.5597 == the trivial
+majority baseline exactly** (the arm collapsed to abstain-with-justification),
+self@1.7B perm legacy 0.5461 ≈ base legacy 0.5324, veto closed legacy +5.3 pp
+(the only weak positive anywhere; secondary task, C-4-hazard scorer,
+non-gating). So the confound does not hide a win: at content level, intent
+conditioning buys nothing on these shapes either.
+
+**New baseline facts measured along the way:**
+- 1.7B base BEATS 0.6B base on judgment-shaped cells (perm 0.5154 vs 0.4403;
+  veto 0.3392 vs 0.2511) but COLLAPSES on clause (0.1067 vs 0.8600): the
+  larger model refuses the bare-label format on short memo text — strict
+  accuracy at 1.7B is format-bound, not judgment-bound, on that task. Any
+  future 1.7B closed-set arm needs a format-compliance control.
+- Closed-intent SELECTION is scale-gated without training: 6.1 % malformed at
+  1.7B vs 71 % at 0.6B — the same format-compliance gap the trained LoRA
+  ranker exists to close at 0.6B (ranked == generated, zero illegal labels).
+
+Non-claims: no training happened; nothing here transfers credit to or from
+the confirmed LoRA ranker (different adapter, different label space). No
+generation-shaped (swe/decomp) intent claim exists in either direction — the
+arm measured closed-set decision shapes only. The veto/closed legacy +5.3 pp
+is NOT a finding (secondary task, non-frozen scorer, no paired significance
+computed for a non-gate). Tok/s and wall-clock numbers are informational
+(AC-asserted, charge current recorded). Evidence:
+`bench/nursery/experiments/intent-conditioning-{0.6b-2026-11-02T21-05-29Z,
+1.7b-2026-11-02T21-29-46Z}/` (run records + per-item completion caches +
+`intent-conditioning-verdict-*.json`).
+
+### §18 addendum — 2026-11-03 CPU replay: the experiment critiqued against its own caches (DESCRIPTIVE, post-hoc; the frozen verdict stands)
+
+Owner asked for a criticism of the IC arm. Three criticisms are measurable
+from the cached completions with zero GPU (`tool/nursery/ic_replay.py`, new
+tracked replay tool; full output `bench/nursery/experiments/ic-replay-2026-11-03.txt`).
+These extractors were NOT frozen before the run, so every number here is a
+hypothesis generator, never a gate input, in either direction.
+
+**D1 — format-normalized reads (first-line-exact / starts-with-label, both
+C-4-safe word-boundary matchers; identical results under both).**
+
+| cell | strict Δ | first-line Δ | paired p (first-line) | discordance |
+| ---- | -------- | ------------ | --------------------- | ----------- |
+| 0.6B self perm | −5.80 pp | **−5.80 pp** | 1.5e-5 | 17-0 — the harm SURVIVES format normalization: real judgment damage |
+| 0.6B self clause | −18.7 pp | −14.7 pp | 2.7e-5 | 25-3 — survives |
+| 0.6B self veto | +0.44 pp | +3.96 pp | 0.19 | 14-23 — mildly positive, ns |
+| 1.7B closed perm | −22.5 pp | **+2.73 pp** | 0.53 | **124/293 items flip** with net ~0 — conditioning noise atop a below-trivial decider |
+| 1.7B self perm | −35.5 pp | +1.02 pp | 0.86 | 129/293 flip, net ~0 |
+| 1.7B closed veto | +0.44 pp | **+5.73 pp** | **2.4e-4** | **13-0, all flips one-way repairs** — the only clean positive anywhere |
+| 1.7B self veto | −10.6 pp | −2.64 pp | 0.35 | 17-11 |
+| 1.7B clause (all) | ≤0.11 | ≤0.15 | — | clause at 1.7B is broken BEYOND format repair (base first-line 0.14) |
+
+Reading: the 1.7B strict collapse is largely a format artifact (judgment-level
+deltas shrink to flat), but "flat" sits on top of a base decider that is
+itself at/below trivial on perm (0.5154/0.5324 vs 0.5597 majority) — the arm
+conditioned a process that was not working, and the 124-item churn with net
+zero is what noise looks like. The veto cell (where 1.7B base IS above
+trivial, 0.3392 vs 0.2819) is exactly where the one clean positive appeared.
+The +5.73 pp/13-0/p=2.4e-4 read survives Bonferroni over the ~36 replay
+reads — and remains descriptive: post-hoc scorer, secondary task, never
+pre-registered. It is recorded as the IC-2 hypothesis (VERDICTS.md O row).
+
+**D2 — intent content (self arm):** zero answer leaks on perm/veto at both
+casts (intents never mention label words) — the manipulation was clean; the
+intents were procedurally-phrased paraphrases. clause@1.7B: 13/150 misleads
+(intent mentions a non-gold label), 1 leak. IC-G4 measured diversity, never
+type or usefulness — a design gap, partially closed here.
+
+**D3 — constant-prefix check (closed arm):** pick top-share **0.92 (0.6B
+perm), 1.00 (0.6B veto), 0.99 (1.7B perm), 1.00 (1.7B veto)** — nearly
+always `match_against_policy`. The closed arm never varied the intent per
+item: it was an accidental FIXED-PROCEDURE control. Consequences: (a) the
+arm cannot answer "does the RIGHT intent help" — only "does a procedural
+prefix help"; (b) the four-intent vocabulary carried ≈0 bits/item (one
+option nearly always chosen, and the options were near-synonyms); (c) the
+missing `fixed`/`random`-procedure controls were never needed as separate
+arms — `closed` WAS the fixed arm, unplanned.
+
+**What changes / what does not.** The frozen verdict (FAIL, reading 3) is
+untouched — it was computed by the frozen scorer on the frozen design and a
+scorer or design swapped after seeing data is a knob. What the replay
+changes is the SCOPE of the negative: the 0.6B closures are solid (self
+harms at judgment level; closed is degenerate untrained); the 1.7B closure
+is format-conditional, and at judgment level the honest summary is "flat on
+a below-trivial decider, one clean unreplicated positive on the task where
+the base actually works." Recorded as such in VERDICTS.md (F row amended +
+new O row: the IC-2 judgment-level design). Design lessons banked: match
+the instrument to the manipulation (format-normalized co-primary or a
+bare-label instruction in ALL arms), vary the thing whose value you test
+(information-bearing intents + fixed/random controls), condition a WORKING
+decider (the confirmed adapter, not the base), and match the task shape to
+the hypothesis (skeleton→fill belongs on generation-shaped tasks, which owe
+a new paired blind-rubric oracle).

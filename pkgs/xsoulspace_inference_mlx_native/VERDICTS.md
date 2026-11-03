@@ -12,8 +12,10 @@ environment-conditional, and what is actually next.**
 This file is **a reading of the record at a named time** — 2026-10-26 (last
 touch: the L-G7 third-task arm, which completed the Part-4 gate set; branch
 `ag-c`, same day as `03720365`/`0727e53d`) — not a claim about the tree
-today. If a row here and its evidence disagree, the evidence wins and this
-file is wrong; fix it here.
+today. On 2026-10-28 the stale OPEN rows below were reconciled against their
+closures and [`ROADMAP.md`](ROADMAP.md) became the live queue only; this
+file is the closed register's home. If a row here and its evidence disagree,
+the evidence wins and this file is wrong; fix it here.
 
 Reading order: **this file → [`LINES.md`](LINES.md) rows →
 [`MTP-GATES.md`](MTP-GATES.md) gates → `bench/nursery/experiments/RESULTS-*`
@@ -34,10 +36,11 @@ Reading order: **this file → [`LINES.md`](LINES.md) rows →
 
 ## The path forward (what is actually next)
 
-> **Distilled into [`ROADMAP.md`](ROADMAP.md) (2026-10-27):** the closed
-> experiments now live there as a register (verdict, why, evidence), and the
-> live open list is maintained in one place. The tier record below is how the
-> 2026-10-26 program landed; it is history, not the queue.
+> **Distilled into [`ROADMAP.md`](ROADMAP.md) (2026-10-28 split):** ROADMAP
+> now carries the LIVE QUEUE only — the closed register lives HERE (the
+> tables below), and every dated measurement is tabulated in
+> [`RESULTS-HISTORY.md`](RESULTS-HISTORY.md) §1–§16. The tier record below is
+> how the 2026-10-26 program landed; it is history, not the queue.
 
 Ordered by the lane's own law — *an arm that can close or unlock the line runs
 before an arm that can only refine it* — and by measured cost.
@@ -135,6 +138,7 @@ arm on new hardware (must be a new registered arm; see CONDITIONAL).
 | Thinking mode at 0.6B | 2/1/0 with enable_thinking=true — hurts at this scale | a bigger trunk | fair-matrix record, ADR 0057 era |
 | Bit-identity as the batch-precondition bar | the same-shape-class control diverges too — the batch dim moves the bits; fp16 trunks cannot deliver it | none — the bar itself is retired; its replacement (decision-level invariance) is the standing gate | `MTP-GATES.md` Part 4 post-run note |
 | The swappable-set product shape (`lora_set.rs` as shipped intent) | set not justified (see F above); the surface is kept only as a cheap-to-re-derive negative | a product that genuinely swaps adapters per request on non-quantized bases | `LINES.md` Row K |
+| Intent conditioning on the AR stack (Line IC — claim A of the 2026-11-02 intent-first proposal) | no SIGNAL cell in the frozen 2×2 {closed,self}×{0.6B,1.7B}: 0.6B closed degenerate (71 % malformed picks, IC-G4 FAIL) and flat; 0.6B self significantly harmful (perm −5.8 pp, p=1.5e-5, 17-0 discordant); 1.7B both regimes significantly harmful under strict (perm −22.5/−35.5 pp, p≤3e-9) — the Procedure line flips 1.7B into label+justification prose (outside 145/206), and the legacy content reads are flat-or-degenerate anyway (closed@1.7B perm legacy 0.5597 == the trivial majority = abstain-with-justification). **CPU replay 2026-11-03 (descriptive, `tool/nursery/ic_replay.py`):** under format-normalized first-line extraction the 1.7B judgment-level deltas shrink to +2.7/+1.0 pp (ns, with 124/293-item churn = conditioning noise atop a below-trivial base decider), so the strict collapse is largely format artifact — while the 0.6B self harm SURVIVES normalization (−5.8 pp, p=1.5e-5), and the closed arm turns out to have been an accidental CONSTANT-PREFIX control (pick top-share 0.92–1.00; the intent vocabulary never varied per item) | a generation-shaped task with a NEW oracle (Part 5 reading 3's named route), a TRAINED intent adapter, or the IC-2 judgment-level design (O row below) — each a new registered arm with its own frozen threshold; claim B (diffusion fill) stays closed on the Stage-0 compute verdict regardless | `MTP-GATES.md` Part 5; `RESULTS-HISTORY.md` §18 + addendum; `LINES.md` Row N; `bench/nursery/experiments/intent-conditioning-*-2026-11-02T*`, `ic-replay-2026-11-03.txt` |
 
 ---
 
@@ -192,11 +196,12 @@ arm on new hardware (must be a new registered arm; see CONDITIONAL).
 | ---- | ---- | ---- | -------------------------- |
 | ~~ranked(adapter)~~ **RUN 2026-10-27 (R-G1 PASS)** | ranked matches generated within 0.009 on both tasks under the adapter; 0 illegal labels by construction | done | frozen in `RESULTS-native-surface-2026-10-27.md` before the run |
 | Constrained decoding / logit masking | probe: base outside-label-set rate | minutes | predicted dead on arrival — the base already emits 0 illegal labels (L-G6) |
-| Seed determinism E2E test | seeded local decode reproduces via `MlxNativeTextClient` | small | contract exists (ADR 0071); enforcement does not |
-| Nursery RUNG-1 (decision head → laya's slot) | PERM-GATE-1 | one training rung | stands WITHOUT the MoE thesis (margins noise-stable) |
+| ~~Seed determinism E2E test~~ **CLOSED 2026-10-26** | `test/mlx_native_seed_e2e_test.dart` pins reproducibility, the meta echo, and the honesty warning through the real client | done | Tier C item 9 recorded the closure; the row stayed stale until the 2026-10-28 reconciliation |
+| Nursery RUNG-1 (decision head → laya's slot) | attempts 4–7 RAN: the dense line AND its readout lever closed WITH DATA (ceiling 0.722/3 unsafe; every calibrated point degenerates to all-abstain 0.667/0) | open at levers dense-perm-e (capacity) + dense-perm-f (boundary data) — pre-registered, battery-gated; the live-slot acceptance record owed | `RESULTS-HISTORY.md` §14–§16; the queue: ROADMAP §1 |
 | MTP attention head | none — J'-G4 does not buy it | not bought | eligible only if flat-forward hardware appears AND a head passes J'-G1 on it |
-| Tracked fixture for the adapter-format gate | make `mlx_lm_artifact_merge` runnable on a clone | small | closes the "gate that cannot run on a clone" gap (EXPERIMENT-PLAN §5.3) |
-| CI of any kind | **WORKFLOW WRITTEN 2026-10-27** (`.github/archite_workflows/mlx_native_gate.yml`) | small | needs one green run; one pre-existing local red (thinking-truncation test, stash-proven non-regression) needs its own disposition first |
+| ~~Tracked fixture for the adapter-format gate~~ **CLOSED 2026-10-27** | the synthetic in-test fixture runs the full reader law on any clone with a Metal device | done | §12 below; `tests/mlx_lm_artifact_merge.rs` |
+| ~~CI of any kind~~ **CLOSED 2026-10-27/28 at its honest scope** | the gate lives in `.github/workflows/` (the `archite_workflows/` directory is DEAD to Actions) and is GREEN at the compile scope (run 40486871329); the thinking-truncation red was disposed (budget 128→768, assertions unchanged) | done — the repo-wide test workflows stay blocked by the dependency pin skew (owner review, §15) | §12–§13, §15 |
+| Intent conditioning at the JUDGMENT level (IC-2 design — never run; born from the 2026-11-03 replay of Line IC) | NOT yet frozen — a registering Part must fix, BEFORE any run: format-repaired scoring (first-line exact as co-primary, or a bare-label instruction in ALL arms including base with re-measured baselines), information-bearing intents + the missing `fixed-procedure` and `random-procedure` controls, and conditioning of a WORKING decider (the confirmed 0.6B adapter, perm 0.87+, not the below-trivial base) | ~30–40 min GPU per cast with the cached adapters; the generation-shaped variant (skeleton→fill on decomp/swe) additionally needs a NEW paired blind-rubric oracle | the hypothesis the descriptive replay generated: 1.7B closed on veto, first-line extraction: **+5.73 pp, p=2.4e-4, 13-0 discordant** (all flips one-way repairs; survives Bonferroni over the ~36 replay reads — but post-hoc scorer, secondary task, never pre-registered ⇒ hypothesis only) |
 
 ---
 
