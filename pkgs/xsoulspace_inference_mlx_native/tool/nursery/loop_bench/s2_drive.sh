@@ -16,6 +16,13 @@ EVID="${1:?usage: s2_drive.sh EVIDENCE_DIR [N_REP] [SMOKE_TASKS]}"
 N_REP="${2:-3}"
 SMOKE="${3:-0}"
 
+# realm_actor refuses a non-absolute --store (actor_store_path_not_absolute)
+# — the invalid 2026-11-04 run-1 leg paid for a relative EVID. Normalize.
+case "$EVID" in
+  /*) ;;
+  *) EVID="$(pwd)/$EVID" ;;
+esac
+
 DFP="/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_mlx_native"
 HARNESS="/Users/antonio/xs/ecsai_harness"
 DART="/Users/antonio/fvm/default/bin/dart"
