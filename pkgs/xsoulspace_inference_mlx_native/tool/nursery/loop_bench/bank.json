@@ -1,0 +1,306 @@
+{
+ "n_tasks": 20,
+ "tasks": [
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "count_vowels.dart",
+   "id": "count_vowels",
+   "prompt": "Create the file lib/count_vowels.dart defining exactly one top-level function: int countVowels(String s) \u2014 return the number of characters of s that are one of a, e, i, o, u (case-insensitive; y is NOT a vowel; empty string returns 0). Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "int countVowels(String s) {\n  const v = 'aeiouAEIOU';\n  var n = 0;\n  for (final c in s.split('')) { if (v.contains(c)) n++; }\n  return n;\n}\n",
+   "sig": "int countVowels(String s)",
+   "spec": "return the number of characters of s that are one of a, e, i, o, u (case-insensitive; y is NOT a vowel; empty string returns 0).",
+   "symbol": "countVowels",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/count_vowels.dart';\n\nvoid main() {\n  test('count_vowels', () {\n    expect(countVowels(''), 0);\n    expect(countVowels('rhythm'), 0);\n    expect(countVowels('AEIOU'), 5);\n    expect(countVowels('The quick brown fox'), 5);\n    expect(countVowels('xyz'), 0);\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "extract_digits.dart",
+   "id": "extract_digits",
+   "prompt": "Create the file lib/extract_digits.dart defining exactly one top-level function: String extractDigits(String s) \u2014 return a string of every digit character ('0'-'9') of s, in order (no digits returns the empty string). Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "String extractDigits(String s) =>\n    s.split('').where((c) => c.compareTo('0') >= 0 && c.compareTo('9') <= 0).join();\n",
+   "sig": "String extractDigits(String s)",
+   "spec": "return a string of every digit character ('0'-'9') of s, in order (no digits returns the empty string).",
+   "symbol": "extractDigits",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/extract_digits.dart';\n\nvoid main() {\n  test('extract_digits', () {\n    expect(extractDigits(''), '');\n    expect(extractDigits('abc'), '');\n    expect(extractDigits('a1b22c333'), '122333');\n    expect(extractDigits('2026-11-04'), '20261104');\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "normalize_ws.dart",
+   "id": "normalize_ws",
+   "prompt": "Create the file lib/normalize_ws.dart defining exactly one top-level function: String normalizeWhitespace(String s) \u2014 collapse every run of one or more space/tab characters into a single space ' ' and trim leading and trailing spaces/tabs (other characters, including newlines, are ordinary characters and are kept). Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "String normalizeWhitespace(String s) =>\n    s.replaceAll(RegExp('[ \\t]+'), ' ').trim();\n",
+   "sig": "String normalizeWhitespace(String s)",
+   "spec": "collapse every run of one or more space/tab characters into a single space ' ' and trim leading and trailing spaces/tabs (other characters, including newlines, are ordinary characters and are kept).",
+   "symbol": "normalizeWhitespace",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/normalize_ws.dart';\n\nvoid main() {\n  test('normalize_ws', () {\n    expect(normalizeWhitespace(''), '');\n    expect(normalizeWhitespace('   '), '');\n    expect(normalizeWhitespace(' a  b\\tc '), 'a b c');\n    expect(normalizeWhitespace('a\\nb'), 'a\\nb');\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "reverse_words.dart",
+   "id": "reverse_words",
+   "prompt": "Create the file lib/reverse_words.dart defining exactly one top-level function: String reverseWords(String s) \u2014 first apply the normalizeWhitespace rule (runs of space/tab to one space, trim), then reverse the order of the space-separated words and join them with single spaces. Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "String reverseWords(String s) {\n  final n = s.replaceAll(RegExp('[ \\t]+'), ' ').trim();\n  if (n.isEmpty) return '';\n  return n.split(' ').reversed.join(' ');\n}\n",
+   "sig": "String reverseWords(String s)",
+   "spec": "first apply the normalizeWhitespace rule (runs of space/tab to one space, trim), then reverse the order of the space-separated words and join them with single spaces.",
+   "symbol": "reverseWords",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/reverse_words.dart';\n\nvoid main() {\n  test('reverse_words', () {\n    expect(reverseWords(''), '');\n    expect(reverseWords('one'), 'one');\n    expect(reverseWords('  the quick   brown '), 'brown quick the');\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "camel_to_snake.dart",
+   "id": "camel_to_snake",
+   "prompt": "Create the file lib/camel_to_snake.dart defining exactly one top-level function: String camelToSnake(String s) \u2014 lowercase the whole string, inserting '_' before every uppercase letter EXCEPT when it is at position 0 (a leading uppercase letter produces no '_'). Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "String camelToSnake(String s) {\n  final b = StringBuffer();\n  for (var i = 0; i < s.length; i++) {\n    final c = s[i];\n    final up = c.toUpperCase() == c && c.toLowerCase() != c;\n    if (up && i > 0) b.write('_');\n    b.write(c.toLowerCase());\n  }\n  return b.toString();\n}\n",
+   "sig": "String camelToSnake(String s)",
+   "spec": "lowercase the whole string, inserting '_' before every uppercase letter EXCEPT when it is at position 0 (a leading uppercase letter produces no '_').",
+   "symbol": "camelToSnake",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/camel_to_snake.dart';\n\nvoid main() {\n  test('camel_to_snake', () {\n    expect(camelToSnake(''), '');\n    expect(camelToSnake('a'), 'a');\n    expect(camelToSnake('camelToSnake'), 'camel_to_snake');\n    expect(camelToSnake('CamelToSnake'), 'camel_to_snake');\n    expect(camelToSnake('HTTPServer'), 'h_t_t_p_server');\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "snake_to_camel.dart",
+   "id": "snake_to_camel",
+   "prompt": "Create the file lib/snake_to_camel.dart defining exactly one top-level function: String snakeToCamel(String s) \u2014 split s into segments on '_'; ignore empty segments; the first non-empty segment becomes all-lowercase; every later non-empty segment gets its first character uppercased and the rest lowercased; concatenate the segments (no separators). No non-empty segment returns the empty string. Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "String snakeToCamel(String s) {\n  final segs = s.split('_').where((x) => x.isNotEmpty).toList();\n  if (segs.isEmpty) return '';\n  final b = StringBuffer(segs.first.toLowerCase());\n  for (final seg in segs.skip(1)) {\n    b.write(seg[0].toUpperCase());\n    b.write(seg.substring(1).toLowerCase());\n  }\n  return b.toString();\n}\n",
+   "sig": "String snakeToCamel(String s)",
+   "spec": "split s into segments on '_'; ignore empty segments; the first non-empty segment becomes all-lowercase; every later non-empty segment gets its first character uppercased and the rest lowercased; concatenate the segments (no separators). No non-empty segment returns the empty string.",
+   "symbol": "snakeToCamel",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/snake_to_camel.dart';\n\nvoid main() {\n  test('snake_to_camel', () {\n    expect(snakeToCamel(''), '');\n    expect(snakeToCamel('single'), 'single');\n    expect(snakeToCamel('snake_to_camel'), 'snakeToCamel');\n    expect(snakeToCamel('_leading_and__double'), 'leadingAndDouble');\n    expect(snakeToCamel('MIXED_case'), 'mixedCase');\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "initials.dart",
+   "id": "initials",
+   "prompt": "Create the file lib/initials.dart defining exactly one top-level function: String initials(String name) \u2014 split on runs of space/tab; take the first character of each word, uppercased; join them with '.' between (no trailing dot). Empty or blank input returns the empty string. Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "String initials(String name) {\n  final words = name\n      .replaceAll(RegExp('[ \\t]+'), ' ')\n      .trim()\n      .split(' ')\n      .where((w) => w.isNotEmpty)\n      .toList();\n  return words.map((w) => w[0].toUpperCase()).join('.');\n}\n",
+   "sig": "String initials(String name)",
+   "spec": "split on runs of space/tab; take the first character of each word, uppercased; join them with '.' between (no trailing dot). Empty or blank input returns the empty string.",
+   "symbol": "initials",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/initials.dart';\n\nvoid main() {\n  test('initials', () {\n    expect(initials(''), '');\n    expect(initials('   '), '');\n    expect(initials('ada lovelace'), 'A.L');\n    expect(initials('  Grace   B. Hopper '), 'G.B.H');\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "acronym.dart",
+   "id": "acronym",
+   "prompt": "Create the file lib/acronym.dart defining exactly one top-level function: String acronym(String s) \u2014 split on runs of space/tab; uppercase the first character of each word and concatenate them with no separator. Empty or blank input returns the empty string. Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "String acronym(String s) {\n  final words = s\n      .replaceAll(RegExp('[ \\t]+'), ' ')\n      .trim()\n      .split(' ')\n      .where((w) => w.isNotEmpty)\n      .toList();\n  return words.map((w) => w[0].toUpperCase()).join();\n}\n",
+   "sig": "String acronym(String s)",
+   "spec": "split on runs of space/tab; uppercase the first character of each word and concatenate them with no separator. Empty or blank input returns the empty string.",
+   "symbol": "acronym",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/acronym.dart';\n\nvoid main() {\n  test('acronym', () {\n    expect(acronym(''), '');\n    expect(acronym('light emission diode'), 'LED');\n    expect(acronym('  as   soon as possible '), ' ASAP'.trim());\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "safe_filename.dart",
+   "id": "safe_filename",
+   "prompt": "Create the file lib/safe_filename.dart defining exactly one top-level function: String safeFilename(String s) \u2014 replace every character that is NOT an ASCII letter, digit, '.', '_' or '-' with '_'; then collapse every run of one or more '_' into a single '_'; then remove leading and trailing '_' characters. Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "String safeFilename(String s) {\n  final replaced = s.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');\n  final collapsed = replaced.replaceAll(RegExp('_+'), '_');\n  return collapsed.replaceAll(RegExp('^_+|_+\\$'), '');\n}\n",
+   "sig": "String safeFilename(String s)",
+   "spec": "replace every character that is NOT an ASCII letter, digit, '.', '_' or '-' with '_'; then collapse every run of one or more '_' into a single '_'; then remove leading and trailing '_' characters.",
+   "symbol": "safeFilename",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/safe_filename.dart';\n\nvoid main() {\n  test('safe_filename', () {\n    expect(safeFilename(''), '');\n    expect(safeFilename('plain.txt'), 'plain.txt');\n    expect(safeFilename('my file (1).txt'), 'my_file_1_.txt');\n    expect(safeFilename('///'), '');\n    expect(safeFilename('a__b'), 'a_b');\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "pad_zero.dart",
+   "id": "pad_zero",
+   "prompt": "Create the file lib/pad_zero.dart defining exactly one top-level function: String padZero(String s, int w) \u2014 if w <= 0 or s.length >= w return s unchanged; otherwise return s left-padded with '0' characters so the result has length exactly w. Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "String padZero(String s, int w) =>\n    (w <= 0 || s.length >= w) ? s : '0' * (w - s.length) + s;\n",
+   "sig": "String padZero(String s, int w)",
+   "spec": "if w <= 0 or s.length >= w return s unchanged; otherwise return s left-padded with '0' characters so the result has length exactly w.",
+   "symbol": "padZero",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/pad_zero.dart';\n\nvoid main() {\n  test('pad_zero', () {\n    expect(padZero('42', 5), '00042');\n    expect(padZero('42', 2), '42');\n    expect(padZero('42', 1), '42');\n    expect(padZero('', 3), '000');\n    expect(padZero('7', 0), '7');\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "mask_email.dart",
+   "id": "mask_email",
+   "prompt": "Create the file lib/mask_email.dart defining exactly one top-level function: String maskEmail(String s) \u2014 if s contains no '@', return s unchanged. Otherwise split at the FIRST '@': if the local part (before it) is empty, return s unchanged; else return the first character of the local part, then '***', then '@' and the domain part exactly as they were. Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "String maskEmail(String s) {\n  final at = s.indexOf('@');\n  if (at < 1) return s;\n  return s[0] + '***' + s.substring(at);\n}\n",
+   "sig": "String maskEmail(String s)",
+   "spec": "if s contains no '@', return s unchanged. Otherwise split at the FIRST '@': if the local part (before it) is empty, return s unchanged; else return the first character of the local part, then '***', then '@' and the domain part exactly as they were.",
+   "symbol": "maskEmail",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/mask_email.dart';\n\nvoid main() {\n  test('mask_email', () {\n    expect(maskEmail('no-at-sign'), 'no-at-sign');\n    expect(maskEmail('@domain.com'), '@domain.com');\n    expect(maskEmail('ada@domain.com'), 'a***@domain.com');\n    expect(maskEmail('a.b@x.y'), 'a***@x.y');\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "redact_digits.dart",
+   "id": "redact_digits",
+   "prompt": "Create the file lib/redact_digits.dart defining exactly one top-level function: String redactDigits(String s) \u2014 replace every MAXIMAL run of six or more consecutive digit characters with a single '#'; runs of fewer than six digits stay unchanged; all other characters stay unchanged. Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "String redactDigits(String s) =>\n    s.replaceAll(RegExp(r'[0-9]{6,}'), '#');\n",
+   "sig": "String redactDigits(String s)",
+   "spec": "replace every MAXIMAL run of six or more consecutive digit characters with a single '#'; runs of fewer than six digits stay unchanged; all other characters stay unchanged.",
+   "symbol": "redactDigits",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/redact_digits.dart';\n\nvoid main() {\n  test('redact_digits', () {\n    expect(redactDigits(''), '');\n    expect(redactDigits('12345'), '12345');\n    expect(redactDigits('123456'), '#');\n    expect(redactDigits('id 1234567890 ok'), 'id # ok');\n    expect(redactDigits('a123456b123'), 'a#b123');\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "truncate.dart",
+   "id": "truncate",
+   "prompt": "Create the file lib/truncate.dart defining exactly one top-level function: String truncateEnd(String s, int n) \u2014 if n <= 0 return ''; if s.length <= n return s unchanged; if n == 1 return '-'; otherwise return the first n-1 characters of s followed by '-'. Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "String truncateEnd(String s, int n) {\n  if (n <= 0) return '';\n  if (s.length <= n) return s;\n  if (n == 1) return '-';\n  return s.substring(0, n - 1) + '-';\n}\n",
+   "sig": "String truncateEnd(String s, int n)",
+   "spec": "if n <= 0 return ''; if s.length <= n return s unchanged; if n == 1 return '-'; otherwise return the first n-1 characters of s followed by '-'.",
+   "symbol": "truncateEnd",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/truncate.dart';\n\nvoid main() {\n  test('truncate', () {\n    expect(truncateEnd('abcdef', 0), '');\n    expect(truncateEnd('abc', 3), 'abc');\n    expect(truncateEnd('abc', 5), 'abc');\n    expect(truncateEnd('abcdef', 1), '-');\n    expect(truncateEnd('abcdef', 4), 'abc-');\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "kebab.dart",
+   "id": "kebab",
+   "prompt": "Create the file lib/kebab.dart defining exactly one top-level function: String kebab(String s) \u2014 lowercase s; replace every maximal run of one or more characters that are NOT 'a'-'z' or '0'-'9' (after lowercasing) with a single '-'; then remove leading and trailing '-' characters. Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "String kebab(String s) => s\n    .toLowerCase()\n    .replaceAll(RegExp(r'[^a-z0-9]+'), '-')\n    .replaceAll(RegExp(r'^-+|-+$'), '');\n",
+   "sig": "String kebab(String s)",
+   "spec": "lowercase s; replace every maximal run of one or more characters that are NOT 'a'-'z' or '0'-'9' (after lowercasing) with a single '-'; then remove leading and trailing '-' characters.",
+   "symbol": "kebab",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/kebab.dart';\n\nvoid main() {\n  test('kebab', () {\n    expect(kebab(''), '');\n    expect(kebab('Hello World'), 'hello-world');\n    expect(kebab('  --a  B--c--  '), 'a-b-c');\n    expect(kebab('already-kebab'), 'already-kebab');\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "title_ascii.dart",
+   "id": "title_ascii",
+   "prompt": "Create the file lib/title_ascii.dart defining exactly one top-level function: String titleAscii(String s) \u2014 first apply the normalizeWhitespace rule (runs of space/tab to one space, trim); then for each word uppercase its first character and lowercase the rest; join the words with single spaces. Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "String titleAscii(String s) {\n  final n = s.replaceAll(RegExp('[ \\t]+'), ' ').trim();\n  if (n.isEmpty) return '';\n  return n\n      .split(' ')\n      .map((w) => w[0].toUpperCase() + w.substring(1).toLowerCase())\n      .join(' ');\n}\n",
+   "sig": "String titleAscii(String s)",
+   "spec": "first apply the normalizeWhitespace rule (runs of space/tab to one space, trim); then for each word uppercase its first character and lowercase the rest; join the words with single spaces.",
+   "symbol": "titleAscii",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/title_ascii.dart';\n\nvoid main() {\n  test('title_ascii', () {\n    expect(titleAscii(''), '');\n    expect(titleAscii('THE quick BROWN fox'), 'The Quick Brown Fox');\n    expect(titleAscii('  a   b '), 'A B');\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "is_palindrome.dart",
+   "id": "is_palindrome",
+   "prompt": "Create the file lib/is_palindrome.dart defining exactly one top-level function: bool isPalindromeAscii(String s) \u2014 remove every character that is NOT an ASCII letter or digit, lowercase the result, and return true when it reads the same backwards (the empty cleaned string returns true). Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "bool isPalindromeAscii(String s) {\n  final cleaned =\n      s.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toLowerCase();\n  final rev = cleaned.split('').reversed.join();\n  return cleaned == rev;\n}\n",
+   "sig": "bool isPalindromeAscii(String s)",
+   "spec": "remove every character that is NOT an ASCII letter or digit, lowercase the result, and return true when it reads the same backwards (the empty cleaned string returns true).",
+   "symbol": "isPalindromeAscii",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/is_palindrome.dart';\n\nvoid main() {\n  test('is_palindrome', () {\n    expect(isPalindromeAscii(''), isTrue);\n    expect(isPalindromeAscii('A man, a plan, a canal: Panama'), isTrue);\n    expect(isPalindromeAscii('abc'), isFalse);\n    expect(isPalindromeAscii('No lemon, no melon'), isTrue);\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "join_unique.dart",
+   "id": "join_unique",
+   "prompt": "Create the file lib/join_unique.dart defining exactly one top-level function: String joinUnique(List<String> parts, String sep) \u2014 keep the FIRST occurrence of each exact string in order, drop every later duplicate, and join the kept strings with sep (an empty list returns the empty string). Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "String joinUnique(List<String> parts, String sep) {\n  final seen = <String>{};\n  final kept = <String>[];\n  for (final p in parts) {\n    if (seen.add(p)) kept.add(p);\n  }\n  return kept.join(sep);\n}\n",
+   "sig": "String joinUnique(List<String> parts, String sep)",
+   "spec": "keep the FIRST occurrence of each exact string in order, drop every later duplicate, and join the kept strings with sep (an empty list returns the empty string).",
+   "symbol": "joinUnique",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/join_unique.dart';\n\nvoid main() {\n  test('join_unique', () {\n    expect(joinUnique([], ','), '');\n    expect(joinUnique(['a'], ','), 'a');\n    expect(joinUnique(['a', 'b', 'a', 'c', 'b'], '-'), 'a-b-c');\n    expect(joinUnique(['x', 'x', 'x'], ''), 'x');\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "run_length_encode.dart",
+   "id": "run_length_encode",
+   "prompt": "Create the file lib/run_length_encode.dart defining exactly one top-level function: String runLengthEncode(String s) \u2014 replace every maximal run of an identical character with that character followed by the run's length in decimal (a single character becomes e.g. 'a1'); the empty string returns the empty string. Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "String runLengthEncode(String s) {\n  if (s.isEmpty) return '';\n  final b = StringBuffer();\n  var cur = s[0];\n  var n = 1;\n  for (var i = 1; i < s.length; i++) {\n    if (s[i] == cur) {\n      n++;\n    } else {\n      b.write('$cur$n');\n      cur = s[i];\n      n = 1;\n    }\n  }\n  b.write('$cur$n');\n  return b.toString();\n}\n",
+   "sig": "String runLengthEncode(String s)",
+   "spec": "replace every maximal run of an identical character with that character followed by the run's length in decimal (a single character becomes e.g. 'a1'); the empty string returns the empty string.",
+   "symbol": "runLengthEncode",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/run_length_encode.dart';\n\nvoid main() {\n  test('run_length_encode', () {\n    expect(runLengthEncode(''), '');\n    expect(runLengthEncode('a'), 'a1');\n    expect(runLengthEncode('aabbbc'), 'a2b3c1');\n    expect(runLengthEncode('abcd'), 'a1b1c1d1');\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "clamp_int.dart",
+   "id": "clamp_int",
+   "prompt": "Create the file lib/clamp_int.dart defining exactly one top-level function: int clampInt(int v, int lo, int hi) \u2014 assume lo <= hi; return lo when v < lo, hi when v > hi, and v otherwise. Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "int clampInt(int v, int lo, int hi) =>\n    v < lo ? lo : (v > hi ? hi : v);\n",
+   "sig": "int clampInt(int v, int lo, int hi)",
+   "spec": "assume lo <= hi; return lo when v < lo, hi when v > hi, and v otherwise.",
+   "symbol": "clampInt",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/clamp_int.dart';\n\nvoid main() {\n  test('clamp_int', () {\n    expect(clampInt(5, 0, 10), 5);\n    expect(clampInt(-1, 0, 10), 0);\n    expect(clampInt(11, 0, 10), 10);\n    expect(clampInt(0, 0, 0), 0);\n  });\n}\n"
+  },
+  {
+   "check": [
+    "/Users/antonio/fvm/default/bin/dart",
+    "test",
+    "test/verify_test.dart"
+   ],
+   "file": "word_wrap.dart",
+   "id": "word_wrap",
+   "prompt": "Create the file lib/word_wrap.dart defining exactly one top-level function: String wordWrap(String s, int w) \u2014 assume w >= 1. First apply the normalizeWhitespace rule (runs of space/tab to one space, trim); split into words on single spaces; build lines greedily: append a word to the current line while the line's length plus (1 for the separating space when the line is not empty) plus the word's length is at most w; a word longer than w goes on a line of its own (words are never split); join the lines with '\\n'. Empty input returns the empty string. Use the write tool once to create the file, then use the run tool to run the verification command. Change no other file.",
+   "reference_impl": "String wordWrap(String s, int w) {\n  final n = s.replaceAll(RegExp('[ \\t]+'), ' ').trim();\n  if (n.isEmpty) return '';\n  final words = n.split(' ');\n  final lines = <String>[];\n  var line = '';\n  for (final word in words) {\n    if (word.length > w) {\n      if (line.isNotEmpty) lines.add(line);\n      lines.add(word);\n      line = '';\n      continue;\n    }\n    final add = line.isEmpty ? word.length : line.length + 1 + word.length;\n    if (add <= w) {\n      line = line.isEmpty ? word : '$line $word';\n    } else {\n      lines.add(line);\n      line = word;\n    }\n  }\n  if (line.isNotEmpty) lines.add(line);\n  return lines.join('\\n');\n}\n",
+   "sig": "String wordWrap(String s, int w)",
+   "spec": "assume w >= 1. First apply the normalizeWhitespace rule (runs of space/tab to one space, trim); split into words on single spaces; build lines greedily: append a word to the current line while the line's length plus (1 for the separating space when the line is not empty) plus the word's length is at most w; a word longer than w goes on a line of its own (words are never split); join the lines with '\\n'. Empty input returns the empty string.",
+   "symbol": "wordWrap",
+   "verify_test": "import 'package:test/test.dart';\nimport 'package:lb_sandbox/word_wrap.dart';\n\nvoid main() {\n  test('word_wrap', () {\n    expect(wordWrap('', 5), '');\n    expect(wordWrap('one', 3), 'one');\n    expect(wordWrap('aaa bb c', 3), 'aaa\\nbb\\nc');\n    expect(wordWrap('short', 2), 'short');\n    expect(wordWrap('the quick brown fox', 9), 'the quick\\nbrown fox');\n  });\n}\n"
+  }
+ ],
+ "version": 1
+}

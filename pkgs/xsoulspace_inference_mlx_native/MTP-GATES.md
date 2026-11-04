@@ -1389,3 +1389,146 @@ frozen Part.
   ranker/laya-supplied skeleton is a productization question for a future
   arm, not this one.
 - No training happens in this arm.
+
+---
+
+## PART 8 — Line LB: the completion@N loop-bench (FROZEN 2026-11-04, before any gated run)
+
+Owner go 2026-11-04 ("do phase 1 and freeze gates as recommended" — the
+LB-G2 threshold 0.50 accepted as recommended). Dual-use arm: the lane's
+REASONING-TRACK direction #1 (measure the loop, not the shot) AND the
+harness reliability program's Phase 1
+(`ecsai_harness/pkgs/xsoulspace_agentic_harness/docs/agent/local_actor_reliability_program.md`).
+Lane law applies in full: the thresholds below were frozen BEFORE any
+gated run; changing a constant after seeing data makes a NEW arm needing
+a NEW Part; a scorer changed after seeing data is a knob.
+
+Runners (frozen): `tool/nursery/loop_bench.py` (S1/S3 + the CPU verdict),
+`tool/nursery/loop_bench/bank_build.py` + `bank.json` (the S2 corpus),
+`tool/nursery/loop_bench/s2_drive.sh` + harness `tool/lb_task_ctl.dart`
+(the S2 isolated-trial chain). Evidence: `bench/nursery/experiments/
+loop-bench-<UTC>/` (gitignored; full completion/receipt caches — every
+verdict is CPU replay).
+
+### Frozen constants
+
+- **Casts.** S1 decider = Qwen3-0.6B-4bit + `adapter_untagged`
+  (bench/nursery/experiments/adapter-conditioning-2026-10-21/adapter_untagged).
+  S3 = Qwen3-0.6B-4bit BASE. S2 = the harness native `qwen` binding (the
+  same 0.6B-4bit snapshot) driven by `realm_actor --once` →
+  `DurableCodingExecutor` at harness HEAD including the
+  `tool_proposal_absent` terminal (ada86954). No env overrides; thinking
+  off (template default); power/state recorded at run start.
+- **Sampling.** N=4 sampled candidates (S1/S3), N_REP=3 independent
+  trials (S2); temp 0.8, top_p 0.95 (`make_sampler`); caps S1=16 tokens,
+  S3=96 tokens. Sampling is not seed-reproducible on this stack — the
+  caches are the reproducibility artifact (LB-G5).
+- **Corpora.** S1: perm (293) / veto (227) ALL test rows via the K' hash
+  law (`adapter_conditioning` load_task/split_rows), labels joined ", ",
+  BASE_PROMPT unchanged. S3: `decomp_skeleton_dataset.json` sha256
+  `cac823a79c9ce37535ce483e839ec5daa61db25b8d5fd633b0f23a04a42c5c2c`
+  (n=90; the SK-G0 refusal law applies) + the tracked 10
+  (`testdata/bench/decompression_lane.json`; oracle constants 280/2/5).
+  S2: `bank.json` sha256 `ba8a13fefbe716ea46395d1ac10a6b77596ee0724b77a1e70b1b28b24d920c48` — 20 slugify-shaped scoped tasks;
+  each task's verify test is BANK-authored (the independent oracle; the
+  actor never authors the checker) with its sha256 recorded; every task
+  audited BEFORE this freeze: reference impl green AND empty sandbox red
+  (20/20 discriminate; audit log retained in the evidence dir).
+- **S1 selection policy.** Candidates = the distinct VALID first-line
+  labels of the 4 samples, first-appearance order. Selection = the ranker
+  greedy over BASE_PROMPT restricted to the candidate vocabulary (its
+  native closed-vocab shape). Malformed selection → plurality among
+  candidates (first-appearance tiebreak), counted loud. Zero valid
+  candidates → the greedy label, counted loud.
+- **S2 trial law.** Fresh temp store + fresh sandbox per (task, rep);
+  frozen check = the bank verify test (`fvm dart test
+  test/verify_test.dart`); the verify-test sha is compared before/after
+  each trial — a mismatch VOIDs the trial and counts an integrity
+  violation (gating). Success = queue terminal `succeeded` (run-pass +
+  source-effects-current + goal-acceptance conclusive). Executor budget =
+  the default maxInferenceStarts (20) with the `tool_proposal_absent`
+  early terminal armed.
+- **S2 seam note (frozen caveat).** Trials admit with `model:'qwen'`
+  through the CURRENT task-level-modelId seam — the worker-era knob the
+  owner critique named (program U8 / Phase 2d). The bench measures the
+  cast's loop reliability; the wiring fix changes nothing measured here.
+
+### Gates
+
+- **LB-G0 (reproduction guard, per S1 task):** greedy top-1
+  (`extract_label_first_line`, PRIMARY) reproduces perm 0.8737 / veto
+  0.7533 within ±2.0 pp on the full test rows, same run. Failure ⇒
+  REFUSAL: instrument drift — no LB gate may pass on that run.
+- **LB-G1 (selection law, per S1 task):** selection-from-4 accuracy ≥
+  greedy accuracy − 1.0 pp AND selection_malformed == 0. Readings
+  (frozen, co-reported): selection−greedy pp with the McNemar exact p +
+  CI95; pass@4 (any valid candidate = gold) with Wilson CI;
+  zero_valid_candidates count. Malformed SAMPLED candidates do not fail
+  G1 (the zero-illegal law governs the greedy ranker outputs); they are
+  excluded from candidates and counted.
+- **LB-G2 (loop reliability, S2):** bank-level pass@3 ≥ 0.50 AND
+  coverage 1.0 (20/20 tasks × 3 reps scored) AND integrity violations
+  == 0. Readings: first-attempt pass rate + Wilson CI; pass@3 + CI; the
+  named-failure-class distribution (tool_proposal_absent /
+  coding_source_effect_missing / independent_check_failed /
+  provider-class / capacity-class / other); decisions + wall-seconds per
+  trial. Coverage <1.0 ⇒ verdict C (partial never gates input — L-G3).
+  PASS ⇒ the scoped-tool-task shape is declared loop-reliable at budget
+  3 for qwen0.6B; FAIL ⇒ the shape's default stays escalation-first;
+  EITHER way the readings supply the per-shape retry-budget numbers for
+  the harness ladder (replacing the maxInferenceStarts=20 guess).
+- **LB-G3 (draft loop, S3):** tracked-10 pass@4 ≥ 9/10. Readings: the
+  90-case generated pass@1 (the FIRST qwen0.6B decomposition measurement
+  in this lane) and pass@4, both with Wilson CI. The 1.7B comparison
+  cell is DEFERRED — not run, not gated.
+- **LB-G4 (cost/physics):** GPU minutes reported per shape; S2 wall
+  budget ≤ 4 h; GPU-serial law (never two consumers at once — the
+  lane's battery law); AC + charge state recorded at run start (ADR
+  0061: these are quality gates, not power-conditioned).
+- **LB-G5 (honesty):** full completion/receipt caches; verdicts are CPU
+  replay only (`--verdict`); scorers/oracles frozen before the run
+  (scoring.py extractors; the skeleton_fill oracle constants; the bank
+  verify tests + shas); smoke runs are recorded as smoke and never
+  gated; every non-pass is a named receipt; no post-hoc edits to this
+  Part.
+
+### Interpretation laws (frozen before any run)
+
+- pass@N := the fraction of items with ≥1 oracle-passing trial among
+  their first N trials (keep-if-verified loop semantics; trials
+  independent by construction).
+- LB-G1 PASS with selection−greedy ≥ 0 ⇒ selection-as-deliberation is
+  safe on the closed-set shape (direction #2's verifier question gets a
+  measured answer); beyond the −1 pp slack ⇒ the FAIL reading stands:
+  the single greedy pass remains the product path.
+- LB-G3's tracked gate does NOT extrapolate to the 90-case corpus (the
+  SK law: the tracked 10 is a ceiling, not a rate); the 90-case readings
+  are descriptive.
+
+### Preflight record (before the freeze; smokes never gate)
+
+- Bank audit: round 1 = 0/20 (bare `expect()` outside `test()` — the
+  builder's structural defect); round 2 = 18/20 (word_wrap expectation
+  arithmetic; kebab raw-string `\$` regex defect; safe_filename
+  expectation); round 3 = 20/20 CLEAN, then bank.json written (sha
+  above). All three rounds are pre-freeze generator fixes (the SK
+  precedent); audit logs retained in the evidence dir `_preflight/`.
+- S1/S3 smoke (4 perm rows, 3 tracked cases): chain green — generation,
+  sampling (`make_sampler`), caches, CPU verdict; gates printed SMOKE.
+  Two pre-freeze runner fixes it caught: PKG path level, mlx_lm 0.32
+  sampler API.
+- S2 smoke (count_vowels, 1 trial): the FULL executor chain ran —
+  palette resolved via `modelConfigurationRoot`, native qwen drove 20
+  decisions / 19 writes / 1 goal_verify in 121 s, verify-sha intact,
+  honest terminal `independent_check_failed` (the frozen check caught a
+  real qwen defect: `.length()` invoked as a function; the actor never
+  fixed it within the 20-start budget — a valid capability receipt, the
+  class this bench exists to quantify). Pre-freeze driver fixes it
+  caught: the palette-config seam and the reason parse from run.log.
+- Evidence dir: `bench/nursery/experiments/loop-bench-2026-11-04T00-01-12Z`
+  (preflight artifacts under `_preflight/`). Power at run start: AC,
+  44 %, charging (ADR 0061 recorded; quality gates, not power-conditioned).
+
+### Post-run status
+
+(pending — filled after the gated runs; this Part is not edited)
