@@ -13,10 +13,13 @@ import 'package:xsoulspace_inference_local_serve/native_asset_cache.dart';
 /// reference (ml-explore/mlx#3915 blocks the CMake route there).
 ///
 /// MLX resolves its Metal kernels COLOCATED with the loaded dylib, and a
-/// bare dart process has no bundle fallback, so the `mlx.metallib` is copied
+/// bare dart process has no bundle fallback, so the `mlx.metallib` is placed
 /// beside every load candidate: the hook output directory, the resolving
 /// workspace's `.dart_tool/lib`, and — as a DATA asset — the application
-/// bundle that `dart build cli` produces.
+/// bundle that `dart build cli` produces. The placements are APFS clones
+/// (`_copyCoalesced`): byte-identical to the stripped source and sharing its
+/// blocks, so N consumer workspaces no longer store the metallib N times
+/// (measured 2026-11-04: 9 identical 140.4 MB copies across this machine).
 ///
 /// Toolchain needs (first build only): cargo, cmake, and the Metal Toolchain
 /// (`xcodebuild -downloadComponent MetalToolchain`). The mlx/mlx-c cmake
@@ -125,12 +128,12 @@ void main(List<String> args) async {
     final bundledMetallib =
         '${input.outputDirectory.toFilePath()}/mlx.metallib';
     if (buildCode) {
-      await File(dylib).copy(bundledDylib);
+      await _copyCoalesced(File(dylib), bundledDylib);
     }
     final metallibFile = await _strippedMetallib(metallibSource);
     var metallibReady = metallibFile != null;
     if (metallibFile != null) {
-      await metallibFile.copy(bundledMetallib);
+      await _copyCoalesced(metallibFile, bundledMetallib);
     } else {
       stderr.writeln('[laya hook] warning: no metallib at $metallibSource '
           '— GPU ops will fail without it');
@@ -167,7 +170,7 @@ void main(List<String> args) async {
         final name = source.split('/').last;
         final temp =
             '${loadDir.path}/.$name.laya-hook-${DateTime.now().microsecondsSinceEpoch}';
-        await File(source).copy(temp);
+        await _copyCoalesced(File(source), temp);
         await File(temp).rename('${loadDir.path}/$name');
       }
     }
@@ -196,6 +199,23 @@ void main(List<String> args) async {
       );
     }
   });
+}
+
+/// Copies [source] to [destPath], on APFS as a clone (`cp -c`):
+/// byte-identical, copy-on-write, and costing no new disk blocks — the
+/// stripped metallib (140.4 MB, golden-identical) was being physically
+/// stored once per consumer copy. Falls back to a plain byte copy when the
+/// clone is refused (non-APFS volume, cross-device, older cp).
+Future<void> _copyCoalesced(File source, String destPath) async {
+  final clone = await Process.run('/bin/cp', ['-c', source.path, destPath]);
+  final dest = File(destPath);
+  if (clone.exitCode == 0 &&
+      dest.existsSync() &&
+      dest.lengthSync() == source.lengthSync()) {
+    return;
+  }
+  if (dest.existsSync()) dest.deleteSync();
+  await source.copy(destPath);
 }
 
 /// The metallib to bundle: a cached `metal-strip`ped sibling of [source], or
