@@ -38,6 +38,8 @@ Before claiming readiness, maturity, harness support, steward status, or adoptio
 
 If the same friction loops twice, stop before making another packet. Name the pain signal, owner, native validation gate, smallest disposition, rerun route, and non-claims; then fix the owner, move repeated drift to a check/tool/skill/current ledger, leave the path native, or stop.
 
+Probe scratch law (paid for 2026-11-04: `local-adoption`/`cancellation-native` left ~850 MB of binary copies in `.dart_tool`): probes and one-off experiments never write multi-MB binaries (metallibs, dylibs, dills, model snapshots) into `.dart_tool` or the repo tree — route those to `$TMPDIR` (auto-swept by `just sweep-machine`) and keep the durable evidence textual: counts, verdicts, paths. A `dart_tool` capture dir is scratch by definition; it is never the evidence artifact.
+
 If this repo needs a current claim ledger, run `steward evidence init --minimal`.
 Default to no harness: do not add actions, probes, benchmarks, or scenarios unless typed actions, probes, or benchmarks help real repo work.
 Use `steward.yaml` and harness proof only when typed actions, probes, or benchmarks help real repo work.
