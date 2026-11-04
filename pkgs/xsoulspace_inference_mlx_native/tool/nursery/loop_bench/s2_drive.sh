@@ -31,7 +31,26 @@ BUILDER="$DFP/tool/nursery/loop_bench/bank_build.py"
 
 mkdir -p "$EVID/s2"
 TRIALS="$EVID/s2_trials.jsonl"
-: > "$TRIALS"
+touch "$TRIALS"
+
+# RESUME LAW (mechanism repair, 2026-11-04, documented in Part 8 post-run
+# status): a trial whose VALID receipt line already exists in the jsonl is
+# skipped — valid = decisions recorded, wall > 30 s, and not one of the
+# ENOSPC classes (receipt_unreadable / actor_stopped). Frozen constants,
+# oracles and prompts are untouched by this skip; it only prevents
+# re-spending GPU on trials already measured under this exact Part.
+SKIP=$(python3 -c "
+import json
+try:
+    rows = [json.loads(l) for l in open('$TRIALS')]
+except FileNotFoundError:
+    rows = []
+valid = [r for r in rows
+         if r.get('decisions') is not None and r.get('wall_s', 0) > 30
+         and 'receipt_unreadable' not in str(r.get('reason'))
+         and r.get('reason') != 'actor_stopped']
+print(' '.join(f\"{r['task']}:{r['rep']}\" for r in valid))
+")
 
 TASK_IDS=$(python3 -c "
 import json
@@ -42,6 +61,9 @@ print(' '.join(ids[:$SMOKE] if $SMOKE else ids))
 
 for task in $TASK_IDS; do
   for rep in $(seq 1 "$N_REP"); do
+    case " $SKIP " in
+      *" $task:$rep "*) echo "[s2] skip ${task} rep=${rep} (valid receipt exists)"; continue ;;
+    esac
     dir="$EVID/s2/${task}_${rep}"
     mkdir -p "$dir/store"
     spec_out=$(python3 "$BUILDER" --emit-sandbox "$task" "$dir/sandbox")
