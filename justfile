@@ -31,6 +31,35 @@ sweep-machine:
     echo "== disk =="
     df -h /System/Volumes/Data | tail -1
 
+# Prune stale native-assets hook generations across the workspaces that
+# path-depend on the native packages (measured 2026-11-04: hooks_runner kept
+# every config-hash generation forever — one package held two 151M copies of
+# the same metallib). AGE-BASED by design: a "keep the newest per package"
+# heuristic misfires here, because the hook ships APFS clones whose mtimes
+# carry the SOURCE build date (Oct 8), so fresh generations can look older
+# than stale metadata dirs. Generations younger than 30 days are never
+# touched; older ones re-run their hook on demand (cheap: warm cmake/cargo/
+# metal-strip caches, and cloned metallibs make a stale generation cost its
+# dylib clone (~18M) — not a second metallib). `just sweep-machine` does NOT
+# cover these (it only touches $TMPDIR).
+hook-hash-gc roots="$HOME/xs/storage_problem/dart_flutter_packages $HOME/xs/ecsai_harness $HOME/xs/storage_problem/last_answer":
+    #!/usr/bin/env bash
+    set -uo pipefail
+    for ws in {{ roots }}; do
+      ws="${ws/#\~/$HOME}"
+      base="$ws/.dart_tool/hooks_runner"
+      [ -d "$base" ] || continue
+      find "$base" -type d -mindepth 2 -maxdepth 4 -mtime +30 2>/dev/null | while read -r d; do
+        # Hash dirs are >=9 hex chars; excludes 'build', 'out', package names.
+        case "$(basename "$d")" in
+          [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) ;;
+          *) continue;;
+        esac
+        echo "hook-hash-gc [$ws]: rm $d"
+        rm -rf "$d"
+      done
+    done
+
 # Fast scoped gate for one package (default: xsoulspace_inference_core).
 # Usage: just check [package]  — pub get is reused from workspace resolution.
 check package="xsoulspace_inference_core":
