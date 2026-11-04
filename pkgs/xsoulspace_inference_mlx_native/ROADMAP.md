@@ -125,7 +125,14 @@ Owed regardless of the levers:
   (decision-compile = advisory measured-shape routing, never an actor
   limit) and #4 (verifier-gated draft =
   the gated-draft bench shape). That file schedules nothing here; the lane
-  law — thresholds freeze before runs — is unchanged.)
+  law — thresholds freeze before runs — is unchanged. **2026-11-04 —
+  direction #1 is MEASURED (Line LB, Part 8):** LB-G0/G1/G3 PASS (the
+  selection loop is safe; pass@4 headroom 0.945/0.934 = selector-side;
+  qwen0.6B decomposition pass@1 0.222 → pass@4 0.478), LB-G2 FAIL
+  legitimate (the scoped-tool-task loop is 0/60 at qwen0.6B on the
+  durable-executor prompt surface — the argv-path-latch class;
+  escalation-first stays its default; the ladder constants are measured).
+  RESULTS-HISTORY §22; LINES Row P.)
 
 - **Direction #7 — weight-space programming (external pointer, recorded
   2026-11-03; UNREPLICATED here).** A frontier LLM (GPT-6 Astra) edited

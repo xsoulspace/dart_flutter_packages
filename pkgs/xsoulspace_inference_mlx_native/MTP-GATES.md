@@ -1531,4 +1531,41 @@ verdict is CPU replay).
 
 ### Post-run status
 
-(pending — filled after the gated runs; this Part is not edited)
+**RUN 2026-11-04 (AC, 44 % charging at start; verdicts CPU-replayed).**
+
+- **LB-G0 PASS both tasks — EXACT reproduction** (perm 0.8737201365…,
+  veto 0.7533039647…; 0.00 pp drift on both).
+- **LB-G1 PASS both tasks.** perm selection 0.8874 (+1.37 pp, McNemar
+  p=0.34375, CI95 [−0.035, +0.007]); veto 0.7533 (±0.00, p=1.0); zero
+  malformed selections, zero zero-valid rows. pass@4: perm 0.9454
+  [0.913, 0.966]; veto 0.9339 [0.894, 0.960].
+- **LB-G2 FAIL (legitimate; coverage 1.0; integrity violations 0).**
+  0/60 succeeded; pass@3 = 0.00 [0.00, 0.16] vs ≥ 0.50. Classes: 55 ×
+  coding_source_effect_missing (the argv-path-latch class: writes aimed
+  at the absolute verification-binary path from the system prompt; the
+  jail refused every one; median 14.5 moves; median 20 decisions = the
+  budget ceiling, never flipped) + 5 × independent_check_failed (real
+  defects caught by the bank verify tests). Frozen interpretation
+  applies: the shape's default stays escalation-first; ladder constants:
+  budget 20 is pure burn on this shape/cast — escalate early (~5) and
+  add the consecutive-write-gate-refusals named-terminal candidate.
+- **LB-G3 PASS.** tracked-10 pass@4 10/10 (greedy already 10/10 — the
+  ceiling). Generated-90: pass@1 0.2222 [0.149, 0.318] → pass@4 0.4778
+  [0.378, 0.580] — the first qwen0.6B decomposition cell.
+- **LB-G4 within bound.** GPU wall: S1 5.7 + 4.7 min, S3 11.2 min, S2
+  83.8 min ≈ 105 min ≤ 4 h; GPU-serial held; AC recorded at start.
+- **LB-G5 held.** Full caches; CPU-replay verdicts; no scorer, oracle or
+  constant changed after the freeze. TWO mechanism repairs, each
+  committed with its receipt and neither touching a frozen constant:
+  `1d1d6270` (absolute-path normalization — run-1's S2 leg was invalid
+  at the argument stage, `actor_store_path_not_absolute` ×60, zero GPU;
+  quarantined under `_preflight/s2-invalid-relative-store/`) and
+  `27d85bf9` (the resume law — a machine-level ENOSPC event polluted 24
+  of the first 32 trials; the 8 valid rows were kept and seeded, the
+  32-row jsonl quarantined under `_preflight/enospc-interrupted/`, 52
+  trials re-ran under THIS Part). The smoke blind spot is receipted:
+  /tmp paths are absolute and masked the relative-EVID defect.
+- Descriptive findings banked (not gates): the argv-path-latch hazard
+  and prompt-surface fragility (identical frozen prompt + greedy
+  decoding flipped behavior between jail-path strings) — §22.
+

@@ -44,6 +44,24 @@ any run. Recorded 2026-10-28, branch `ag-c`.
 > 2026-10-30) — n=1 is exactly why the loop, not the shot, is the
 > unmeasured quantity. Still no gates in this file.
 
+> **Update 2026-11-04 (direction #1 is MEASURED):** the loop-bench ran as
+> **Line LB** (MTP-GATES Part 8, frozen on the owner's go "do phase 1 and
+> freeze gates as recommended"; the LB-G2 threshold 0.50 accepted as
+> recommended). LB-G0 reproduced the ranker baselines EXACTLY; **G1
+> PASS** — selection-from-4 is non-inferior both tasks (perm 0.8874
+> +1.37 pp p=0.34; veto ±0.00; zero malformed) with pass@4 = 0.945/0.934:
+> the headroom is SELECTOR-side, which sharpens direction #2 into a
+> verifier question with numbers; **G3 PASS** — first qwen0.6B
+> decomposition cell: pass@1 0.222 → pass@4 0.478 (the loop doubles
+> yield); **G2 FAIL legitimate** — the scoped-tool-task shape is 0/60 at
+> qwen0.6B on the durable-executor prompt surface (the argv-path-latch
+> class; median 20 decisions = budget ceiling, never flipped): it stays
+> escalation-first and the ladder constants are now measured, not
+> guessed. Directions #2/#4 inherit these numbers; direction #7
+> (weight-space programming) gains a concrete target class
+> (instruction-following / the argv latch). §22; VERDICTS F/✓ rows;
+> LINES Row P.
+
 ## Why this file exists
 
 The lane converged on two live, measured tracks: a **capability track**

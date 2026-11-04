@@ -780,6 +780,54 @@ exhausted at 91) and/or a non-lexical skeleton-carry criterion. Full
 numbers: [`RESULTS-HISTORY.md`](RESULTS-HISTORY.md) §20; evidence under
 `bench/nursery/experiments/sk-fill-*-2026-11-03T*`.
 
+## Row P — Line LB: the completion@N loop-bench (CLOSED — G0/G1/G3 PASS, G2 FAIL legitimate; the loop numbers are banked)
+
+**The question (owner go 2026-11-04, "do phase 1 and freeze gates as
+recommended").** The lane had only ever measured SHOT reliability; LB
+measured the LOOP — completion@N inside keep-if-verified over the three
+beat shapes of the harness reliability program (its Phase 1 =
+REASONING-TRACK direction #1). Everything pre-registered in MTP-GATES
+Part 8 BEFORE any run: constants, N grids, sampling (temp 0.8 / top_p
+0.95), the 20-task S2 bank (sha `ba8a13fe…`, 20/20 audit-discriminated
+after three pre-freeze generator rounds), and the interpretation laws.
+
+**The result.** **S1** (0.6B+adapter; perm 293 / veto 227): G0 reproduced
+the frozen baselines EXACTLY (0.00 pp both); selection-from-4 is
+non-inferior (perm 0.8874, +1.37 pp p=0.34; veto ±0.00; zero malformed
+selections) and **pass@4 = 0.945 / 0.934** — the correct label is present
+in cheap samples 93–95 % of the time; the headroom is a SELECTOR problem
+(direction #2 quantified). **S3** (0.6B base; deterministic oracle):
+tracked-10 10/10 (ceiling); generated-90 — the FIRST qwen0.6B
+decomposition cell — **pass@1 0.222 → pass@4 0.478**: the loop more than
+doubles yield. **S2** (the real executor route: `realm_actor --once` →
+`DurableCodingExecutor`, native qwen, per-trial isolated store+sandbox,
+bank-authored verify tests, sha-integrity law): **0/60, pass@3 = 0.00 vs
+frozen ≥ 0.50 — LB-G2 FAIL legitimate** (coverage 1.0, integrity 0):
+55 × the ARGV-PATH-LATCH class (the actor aims `write` at the absolute
+verification-binary path from the executor system prompt; the jail
+refuses; median 14.5 refused moves, zero adaptation) + 5 genuine
+check failures; median decisions 20 = the budget ceiling — the retry
+budget never bought a flip.
+
+**What banks.** (1) The selection loop is a product-usable policy on
+closed sets; converting pass@4 headroom needs a better selector. (2) The
+draft loop is the cheapest measured yield multiplier. (3) The
+scoped-tool-task shape stays escalation-first at qwen0.6B on this prompt
+surface; measured ladder constants replace the maxInferenceStarts=20
+guess: budget 20 is pure burn — escalate early (~5) and add the
+consecutive-write-gate-refusals named-terminal candidate (the class
+slips past `tool_proposal_absent`: tools ARE proposed, just invalid).
+(4) Two named hazards for any 0.6B actor wiring: the argv-path latch and
+prompt-surface fragility (the identical frozen prompt under identical
+greedy decoding flipped behavior between jail-path strings `/private/tmp/…`
+vs `/Users/…`). Run honesty: one invalid leg (relative paths;
+quarantined; `1d1d6270`) and one machine-level ENOSPC interruption (8
+valid kept, 24 polluted quarantined, resume law `27d85bf9` under the SAME
+Part). Cost ≈ 105 GPU-min serial, verdicts CPU replay. Full numbers:
+[`RESULTS-HISTORY.md`](RESULTS-HISTORY.md) §22; evidence
+`bench/nursery/experiments/loop-bench-2026-11-04T00-01-12Z/` (`_preflight/`
+holds the audit, smokes and quarantines).
+
 ## The standing non-claims of this lane
 
 - Every number here is **one machine, one model, one corpus, one seed, one

@@ -604,3 +604,90 @@ the gated runs' caches stay); session temp artifacts removed; no tracked
 file deleted. Evidence for the retired line remains where it always lived:
 the run dirs + verdict jsons under `bench/nursery/experiments/` (gitignored
 by lane convention) and the tracked records cited above.
+
+
+---
+
+## §22 — Line LB: the completion@N loop-bench (2026-11-04, Part 8)
+
+**The arm.** The lane's FIRST loop measurement (REASONING-TRACK direction
+#1 = harness reliability-program Phase 1; owner go 2026-11-04, "do phase 1
+and freeze gates as recommended" — the LB-G2 threshold 0.50 accepted as
+recommended). Everything pre-registered in MTP-GATES Part 8 BEFORE any
+gated run: three beat shapes × frozen oracles, N grids, sampling constants
+(temp 0.8 / top_p 0.95), the S2 bank (sha256
+`ba8a13fefbe716ea46395d1ac10a6b77596ee0724b77a1e70b1b28b24d920c48`,
+20/20 audit-discriminated after three pre-freeze generator rounds:
+0/20 test-wrapper defect → 18/20 word_wrap/kebab/safe_filename defects →
+20/20 CLEAN). Evidence: `bench/nursery/experiments/loop-bench-2026-11-04T00-01-12Z/`
+(gitignored; `_preflight/` retains the audit logs, smokes, the invalid
+run-1 leg and the ENOSPC quarantine). AC power, 44 % charging at start.
+
+**S1 — closed-set decision loop** (0.6B + adapter_untagged; perm 293 /
+veto 227; greedy + N=4 samples; selection = the ranker re-asked over the
+distinct valid candidate labels):
+
+| cell | greedy (G0) | selection | Δ pp | McNemar p | pass@4 [Wilson 95 %] | malformed sel | zero-valid |
+| ---- | ----------- | --------- | ---- | --------- | -------------------- | ------------- | ---------- |
+| perm | 0.8737 (0.00 pp vs frozen) | 0.8874 | +1.37 | 0.344 | 0.9454 [0.913, 0.966] | 0 | 0 |
+| veto | 0.7533 (0.00 pp) | 0.7533 | 0.00 | 1.0 | 0.9339 [0.894, 0.960] | 0 | 0 |
+
+LB-G0 PASS (EXACT reproduction — greedy determinism + instrument
+identity). LB-G1 PASS both (non-inferiority −1 pp law; zero malformed
+selections). **The headline reading: the correct label is PRESENT among 4
+cheap samples 93–95 % of the time while greedy captures 87/75 % and
+ranker-selection 89/75 % — the headroom is a SELECTOR problem, not a
+generation problem** (direction #2's verifier question, quantified).
+
+**S3 — gated draft / decomposition loop** (0.6B base; deterministic oracle
+280/2/5; corpus sha-guarded): tracked-10 greedy 10/10, pass@4 10/10
+(LB-G3 PASS; ceiling per the SK law). Generated-90 — the FIRST qwen0.6B
+decomposition cell in this lane: **pass@1 0.2222 [0.149, 0.318] → pass@4
+0.4778 [0.378, 0.580]** — the keep-if-verified loop more than doubles the
+yield on the shape where only lfm had ever been measured (0.34 at 1.7B,
+§20).
+
+**S2 — scoped-tool-task loop** (the REAL executor route: `realm_actor
+--once` → `DurableCodingExecutor` on the native qwen binding; per-trial
+isolated store + sandbox; bank-authored verify tests = the independent
+oracle; sha-integrity law around every trial): **LB-G2 FAIL, legitimate** —
+0/60 succeeded, pass@3 = 0.00 [0.00, 0.16] vs frozen ≥ 0.50; coverage
+1.0; integrity violations 0. Classes: **55 × coding_source_effect_missing
+of the ARGV-PATH-LATCH kind** (the actor repeatedly aims `write` at
+`/Users/antonio/fvm/default/bin/dart` — the absolute verification-binary
+path embedded in the executor system prompt; the jail refuses every
+attempt with an explicit repair message; median 14.5 refused moves with
+ZERO adaptation) + 5 × independent_check_failed (files authored; the
+frozen check caught real defects, e.g. the smoke's `.length()` invoked as
+a function). **Median decisions = 20 = the budget ceiling: every trial
+spent its full inference budget and never flipped.** Frozen interpretation
+applies: the shape's default stays escalation-first.
+
+**Banked facts.** (1) The selection loop is SAFE and cheap on closed sets
+— N=4 + ranker-selection is a product-usable policy; converting the
+93–95 % pass@4 headroom needs a better SELECTOR. (2) The draft loop more
+than doubles decomposition yield at 0.6B. (3) The scoped-tool-task loop
+is dead at 0.6B on this prompt surface: measured ladder constants replace
+the maxInferenceStarts=20 guess — budget 20 is pure burn here; escalate
+early (~5 decisions) and add the named-terminal candidate
+(consecutive-write-gate-refusals — the class slips past
+`tool_proposal_absent` because tools ARE proposed, just invalid).
+(4) Two named hazards: the ARGV-PATH LATCH (absolute argv in a 0.6B-class
+system prompt) and PROMPT-SURFACE FRAGILITY (the identical frozen prompt
+under identical greedy decoding flipped behavior between jail-path strings
+— `/private/tmp/…` authored the lib file, `/Users/…` latched the argv).
+
+**Run events (the honesty record).** (a) Run-1's S2 leg was INVALID at the
+argument stage: a relative evidence path → `actor_store_path_not_absolute`
+×60, zero GPU spent; quarantined under `_preflight/s2-invalid-relative-store/`;
+driver repair `1d1d6270`; the smoke's blind spot (/tmp is absolute) is
+receipted. (b) A MACHINE-LEVEL ENOSPC event (data volume at 99 %, owner-
+flagged; the bench footprint was ~72 MB, not the cause) interrupted run-2
+at 32/60: 8 valid trials kept, 24 polluted quarantined
+(`_preflight/enospc-interrupted/`), the resume law (`27d85bf9`) re-ran
+the 52 under the SAME frozen Part. (c) S1/S3 legs were untouched and
+valid.
+
+**Cost.** GPU wall: S1 perm 5.7 min + S1 veto 4.7 min + S3 11.2 min + S2
+83.8 min ≈ 105 min (LB-G4 ≤ 4 h; GPU-serial held). Verdicts are CPU
+replay from the caches (LB-G5).
