@@ -520,7 +520,7 @@ String? resolveQwenSnapshotDir(String? override) {
   return null;
 }
 
-/// One mlx-community Qwen3 variant discovered under the HF hub cache.
+/// One cached Qwen3 text cast discovered under the HF hub cache.
 final class CachedQwen3Snapshot {
   const CachedQwen3Snapshot({
     required this.refName,
@@ -542,14 +542,30 @@ final class CachedQwen3Snapshot {
   final String snapshotDir;
 }
 
-/// Derives a [CachedQwen3Snapshot] from one `models--mlx-community--<Name>`
-/// hub-cache directory, or null when the name is not a Qwen3 text cast or
+/// Hub-cache organizations whose Qwen3-family casts join the discovered
+/// surface: `mlx-community` (the MLX-converted `Qwen3-*` casts) and `Qwen`
+/// (the org's own checkpoints, e.g. the dotted `Qwen3.5-*` family). Any
+/// other org is not a discovered cast, whatever its model name.
+const Set<String> _qwen3HubOrgs = {'mlx-community', 'Qwen'};
+
+/// Matches a `models--<org>--Qwen3[.<n>]-<model>` hub-cache base name:
+/// group 1 = org, group 2 = family (`Qwen3` or dotted `Qwen3.5`),
+/// group 3 = the model tail (e.g. `1.7B-4bit`, `0.6B-bf16`, `0.8B`).
+final RegExp _qwen3HubDirPattern = RegExp(
+  r'^models--([A-Za-z0-9_.-]+)--(Qwen3(?:\.\d+)?)-(.*)$',
+);
+
+/// Derives a [CachedQwen3Snapshot] from one
+/// `models--<org>--Qwen3[.<n>]-<Name>` hub-cache directory (org in
+/// [_qwen3HubOrgs]), or null when the name is not a Qwen3 text cast or
 /// no complete snapshot (config.json) is checked out.
 CachedQwen3Snapshot? cachedQwen3SnapshotFromDir(String dirPath) {
   final base = dirPath.split(Platform.pathSeparator).last;
-  const prefix = 'models--mlx-community--Qwen3-';
-  if (!base.startsWith(prefix)) return null;
-  var model = base.substring(prefix.length); // e.g. `1.7B-4bit`, `0.6B-bf16`
+  final match = _qwen3HubDirPattern.firstMatch(base);
+  if (match == null) return null;
+  if (!_qwen3HubOrgs.contains(match.group(1)!)) return null;
+  final family = match.group(2)!; // `Qwen3` | `Qwen3.5`
+  var model = match.group(3)!; // e.g. `1.7B-4bit`, `0.6B-bf16`, `0.8B`
   final snapshots = Directory('$dirPath/snapshots');
   if (!snapshots.existsSync()) return null;
   String? dir;
@@ -576,17 +592,19 @@ CachedQwen3Snapshot? cachedQwen3SnapshotFromDir(String dirPath) {
       : '${sizeMatch.group(1)}B';
   return CachedQwen3Snapshot(
     refName:
-        'qwen3-${model.toLowerCase().replaceAll('_', '-')}$quantTag'
+        '${family.toLowerCase()}-${model.toLowerCase().replaceAll('_', '-')}$quantTag'
             .replaceAll(RegExp(r'-+'), '-'),
     paramLabel: paramLabel,
     snapshotDir: dir,
   );
 }
 
-/// Every cached mlx-community Qwen3 variant under the HF hub cache,
-/// sorted by ref name. Empty when the cache is absent. Never downloads;
-/// a missing HOME or hub directory simply names nothing. [hubRoot]
-/// overrides the hub directory (tests).
+/// Every cached Qwen3-family cast under the HF hub cache (orgs in
+/// [_qwen3HubOrgs]: the mlx-community `Qwen3-*` converts and the Qwen
+/// org's own checkpoints, dotted families like `Qwen3.5-*` included),
+/// sorted by directory name. Empty when the cache is absent. Never
+/// downloads; a missing HOME or hub directory simply names nothing.
+/// [hubRoot] overrides the hub directory (tests).
 List<CachedQwen3Snapshot> listCachedQwen3Snapshots({String? hubRoot}) {
   final root =
       hubRoot ??

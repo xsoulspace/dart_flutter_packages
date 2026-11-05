@@ -98,22 +98,64 @@ void main() {
       'models--mlx-community--Qwen3-1.7B-4bit',
       'models--mlx-community--Qwen3-0.6B-bf16',
       'models--mlx-community--NotQwen-7B',
+      // The Qwen org's own dotted-family checkpoint (bf16, non-quantized:
+      // no quant tag in the name, none in the refName).
+      'models--Qwen--Qwen3.5-0.8B',
+      // A complete snapshot under a NON-allowed org: never discovered,
+      // whatever its family name.
+      'models--RandomOrg--Qwen3.5-0.8B',
     ]) {
       final snap = Directory('${temp.path}/$name/snapshots/abc123');
       snap.createSync(recursive: true);
       File('${snap.path}/config.json').writeAsStringSync('{}');
     }
+    // The real Qwen3.5 checkout pins the `main` revision dir; discovery
+    // takes any revision with a config.json.
+    final qwen35Main = Directory(
+      '${temp.path}/models--Qwen--Qwen3.5-0.8B/snapshots/main',
+    );
+    qwen35Main.createSync(recursive: true);
+    File('${qwen35Main.path}/config.json').writeAsStringSync('{}');
     final variants = listCachedQwen3Snapshots(hubRoot: temp.path);
     expect(
       variants.map((v) => v.refName),
-      ['qwen3-0.6b', 'qwen3-0.6b-bf16', 'qwen3-1.7b'],
-      reason: 'sorted by name; non-Qwen3 dirs ignored',
+      ['qwen3.5-0.8b', 'qwen3-0.6b', 'qwen3-0.6b-bf16', 'qwen3-1.7b'],
+      reason: 'sorted by directory name; non-Qwen3 and non-allowed-org '
+          'dirs ignored',
     );
     expect(variants.last.paramLabel, '1.7B');
+
+    // Regression pins: the existing mlx-community casts keep byte-identical
+    // refNames and labels under the generalized discovery.
+    final byRef = {for (final v in variants) v.refName: v};
+    expect(byRef['qwen3-0.6b']!.paramLabel, '0.6B');
+    expect(byRef['qwen3-0.6b']!.snapshotDir, contains('Qwen3-0.6B-4bit'));
+    expect(byRef['qwen3-0.6b-bf16']!.paramLabel, '0.6B');
+    expect(byRef['qwen3-0.6b-bf16']!.snapshotDir, contains('Qwen3-0.6B-bf16'));
+    expect(byRef['qwen3-1.7b']!.paramLabel, '1.7B');
+
+    // The Qwen-org dotted family: the dot survives in the refName and the
+    // param label parses off the size token.
+    expect(byRef['qwen3.5-0.8b']!.paramLabel, '0.8B');
+    expect(
+      byRef['qwen3.5-0.8b']!.snapshotDir,
+      contains('models--Qwen--Qwen3.5-0.8B'),
+    );
+    // The wrong-org twin is refused at the single-dir seam too.
+    expect(
+      cachedQwen3SnapshotFromDir(
+        '${temp.path}/models--RandomOrg--Qwen3.5-0.8B',
+      ),
+      isNull,
+    );
 
     // A named variant resolves to its snapshot dir; unknown names refuse.
     final dir = resolveQwen3SnapshotVariant('qwen3-1.7b', hubRoot: temp.path);
     expect(dir, contains('Qwen3-1.7B-4bit'));
+    expect(
+      resolveQwen3SnapshotVariant('qwen3.5-0.8b', hubRoot: temp.path),
+      contains('models--Qwen--Qwen3.5-0.8B'),
+    );
     expect(
       resolveQwen3SnapshotVariant('qwen3-not-there', hubRoot: temp.path),
       isNull,

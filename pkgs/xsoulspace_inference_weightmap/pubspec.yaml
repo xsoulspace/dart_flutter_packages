@@ -1,0 +1,25 @@
+name: xsoulspace_inference_weightmap
+description: >-
+  ISOLATED EXPERIMENT — weight-space concept editing and its validation
+  program (weightmap). Removable by deleting this directory and its pubspec
+  entry; no other package depends on it. Imports inference_core for shared
+  vocabulary only. See PROGRAM.md and AGENTS.md.
+version: 0.0.1
+publish_to: none
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+
+environment:
+  sdk: ^3.13.0
+
+resolution: workspace
+
+dependencies:
+  # Ledger/blinding digests are library surface (receipt chains), not test-only.
+  crypto: ^3.0.7
+  xsoulspace_inference_core:
+    path: ../xsoulspace_inference_core
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.31.2
