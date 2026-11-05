@@ -1,0 +1,11 @@
+{
+  "lanes": [
+    {
+      "name": "index-freshness",
+      "watch": ["pkgs"],
+      "extensions": [".dart", ".py", ".rs", ".ts", ".sh"],
+      "run": ["/Users/antonio/xs/codemap/tools/ops/index_refresh_once.sh", "."],
+      "promise": "keep the codemap index warm: refresh the native index whenever pkgs/ sources drift, so a graph query never waits on a cold rebuild (N6 ambient freshness; runner is codemap's — codemap-tools run-lanes --root <this repo>)"
+    }
+  ]
+}
