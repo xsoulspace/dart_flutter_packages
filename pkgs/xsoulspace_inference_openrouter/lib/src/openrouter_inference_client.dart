@@ -431,10 +431,19 @@ class OpenRouterInferenceClient
         meta: <String, dynamic>{'provider': id, 'model': model},
       );
     } on TimeoutException catch (_) {
+      // A spent REQUEST BUDGET is our own clock, not the backend's health:
+      // a slow-but-healthy agentic generate (big tool transcript) used to be
+      // mislabeled `engine_unavailable` here, which the rebind and ladder
+      // planes read as backend absence and switched palettes over (paid for
+      // live 2026-11-05: scout's drop came exactly 60.19s after its last
+      // tool result). Name it honestly; transport failures below keep the
+      // absence code.
       diagnosticOutcome = 'timeout';
       return InferenceResult<InferenceResponse>.fail(
-        code: 'engine_unavailable',
-        message: 'OpenRouter request timed out',
+        code: 'generate_timeout',
+        message:
+            'request budget expired after ${timeout.inSeconds}s — a slow '
+            'generate hit OUR client timeout, not backend absence',
         meta: <String, dynamic>{'provider': id},
       );
     } on SocketException catch (error) {
