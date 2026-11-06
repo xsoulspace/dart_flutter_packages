@@ -1,0 +1,183 @@
+{
+ "stage": "certifier (blind)",
+ "generated_utc": "2026-11-06T02:45:56.467882Z",
+ "cells_sha256": "8406130623b6e85922eac6cbd92b73dd2282e6fc19538bb3c199f647f518d760",
+ "certification_rule": "certified(arm) := loop_rate(R) < loop_rate(M) AND task_success(R) >= task_success(M), where M = planted/null mirror battery and R = removal-edit battery (R = M with -scale*recovered_direction merged in-memory, same columns). Strict inequality / non-strict floor per PREREG-A A3 wording ('loop-rate down', 'task success not down'). Per-cell flips recorded in arm receipts for knife-edge diagnosis.",
+ "base": {
+  "loop_rate_G2": 0.4166666666666667,
+  "task_success": 0.45454545454545453,
+  "task_pass": 10,
+  "task_total": 22,
+  "pilot_loop_rate": 0.1875,
+  "jsonl_sha256": "db87f5a3d3f893ad6fab51b8ee9983fe43143d96638bac334980937e95fe5696"
+ },
+ "arms": {
+  "v1-null-1": {
+   "status": "SCORED",
+   "loop_rate_M": 0.6666666666666666,
+   "loop_rate_R": 1.0,
+   "loop_delta_R_minus_M": 0.33333333333333337,
+   "loop_delta_M_minus_base": 0.24999999999999994,
+   "task_success_M": 0.045454545454545456,
+   "task_success_R": 0.09090909090909091,
+   "task_success_delta_R_minus_M": 0.045454545454545456,
+   "task_pass_M": 1,
+   "task_pass_R": 2,
+   "certified": false,
+   "flips": [
+    {
+     "cell_id": "g0-clamp",
+     "M": false,
+     "R": true
+    }
+   ],
+   "digests": {
+    "battery_M": "f55f992b658d16e4816c77585ebb86d0c527fd0fc96957af416f233c8b88472f",
+    "battery_R": "9e94ca5e9e4f73008a8d78dba2a0285bb4b90fc9928722cc06237845f8fa7e19",
+    "recovered_json": "MISSING",
+    "mirror_receipt": "MISSING",
+    "repair_receipt": "MISSING",
+    "arm_receipt": "MISSING"
+   }
+  },
+  "v1-null-2": {
+   "status": "SCORED",
+   "loop_rate_M": 0.6666666666666666,
+   "loop_rate_R": 1.0,
+   "loop_delta_R_minus_M": 0.33333333333333337,
+   "loop_delta_M_minus_base": 0.24999999999999994,
+   "task_success_M": 0.045454545454545456,
+   "task_success_R": 0.18181818181818182,
+   "task_success_delta_R_minus_M": 0.13636363636363635,
+   "task_pass_M": 1,
+   "task_pass_R": 4,
+   "certified": false,
+   "flips": [
+    {
+     "cell_id": "g0-rle",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g0-clamp",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-01",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-02",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-06",
+     "M": false,
+     "R": true
+    }
+   ],
+   "digests": {
+    "battery_M": "f55f992b658d16e4816c77585ebb86d0c527fd0fc96957af416f233c8b88472f",
+    "battery_R": "3a422acff435bf9026db1b7ee8fe42593bd5bf5d0f8972a297ddb0e937b5c486",
+    "recovered_json": "MISSING",
+    "mirror_receipt": "MISSING",
+    "repair_receipt": "MISSING",
+    "arm_receipt": "MISSING"
+   }
+  },
+  "v1-null-3": {
+   "status": "SCORED",
+   "loop_rate_M": 0.6666666666666666,
+   "loop_rate_R": 0.5833333333333334,
+   "loop_delta_R_minus_M": -0.08333333333333326,
+   "loop_delta_M_minus_base": 0.24999999999999994,
+   "task_success_M": 0.045454545454545456,
+   "task_success_R": 0.36363636363636365,
+   "task_success_delta_R_minus_M": 0.3181818181818182,
+   "task_pass_M": 1,
+   "task_pass_R": 8,
+   "certified": true,
+   "flips": [
+    {
+     "cell_id": "g0-ws",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-01",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-02",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-03",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-04",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-05",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-06",
+     "M": false,
+     "R": true
+    }
+   ],
+   "digests": {
+    "battery_M": "f55f992b658d16e4816c77585ebb86d0c527fd0fc96957af416f233c8b88472f",
+    "battery_R": "4e41a044147d0d48ec1e7b200ca3c08b3162a2fd790deb71cbdc1617f005b95b",
+    "recovered_json": "MISSING",
+    "mirror_receipt": "MISSING",
+    "repair_receipt": "MISSING",
+    "arm_receipt": "MISSING"
+   }
+  },
+  "v1-null-4": {
+   "status": "SCORED",
+   "loop_rate_M": 0.6666666666666666,
+   "loop_rate_R": 1.0,
+   "loop_delta_R_minus_M": 0.33333333333333337,
+   "loop_delta_M_minus_base": 0.24999999999999994,
+   "task_success_M": 0.045454545454545456,
+   "task_success_R": 0.13636363636363635,
+   "task_success_delta_R_minus_M": 0.0909090909090909,
+   "task_pass_M": 1,
+   "task_pass_R": 3,
+   "certified": false,
+   "flips": [
+    {
+     "cell_id": "g0-clamp",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-05",
+     "M": false,
+     "R": true
+    }
+   ],
+   "digests": {
+    "battery_M": "f55f992b658d16e4816c77585ebb86d0c527fd0fc96957af416f233c8b88472f",
+    "battery_R": "67aadc591a3002c3cfd9de5e262518743212a6499278823b44104b3120885178",
+    "recovered_json": "MISSING",
+    "mirror_receipt": "MISSING",
+    "repair_receipt": "MISSING",
+    "arm_receipt": "MISSING"
+   }
+  }
+ }
+}

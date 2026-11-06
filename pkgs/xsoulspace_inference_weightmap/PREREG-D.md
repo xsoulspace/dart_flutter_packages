@@ -57,3 +57,18 @@ is recorded but not scored. Family-wise binomial across the mirrors actually
 run (plant-1 first; extension to more mirrors pre-registered per run row,
 never post hoc). Live scope this arc: plant-1 mirror + base control; further
 mirrors only under a new row.
+
+## Addendum 2026-11-06b (V-3 numeric pins, frozen pre-run)
+- Second-cast pre-check threshold: G2-shaped loop-rate baseline >= 0.25
+  (3/12 cells) on the candidate cast, measured under the frozen cells and
+  sampler key; candidates in order lfm25-1.2b, then qwen3-1.7b-4bit; a cast
+  below threshold is recorded CAST_NOT_LOOPING (a verdict) and the next
+  candidate is tried; both below => V-3 recorded INFEASIBLE_ON_LOCAL_CASTS.
+- K per second cast: 4 plants + 4 nulls (reduced from the primary cast's 8+8;
+  reduction recorded here, pre-run).
+- Cross-cast replication criterion: certification concordance (loop-rate down
+  AND task-success not down on the second cast's own cells) on >= 3/4 plants
+  AND specificity 4/4; direction cosine across casts is NOT a criterion
+  (directions live in different weight spaces); within-mirror proposer
+  agreement (diff-of-means vs WS-3 prior vs random control) is recorded as
+  data, with the WS-3 prior's retired-backbone status noted on its rows.

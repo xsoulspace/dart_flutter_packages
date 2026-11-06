@@ -1,0 +1,57 @@
+{
+ "batch": "v3-precheck-4bit-ref",
+ "batch_file_sha256": "786a5e5382bcc83faf152b69273112eaedd01b591ee3a50bd1ff03fbe6e7f901",
+ "started_utc": "2026-11-06T04:34:34+00:00",
+ "stages": [
+  {
+   "step": "battery_G2_4bit_original",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/a3_battery.py",
+    "--model",
+    "/Users/antonio/.cache/huggingface/hub/models--mlx-community--Qwen3-1.7B-4bit/snapshots/3b1b1768f8f8cf8351c712464f906e86c2b8269e",
+    "--cells",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/cells_frozen_A3.json",
+    "--groups",
+    "G2",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T//wm-v3/gen/battery_4bit_ref_G2.jsonl"
+   ],
+   "exit": 0,
+   "wall_ms": 40665,
+   "wall_ms_claim": false
+  }
+ ],
+ "gates": [],
+ "blocked": null,
+ "lock_wait_ms": 0,
+ "verdict": "BATCH_COMPLETE",
+ "retry_interval_used": 10,
+ "power_start": {
+  "source": "pmset -g batt",
+  "lines": [
+   "Now drawing from 'AC Power'",
+   " -InternalBattery-0 (id=36569187)\t95%; charging; 3:41 remaining present: true"
+  ]
+ },
+ "loadavg_start": [
+  2.1767578125,
+  3.28955078125,
+  4.3251953125
+ ],
+ "finished_utc": "2026-11-06T04:35:14+00:00",
+ "power_end": {
+  "source": "pmset -g batt",
+  "lines": [
+   "Now drawing from 'AC Power'",
+   " -InternalBattery-0 (id=36569187)\t95%; charging; (no estimate) present: true"
+  ]
+ },
+ "loadavg_end": [
+  2.1953125,
+  3.1689453125,
+  4.2333984375
+ ]
+}

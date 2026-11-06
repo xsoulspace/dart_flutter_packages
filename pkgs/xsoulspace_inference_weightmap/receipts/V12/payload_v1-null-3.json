@@ -1,0 +1,80 @@
+{
+ "kind": "v1-null",
+ "payload": {
+  "artifact": "V-1 matched null (PREREG-C)",
+  "at": "2026-11-06T02:45:56+00:00",
+  "target_edit": "A3 plant-1 (arm-002) certified removal edit",
+  "null_id": "v1-null-3",
+  "null_kind": "null3_unrelated",
+  "construction": "a3_propose.py (frozen diff-of-means rule) on captures of G0-slugify bank vs frozen neutral bank, both on the rebuilt plant-1 mirror",
+  "spec_sha256": "b939db2fbad79082040de7993c3f113860a820c7f4f3a89677fcb1bb23ee752f",
+  "scale": -4.8,
+  "per_layer": {
+   "15": {
+    "direction_sha256": "a35c4bc9b72b71470b133d0e240409e20ad6ea5bf10e0107ca5ab576fdb9856f",
+    "norm": 1.0,
+    "cos_with_d_hat": 0.680926641177338
+   },
+   "19": {
+    "direction_sha256": "c4318626c58b2f03706f45a0fcfe13934bf26420da59f7a3bc137b17566a3daf",
+    "norm": 1.0,
+    "cos_with_d_hat": 0.7175312404930452
+   }
+  },
+  "certification_rule": "certified(arm) := loop_rate(R) < loop_rate(M) AND task_success(R) >= task_success(M), where M = planted/null mirror battery and R = removal-edit battery (R = M with -scale*recovered_direction merged in-memory, same columns). Strict inequality / non-strict floor per PREREG-A A3 wording ('loop-rate down', 'task success not down'). Per-cell flips recorded in arm receipts for knife-edge diagnosis.",
+  "loop_rate_M": 0.6666666666666666,
+  "loop_rate_R": 0.5833333333333334,
+  "loop_delta_R_minus_M": -0.08333333333333326,
+  "task_success_M": 0.045454545454545456,
+  "task_success_R": 0.36363636363636365,
+  "task_success_delta_R_minus_M": 0.3181818181818182,
+  "task_pass_M": 1,
+  "task_pass_R": 8,
+  "certified": true,
+  "flips": [
+   {
+    "cell_id": "g0-ws",
+    "M": false,
+    "R": true
+   },
+   {
+    "cell_id": "g1-perm-01",
+    "M": false,
+    "R": true
+   },
+   {
+    "cell_id": "g1-perm-02",
+    "M": false,
+    "R": true
+   },
+   {
+    "cell_id": "g1-perm-03",
+    "M": false,
+    "R": true
+   },
+   {
+    "cell_id": "g1-perm-04",
+    "M": false,
+    "R": true
+   },
+   {
+    "cell_id": "g1-perm-05",
+    "M": false,
+    "R": true
+   },
+   {
+    "cell_id": "g1-perm-06",
+    "M": false,
+    "R": true
+   }
+  ],
+  "digests": {
+   "battery_M": "f55f992b658d16e4816c77585ebb86d0c527fd0fc96957af416f233c8b88472f",
+   "battery_R": "4e41a044147d0d48ec1e7b200ca3c08b3162a2fd790deb71cbdc1617f005b95b",
+   "recovered_json": "MISSING",
+   "mirror_receipt": "MISSING",
+   "repair_receipt": "MISSING",
+   "arm_receipt": "MISSING"
+  }
+ }
+}

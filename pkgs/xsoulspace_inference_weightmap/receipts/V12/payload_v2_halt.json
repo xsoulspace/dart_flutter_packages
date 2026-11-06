@@ -1,0 +1,27 @@
+{
+ "artifact": "V-2 HALT row (PREREG-C kill clause; V-2 NOT RUN)",
+ "at": "2026-11-06T02:51:49+00:00",
+ "halt": {
+  "code": "NULL_LEAK",
+  "rule": "PREREG-C V-1 floor (FROZEN): 0 of 4 nulls certified per edit; any certified null = NAMED NULL_LEAK -> pipeline HALT; the halt and its denominator are the verdict. Task gate: stop V-2, record halt.",
+  "trigger": "v1-null-3 (null3_unrelated: G0-slugify-vs-neutral diff-of-means on the plant mirror) CERTIFIED under the frozen rule: loop_G2 0.667->0.583 (down) AND task_success 0.045->0.364 (not down)",
+  "v1_verdict_row": {
+   "seq": 5,
+   "digest": "39e679693050414cc80204fa549b70a5e696e268aebbc0233d17a86bfaf4a8f9",
+   "ledger": "receipts/V1-nulls.jsonl"
+  },
+  "v2_interventions_run": "none (ablate/restore/relocate batteries NOT executed; B3 batch file prepared but never launched; specs preserved in receipts/V12/ for a future re-preregistered run)"
+ },
+ "kill_clause_scope": "per PREREG-C: NULL_LEAK halts edits; already-recorded A3 measurements stay in the ledger with their denominators (A3 PASS 6/8 sensitivity, 8/8 specificity untouched)",
+ "denominator": {
+  "target_edit": "A3 plant-1 (arm-002); 1 of 6 A3-certified edits",
+  "nulls_run": 4,
+  "nulls_certified": 1,
+  "family_wise_wilson95": [
+   0.0456,
+   0.6994
+  ],
+  "v2_interventions": 0
+ },
+ "effect_mechanism_verdicts": "NOT_RUN (EFFECT and MECHANISM verdicts require V-1 clean per PREREG-C ordering and the task gate)"
+}

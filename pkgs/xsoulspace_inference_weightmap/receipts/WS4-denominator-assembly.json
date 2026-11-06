@@ -1,0 +1,328 @@
+{
+  "tool": "ws4_denominator.py",
+  "schema_target": "ws4-denominator/v1 as amended by the PREREG-E Addendum 2026-11-06 (feature-set v2: capture_eigen_gap optional-absent)",
+  "feature_set": "v2 = {delta_norm, column_count, layer_ids, baseline_loop_rate, layer_column_bands} (PREREG-E Addendum 2026-11-06; PASS bar UNCHANGED)",
+  "exclusion_schema": "ws4-denominator-exclusions/v1",
+  "created_utc": "2026-11-06T03:36:37+00:00",
+  "banner": "PROPOSE_ONLY: WS-4 is an ADVISORY predictor - it NEVER certifies an edit (PROGRAM.md propose-only law / PREREG-E). This assembler only builds the denominator; labels come from the frozen certification oracle receipts, never from a screener.",
+  "propose_only": true,
+  "denominator_counts": {
+    "by_source_candidates": {
+      "A3": 16,
+      "V-1": 4,
+      "V-3": 0,
+      "WS-3": 48
+    },
+    "edit_attempt_candidates": 20,
+    "strict_rows_written": 20,
+    "exclusion_rows_written": 50,
+    "exclusions_by_reason": {
+      "PROMOTED": 1,
+      "NOT_AN_EDIT_ATTEMPT": 48,
+      "V3_NOT_RUN": 1
+    },
+    "promoted_from_feature_missing_v1": 20
+  },
+  "labels": {
+    "battery_pass_true": [
+      "a3-plant-1",
+      "a3-plant-3",
+      "a3-plant-4",
+      "a3-plant-5",
+      "a3-plant-6",
+      "a3-plant-7",
+      "v1-null-3"
+    ],
+    "battery_pass_false": [
+      "a3-null-1",
+      "a3-null-2",
+      "a3-null-3",
+      "a3-null-4",
+      "a3-null-5",
+      "a3-null-6",
+      "a3-null-7",
+      "a3-null-8",
+      "a3-plant-2",
+      "a3-plant-8",
+      "v1-null-1",
+      "v1-null-2",
+      "v1-null-4"
+    ],
+    "label_rule": "A3: certification verdict from receipts/A3/join-table.json (frozen oracle, verdict_frozen-before-unblind), cross-checked against blind-scored.json; V-1: certified flag per null (v1-null-3 certified -> true, confounded-positive-control provenance note)"
+  },
+  "baseline_loop_rate": {
+    "value": 0.4166666666666667,
+    "raw": "5/12",
+    "source": "A3 archived BASE (unedited-mirror) battery, battery_base.g2_loop_rate on the G2-shaped cells (PREREG-A A3); battery sha256 db87f5a3d3f893ad6fab51b8ee9983fe43143d96638bac334980937e95fe5696; cross-checked equal to blind-scored base.loop_rate_G2"
+  },
+  "capture_eigen_gap": {
+    "status": "DROPPED_PER_ADDENDUM",
+    "feature_set_v2": "dropped from the trainable set by the PREREG-E Addendum 2026-11-06 (absent, never imputed); remains a FUTURE candidate behind an instrument-change row (capture_activations.py spectra + re-capture on rebuilt mirrors)",
+    "absent_from_all_receipts": true,
+    "sweep": {
+      "files_swept": 78,
+      "pattern": "eigen|spectrum|singular",
+      "eigen_hits": 0,
+      "non_eigen_hits_contexts": [
+        ",1024); v[i]=d_hat[perm[i]] (same component multiset = same spectrum, wrong geometry)\",\"null3_unrela",
+        ",1024); v[i]=d_hat[perm[i]] (same component multiset = same spectrum, wrong geometry)\",\n  \"null3_unr"
+      ]
+    },
+    "instrument_note": "tool/eval/capture_activations.py (A4-frozen, sha 6327e048e6d884e1489d6feae6dca998ed0f11089894532334e344ddae78b22e per VERDICTS A4 freeze row) records per-layer mean_activation only (shape + tokens_averaged) - no covariance, no spectrum; directions_base.json records diff-of-means direction + diff_l2_norm only; the eigen-gap at the planted rank is NOT COMPUTABLE offline from any archived artifact",
+    "remedy_route": "a capture-instrument change (record activation spectra) plus a new prereg row - owner decision, not runner decision"
+  },
+  "families": [
+    "null-gaussian",
+    "null-quantnoise",
+    "null-shuffle",
+    "null-unrelated",
+    "plant-1",
+    "plant-2",
+    "plant-3",
+    "plant-4",
+    "plant-5",
+    "plant-6",
+    "plant-7",
+    "plant-8"
+  ],
+  "family_rule": "plants: plant-1..plant-8 (one family per plant); nulls: grouped BY CONSTRUCTION TYPE - A3 gaussian nulls and V-1 null1_gaussian share null-gaussian; null-shuffle / null-unrelated / null-quantnoise from V-1",
+  "prospective_split": {
+    "seed": 20261105,
+    "train_families": [
+      "null-quantnoise",
+      "null-shuffle",
+      "plant-1",
+      "plant-2",
+      "plant-3",
+      "plant-5",
+      "plant-7",
+      "plant-8"
+    ],
+    "holdout_families": [
+      "null-gaussian",
+      "null-unrelated",
+      "plant-4",
+      "plant-6"
+    ],
+    "split_digest": "bb180472a72e6534beef0d033e434f3768c9b1647e472c4862cac13a76457db1",
+    "status": "PROSPECTIVE_NOT_EXECUTED (frozen tool split runs only on a non-empty denominator; computed here from the assembled family set under the identical frozen rule)"
+  },
+  "integrity_checks": [
+    {
+      "check": "certified_agreement",
+      "id": "a3-null-1",
+      "blind_label": "arm-010",
+      "ok": true
+    },
+    {
+      "check": "spec_digest",
+      "id": "a3-null-1",
+      "ok": true,
+      "files": 2
+    },
+    {
+      "check": "certified_agreement",
+      "id": "a3-null-2",
+      "blind_label": "arm-001",
+      "ok": true
+    },
+    {
+      "check": "spec_digest",
+      "id": "a3-null-2",
+      "ok": true,
+      "files": 2
+    },
+    {
+      "check": "certified_agreement",
+      "id": "a3-null-3",
+      "blind_label": "arm-014",
+      "ok": true
+    },
+    {
+      "check": "spec_digest",
+      "id": "a3-null-3",
+      "ok": true,
+      "files": 2
+    },
+    {
+      "check": "certified_agreement",
+      "id": "a3-null-4",
+      "blind_label": "arm-004",
+      "ok": true
+    },
+    {
+      "check": "spec_digest",
+      "id": "a3-null-4",
+      "ok": true,
+      "files": 2
+    },
+    {
+      "check": "certified_agreement",
+      "id": "a3-null-5",
+      "blind_label": "arm-008",
+      "ok": true
+    },
+    {
+      "check": "spec_digest",
+      "id": "a3-null-5",
+      "ok": true,
+      "files": 2
+    },
+    {
+      "check": "certified_agreement",
+      "id": "a3-null-6",
+      "blind_label": "arm-000",
+      "ok": true
+    },
+    {
+      "check": "spec_digest",
+      "id": "a3-null-6",
+      "ok": true,
+      "files": 2
+    },
+    {
+      "check": "certified_agreement",
+      "id": "a3-null-7",
+      "blind_label": "arm-003",
+      "ok": true
+    },
+    {
+      "check": "spec_digest",
+      "id": "a3-null-7",
+      "ok": true,
+      "files": 2
+    },
+    {
+      "check": "certified_agreement",
+      "id": "a3-null-8",
+      "blind_label": "arm-013",
+      "ok": true
+    },
+    {
+      "check": "spec_digest",
+      "id": "a3-null-8",
+      "ok": true,
+      "files": 2
+    },
+    {
+      "check": "certified_agreement",
+      "id": "a3-plant-1",
+      "blind_label": "arm-002",
+      "ok": true
+    },
+    {
+      "check": "spec_digest",
+      "id": "a3-plant-1",
+      "ok": true,
+      "files": 2
+    },
+    {
+      "check": "certified_agreement",
+      "id": "a3-plant-2",
+      "blind_label": "arm-007",
+      "ok": true
+    },
+    {
+      "check": "spec_digest",
+      "id": "a3-plant-2",
+      "ok": true,
+      "files": 2
+    },
+    {
+      "check": "certified_agreement",
+      "id": "a3-plant-3",
+      "blind_label": "arm-009",
+      "ok": true
+    },
+    {
+      "check": "spec_digest",
+      "id": "a3-plant-3",
+      "ok": true,
+      "files": 2
+    },
+    {
+      "check": "certified_agreement",
+      "id": "a3-plant-4",
+      "blind_label": "arm-005",
+      "ok": true
+    },
+    {
+      "check": "spec_digest",
+      "id": "a3-plant-4",
+      "ok": true,
+      "files": 2
+    },
+    {
+      "check": "certified_agreement",
+      "id": "a3-plant-5",
+      "blind_label": "arm-015",
+      "ok": true
+    },
+    {
+      "check": "spec_digest",
+      "id": "a3-plant-5",
+      "ok": true,
+      "files": 2
+    },
+    {
+      "check": "certified_agreement",
+      "id": "a3-plant-6",
+      "blind_label": "arm-011",
+      "ok": true
+    },
+    {
+      "check": "spec_digest",
+      "id": "a3-plant-6",
+      "ok": true,
+      "files": 2
+    },
+    {
+      "check": "certified_agreement",
+      "id": "a3-plant-7",
+      "blind_label": "arm-012",
+      "ok": true
+    },
+    {
+      "check": "spec_digest",
+      "id": "a3-plant-7",
+      "ok": true,
+      "files": 2
+    },
+    {
+      "check": "certified_agreement",
+      "id": "a3-plant-8",
+      "blind_label": "arm-006",
+      "ok": true
+    },
+    {
+      "check": "spec_digest",
+      "id": "a3-plant-8",
+      "ok": true,
+      "files": 2
+    },
+    {
+      "check": "a3_matched_control_columns",
+      "pairs": 8,
+      "ok": true
+    },
+    {
+      "check": "v1_spec_digests_and_columns",
+      "rows": 4,
+      "ok": true
+    }
+  ],
+  "outputs": {
+    "strict": {
+      "path": "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/receipts/WS4-denominator.jsonl",
+      "rows": 20,
+      "sha256": "c60ab2994510e4be4f855becfe6313577cfecae7781a9299bfc620c7d3699ac8",
+      "note": ""
+    },
+    "exclusions": {
+      "path": "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/receipts/WS4-denominator-exclusions.jsonl",
+      "rows": 50,
+      "sha256": "fe2b1b0e7748e1a31c57e12f2d258e6bd7bad339c17249e43d9b53a2e28739e2"
+    }
+  },
+  "small_n_note": "the recorded denominator is 20 edit attempts over 12 families - per the PREREG-E Addendum 2026-11-06 this caps ANY outcome at MEASURED_SMALL_N (no generalization claim); economics numbers are reported raw"
+}

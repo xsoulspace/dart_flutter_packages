@@ -9,4 +9,5 @@ export 'src/ledger.dart';
 export 'src/patch_algebra.dart';
 export 'src/probes.dart';
 export 'src/receipts.dart';
+export 'src/redteam.dart';
 export 'src/scorers.dart';

@@ -1,0 +1,52 @@
+{
+ "tool": "make_mirror.py",
+ "created_utc": "2026-11-06T05:57:04+00:00",
+ "base_dir": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v3/base-dequant",
+ "mirror_dir": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v3/mirrors/v3-pilot-s0.2",
+ "base_read_only": true,
+ "base_unchanged": true,
+ "base_file_digests": {
+  ".gitattributes": "34448b82c17d60fec9b65b1f093c115ddbaadc04beb1b0140b6bfed2e012a930",
+  "README.md": "26afc7609fa8dce8a0763b115ce95017763e45c0aaa92ac38911363f4fc1c16b",
+  "added_tokens.json": "c0284b582e14987fbd3d5a2cb2bd139084371ed9acbae488829a1c900833c680",
+  "config.json": "1ddb5b89ebc90dcb417a45c213d818577e65976454d29385c8f6140771d95197",
+  "merges.txt": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+  "model.safetensors": "6a6894aab26ea953d0f3f404578327c18874d8dd68456aceadf932035c8afcc3",
+  "model.safetensors.index.json": "5bc27eb752e76bec3235ce08f98789307f6b3f00f3be241d9fa42a3a50c9fbe8",
+  "special_tokens_map.json": "76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd",
+  "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+  "tokenizer_config.json": "253153d0738ceb4c668d2eff957714dd2bea0b56de772a9fdccd96cbf517e6a0",
+  "vocab.json": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+ },
+ "mirror_shard_sha256": "6646c3249fc54e35d8432588f4aceaf7ff9f4bb23d28dbe8096b63c3b96284e6",
+ "tensors_total": 310,
+ "unedited_identical": 308,
+ "edited": [
+  {
+   "tensor": "model.layers.18.mlp.down_proj.weight",
+   "columns_planted": 64,
+   "columns_differing": 64,
+   "elements_differing": 127951,
+   "elements_absorbed_by_bf16": 3121,
+   "scale": 0.2,
+   "direction_sha256": "c3e81983e109d0dfbe18a87b8714e2fc8873e0cc4730802b4200b7d462835886",
+   "base_tensor_f32_sha256": "ad5a701bd795b2fbfe79218a69860d7e67eb83cdb53832a2458a77a638dde864",
+   "mirror_tensor_f32_sha256": "0875b85f749de3680fd24deb4266a1e08d9caeb8db367e3eb05c81010992c12e",
+   "sidecar_receipt_spec_digest": "349b49a674a37a5e2d56bfaf67eeba284123e678a8c0b797fe3fcb6825f4a7a9"
+  },
+  {
+   "tensor": "model.layers.22.mlp.down_proj.weight",
+   "columns_planted": 64,
+   "columns_differing": 64,
+   "elements_differing": 127741,
+   "elements_absorbed_by_bf16": 3331,
+   "scale": 0.2,
+   "direction_sha256": "d7c3f0d3382ddd19f9ff6bb7a7e8aa6f788337ac4e07fee247cf02060aaa364c",
+   "base_tensor_f32_sha256": "9e6f9fd89bfa798b70d1b242e73174af1b084ee30b22f5495ec718ca33555d6c",
+   "mirror_tensor_f32_sha256": "0bc2a826a9f7acc66f004b6ff11b8d578c1d8355f655ac8bad2efe387448cb68",
+   "sidecar_receipt_spec_digest": "29d16afa009c9a54f7c5a48dc6b5a2e90d95e30d43fe31512aacaabde9906b05"
+  }
+ ],
+ "copy_seconds": 3.5,
+ "verdict": "MIRROR_OK"
+}

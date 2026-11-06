@@ -265,7 +265,7 @@ void main() {
         'DENOMINATOR_SCHEMA_ERROR', () async {
       final lines = _denominatorLines(families: 2, rowsPerFamily: 2);
       final bad = jsonDecode(lines.first) as Map<String, dynamic>;
-      (bad['features'] as Map).remove('capture_eigen_gap');
+      (bad['features'] as Map).remove('baseline_loop_rate');
       lines[1] = jsonEncode(bad);
       final den = File('${tmp.path}/bad.jsonl')..writeAsStringSync(
           '${lines.join('\n')}\n');
@@ -274,7 +274,39 @@ void main() {
            '--dry-run']);
       expect(res.exitCode, 1);
       expect(res.stderr.toString(), contains('DENOMINATOR_SCHEMA_ERROR'));
-      expect(res.stderr.toString(), contains('capture_eigen_gap'));
+      expect(res.stderr.toString(), contains('baseline_loop_rate'));
+    }, skip: skipReason);
+
+    test('ws4 dry-run ACCEPTS capture_eigen_gap absence (PREREG-E Addendum '
+        '2026-11-06 feature-set v2: optional-absent, never imputed) and '
+        'refuses a malformed present value', () async {
+      // v2 rows: eigen-gap absent on every row -> schema-legal.
+      final lines = _denominatorLines(families: 2, rowsPerFamily: 2)
+          .map((l) {
+        final row = jsonDecode(l) as Map<String, dynamic>;
+        (row['features'] as Map).remove('capture_eigen_gap');
+        return jsonEncode(row);
+      }).toList();
+      final den = File('${tmp.path}/v2.jsonl')..writeAsStringSync(
+          '${lines.join('\n')}\n');
+      final res = await runPy(ws4,
+          ['--denominator', den.path, '--out', '${tmp.path}/r.json',
+           '--dry-run']);
+      expect(res.exitCode, 0, reason: '${res.stdout}\n${res.stderr}');
+      final plan = jsonDecode(res.stdout as String) as Map<String, dynamic>;
+      expect((plan['denominator'] as Map)['rows'], 4);
+      // present-but-malformed eigen-gap still refuses, NAMED:
+      final bad = jsonDecode(lines.first) as Map<String, dynamic>;
+      (bad['features'] as Map)['capture_eigen_gap'] = 'not-a-number';
+      final badLines = [jsonEncode(bad), ...lines.sublist(1)];
+      final badDen = File('${tmp.path}/v2bad.jsonl')..writeAsStringSync(
+          '${badLines.join('\n')}\n');
+      final res2 = await runPy(ws4,
+          ['--denominator', badDen.path, '--out', '${tmp.path}/r.json',
+           '--dry-run']);
+      expect(res2.exitCode, 1);
+      expect(res2.stderr.toString(), contains('DENOMINATOR_SCHEMA_ERROR'));
+      expect(res2.stderr.toString(), contains('capture_eigen_gap'));
     }, skip: skipReason);
 
     test('ws4 dry-run refuses a single-family denominator, NAMED '

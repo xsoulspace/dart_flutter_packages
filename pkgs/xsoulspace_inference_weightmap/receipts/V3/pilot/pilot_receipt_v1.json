@@ -1,0 +1,386 @@
+{
+ "stage": "v3-pilot",
+ "started_utc": "2026-11-06T05:34:32+00:00",
+ "ladder": [
+  {
+   "scale": 0.05,
+   "started_utc": "2026-11-06T05:34:32+00:00",
+   "lock_wait_ms": 1000000,
+   "retry_interval_used": 10,
+   "loop_rate": 0.25,
+   "hits": 4,
+   "n": 16,
+   "lift_pp": 0.0,
+   "finished_utc": "2026-11-06T05:53:42+00:00"
+  },
+  {
+   "scale": 0.1,
+   "started_utc": "2026-11-06T05:53:42+00:00",
+   "lock_wait_ms": 0,
+   "retry_interval_used": 10,
+   "loop_rate": 0.25,
+   "hits": 4,
+   "n": 16,
+   "lift_pp": 0.0,
+   "finished_utc": "2026-11-06T05:56:33+00:00"
+  },
+  {
+   "scale": 0.2,
+   "started_utc": "2026-11-06T05:56:33+00:00",
+   "lock_wait_ms": 0,
+   "retry_interval_used": 10,
+   "loop_rate": 0.25,
+   "hits": 4,
+   "n": 16,
+   "lift_pp": 0.0,
+   "finished_utc": "2026-11-06T06:00:14+00:00"
+  },
+  {
+   "scale": 0.4,
+   "started_utc": "2026-11-06T06:00:14+00:00",
+   "lock_wait_ms": 0,
+   "retry_interval_used": 10,
+   "loop_rate": 0.25,
+   "hits": 4,
+   "n": 16,
+   "lift_pp": 0.0,
+   "finished_utc": "2026-11-06T06:04:10+00:00"
+  },
+  {
+   "scale": 0.8,
+   "started_utc": "2026-11-06T06:04:10+00:00",
+   "lock_wait_ms": 0,
+   "retry_interval_used": 10,
+   "loop_rate": 0.25,
+   "hits": 4,
+   "n": 16,
+   "lift_pp": 0.0,
+   "finished_utc": "2026-11-06T06:07:05+00:00"
+  },
+  {
+   "scale": 1.6,
+   "started_utc": "2026-11-06T06:07:05+00:00",
+   "lock_wait_ms": 0,
+   "retry_interval_used": 10,
+   "loop_rate": 0.3125,
+   "hits": 5,
+   "n": 16,
+   "lift_pp": 6.25,
+   "finished_utc": "2026-11-06T06:09:36+00:00"
+  },
+  {
+   "scale": 2.0,
+   "started_utc": "2026-11-06T06:09:36+00:00",
+   "lock_wait_ms": 0,
+   "retry_interval_used": 10,
+   "loop_rate": 0.3125,
+   "hits": 5,
+   "n": 16,
+   "lift_pp": 6.25,
+   "finished_utc": "2026-11-06T06:12:03+00:00"
+  },
+  {
+   "scale": 3.2,
+   "started_utc": "2026-11-06T06:12:03+00:00",
+   "lock_wait_ms": 0,
+   "retry_interval_used": 10,
+   "loop_rate": 0.25,
+   "hits": 4,
+   "n": 16,
+   "lift_pp": 0.0,
+   "finished_utc": "2026-11-06T06:14:37+00:00"
+  },
+  {
+   "scale": 4.8,
+   "started_utc": "2026-11-06T06:14:37+00:00",
+   "lock_wait_ms": 0,
+   "retry_interval_used": 10,
+   "loop_rate": 0.3125,
+   "hits": 5,
+   "n": 16,
+   "lift_pp": 6.25,
+   "finished_utc": "2026-11-06T06:17:12+00:00"
+  }
+ ],
+ "ladder_scales": [
+  0.05,
+  0.1,
+  0.2,
+  0.4,
+  0.8,
+  1.6,
+  2.0,
+  3.2,
+  4.8
+ ],
+ "layers": [
+  "18",
+  "22"
+ ],
+ "base_pilot_loop_rate": 0.25,
+ "base_pilot_hits": 4,
+ "base_pilot_n": 16,
+ "lift_target": 0.2,
+ "columns_procedure": "v3_design.pair_columns_v3(1)",
+ "power_start": " -InternalBattery-0 (id=36569187)\t95%; charging; (no estimate) present: true",
+ "columns_sha256": "23bfc08ae408b15093a276ada28227a796944b3e812f096ff3f8860bdd42eab4",
+ "stages": [
+  {
+   "step": "apply_delta_pilot_s0.05_L18",
+   "exit": 0,
+   "wall_ms": 153,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s0.05_L22",
+   "exit": 0,
+   "wall_ms": 77,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s0.05",
+   "exit": 0,
+   "wall_ms": 18271,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "battery_pilot_s0.05",
+   "exit": 0,
+   "wall_ms": 127212,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s0.1_L18",
+   "exit": 0,
+   "wall_ms": 102,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s0.1_L22",
+   "exit": 0,
+   "wall_ms": 76,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s0.1",
+   "exit": 0,
+   "wall_ms": 14877,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "battery_pilot_s0.1",
+   "exit": 0,
+   "wall_ms": 151263,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s0.2_L18",
+   "exit": 0,
+   "wall_ms": 453,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s0.2_L22",
+   "exit": 0,
+   "wall_ms": 341,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s0.2",
+   "exit": 0,
+   "wall_ms": 39368,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "battery_pilot_s0.2",
+   "exit": 0,
+   "wall_ms": 177849,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s0.4_L18",
+   "exit": 0,
+   "wall_ms": 133,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s0.4_L22",
+   "exit": 0,
+   "wall_ms": 81,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s0.4",
+   "exit": 0,
+   "wall_ms": 16815,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "battery_pilot_s0.4",
+   "exit": 0,
+   "wall_ms": 215161,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s0.8_L18",
+   "exit": 0,
+   "wall_ms": 149,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s0.8_L22",
+   "exit": 0,
+   "wall_ms": 80,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s0.8",
+   "exit": 0,
+   "wall_ms": 13796,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "battery_pilot_s0.8",
+   "exit": 0,
+   "wall_ms": 156405,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s1.6_L18",
+   "exit": 0,
+   "wall_ms": 129,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s1.6_L22",
+   "exit": 0,
+   "wall_ms": 81,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s1.6",
+   "exit": 0,
+   "wall_ms": 14914,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "battery_pilot_s1.6",
+   "exit": 0,
+   "wall_ms": 133003,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s2.0_L18",
+   "exit": 0,
+   "wall_ms": 111,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s2.0_L22",
+   "exit": 0,
+   "wall_ms": 77,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s2.0",
+   "exit": 0,
+   "wall_ms": 13144,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "battery_pilot_s2.0",
+   "exit": 0,
+   "wall_ms": 130528,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s3.2_L18",
+   "exit": 0,
+   "wall_ms": 112,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s3.2_L22",
+   "exit": 0,
+   "wall_ms": 77,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s3.2",
+   "exit": 0,
+   "wall_ms": 14296,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "battery_pilot_s3.2",
+   "exit": 0,
+   "wall_ms": 135868,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s4.8_L18",
+   "exit": 0,
+   "wall_ms": 112,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s4.8_L22",
+   "exit": 0,
+   "wall_ms": 75,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s4.8",
+   "exit": 0,
+   "wall_ms": 14460,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "battery_pilot_s4.8",
+   "exit": 0,
+   "wall_ms": 137211,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  }
+ ],
+ "chosen_scale": null,
+ "lock_wait_total_ms": 1000000,
+ "finished_utc": "2026-11-06T06:17:12+00:00",
+ "power_end": " -InternalBattery-0 (id=36569187)\t95%; charging; (no estimate) present: true",
+ "verdict": "SCALE_UNCALIBRATABLE"
+}

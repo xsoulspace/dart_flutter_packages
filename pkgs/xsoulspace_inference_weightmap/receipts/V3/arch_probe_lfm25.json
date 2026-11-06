@@ -1,0 +1,110 @@
+{
+ "tool": "v3_arch_probe.py",
+ "candidate_snapshot": "/Users/antonio/.cache/huggingface/hub/models--LiquidAI--LFM2.5-1.2B-Instruct-MLX-4bit/snapshots/7ccafdb04c36936f4f1c4685198c6c9a40275932",
+ "mapped_layers": [
+  10,
+  13
+ ],
+ "started_utc": "2026-11-06T03:52:34+00:00",
+ "power_start": " -InternalBattery-0 (id=36569187)\t95%; charging; 3:29 remaining present: true",
+ "loadavg_start": [
+  3.166015625,
+  2.7353515625,
+  2.8349609375
+ ],
+ "checks": {
+  "store_tensors": {
+   "shards": [
+    "model.safetensors"
+   ],
+   "tensor_count": 334,
+   "mlp_down_proj_weight_count": 0,
+   "mlp_down_proj_weight_sample": [],
+   "feed_forward_w2_count": 48,
+   "feed_forward_w2_sample": [
+    "model.layers.0.feed_forward.w2.biases",
+    "model.layers.0.feed_forward.w2.scales",
+    "model.layers.0.feed_forward.w2.weight",
+    "model.layers.1.feed_forward.w2.biases"
+   ],
+   "mapped_layer_tensors": [
+    "model.layers.10.feed_forward.w1.biases",
+    "model.layers.10.feed_forward.w1.scales",
+    "model.layers.10.feed_forward.w1.weight",
+    "model.layers.10.feed_forward.w2.biases",
+    "model.layers.10.feed_forward.w2.scales",
+    "model.layers.10.feed_forward.w2.weight",
+    "model.layers.10.feed_forward.w3.biases",
+    "model.layers.10.feed_forward.w3.scales",
+    "model.layers.10.feed_forward.w3.weight",
+    "model.layers.10.ffn_norm.weight",
+    "model.layers.10.operator_norm.weight",
+    "model.layers.10.self_attn.k_layernorm.weight",
+    "model.layers.10.self_attn.k_proj.biases",
+    "model.layers.10.self_attn.k_proj.scales",
+    "model.layers.10.self_attn.k_proj.weight",
+    "model.layers.10.self_attn.out_proj.biases",
+    "model.layers.10.self_attn.out_proj.scales",
+    "model.layers.10.self_attn.out_proj.weight",
+    "model.layers.10.self_attn.q_layernorm.weight",
+    "model.layers.10.self_attn.q_proj.biases",
+    "model.layers.10.self_attn.q_proj.scales",
+    "model.layers.10.self_attn.q_proj.weight",
+    "model.layers.10.self_attn.v_proj.biases",
+    "model.layers.10.self_attn.v_proj.scales"
+   ]
+  },
+  "mlx_lm_load": {
+   "ok": true,
+   "wall_ms": 1597
+  },
+  "arch_shape": {
+   "has_model_layers": true,
+   "layers_total": 16,
+   "mapped_layers": {
+    "10": {
+     "has_mlp": false,
+     "has_feed_forward": true,
+     "attrs": [
+      "feed_forward",
+      "ffn_norm",
+      "self_attn"
+     ]
+    },
+    "13": {
+     "has_mlp": false,
+     "has_feed_forward": true,
+     "attrs": [
+      "conv",
+      "feed_forward",
+      "ffn_norm"
+     ]
+    }
+   }
+  },
+  "generate_1tok": {
+   "ok": true,
+   "wall_ms": 405,
+   "text_len": 1
+  },
+  "frozen_capture_attempt": {
+   "exit": 1,
+   "wall_ms": 1107,
+   "wall_ms_claim": false,
+   "stderr": "ARCH_SHAPE_UNEXPECTED: layer 10 has no .mlp",
+   "stdout_tail": ""
+  }
+ },
+ "lock_wait_ms": 2410000,
+ "retry_interval_used": 10,
+ "finished_utc": "2026-11-06T04:32:49+00:00",
+ "power_end": " -InternalBattery-0 (id=36569187)\t95%; charging; (no estimate) present: true",
+ "loadavg_end": [
+  3.8857421875,
+  3.93212890625,
+  4.666015625
+ ],
+ "verdict": "ARCH_UNSUPPORTED",
+ "named_code": "ARCH_SHAPE_UNEXPECTED",
+ "detail": "mlx_lm runtime load=True; frozen capture_activations.py exit=1 (ARCH_SHAPE_UNEXPECTED). Frozen instruments are read-only (A4 freeze law): a cast whose tree/store does not satisfy the frozen shape law (.model.layers[i].mlp + plain mlp.down_proj.weight tensors) cannot host the replicated pipeline."
+}

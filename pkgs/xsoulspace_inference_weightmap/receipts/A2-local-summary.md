@@ -108,10 +108,62 @@ counterpart (curve context only).
 achieved/denominator, score, Wilson 95%, cap-hit stats, wall, power, locks.)
 
 ### Cell 1 — IFEval verifiable subset (cap 4096, greedy)
-_PENDING_
+
+Paired n = **44 of 91** mappable rows (base budget_stop at 44/91; edited run
+matched to 44 → full pair; subset itself = 91/541, 450 excluded with
+per-reason counts). Device: per-batch locking; A3 interleave absorbed
+(base lock_wait 420 s; edited 2,340 s incl. one named LOCK_TIMEOUT 1,800 s);
+power AC throughout, Amperage −257…+71 mA (charge-current hole recorded).
+
+| config | k/n | score | Wilson 95% | empty answers | lenient empty passes | strict gated | cap hits @4096 | mean tok |
+|---|---|---|---|---|---|---|---|---|
+| base   | 24/44 | 54.5% | [40.1, 68.3] | 11 | 6 | 40.9% | 18 (40.9%) | 1907 |
+| edited | 21/44 | 47.7% | [33.8, 62.1] | 8 | 5 | 36.4% | 11 (25.0%) | 1428 |
+| published base (32k, temp0.6 avg@2, official checkers, full 541) | — | 21.0% | [18.7, 23.5] | — | — | — | cut 74.9% | 25296 |
+| published edited (same) | — | 62.3% | [59.4, 65.1] | — | — | — | cut 2.2% | 4241 |
+
+**Cell verdict: NON_REPLICATE (named causes)** — direction is reversed
+locally (base ≥ edited) and no CI contains the other point. Named causes
+(all pre-registered as comparability caveats before scoring):
+IFEVAL_SUBSET_COMPOSITION (91-row mappable subset, kw_exclude-heavy, frozen
+strict checkers vs official full-set checkers); GREEDY_VS_SAMPLED_
+TRUNCATION_REGIME (greedy base completes answers — median 655 tok, 41%
+truncation @4k — while published base 21.0 is truncation-dominated at 74.9%
+cut @32k); CAP_4096_VS_32768 (edited published cut 2.2% vs local 25%);
+EMPTY_ANSWER_LENIENT_ROWS (frozen scorer passes empty answers on
+exclusion/max-only specs: base 6, edited 5; strict counts shown);
+SAMPLER_DELTA (greedy ×1 vs temp 0.6 avg@2); TEMPLATE_NEWLINES_COLLAPSED.
+NOT harness-suspect: scorer cross-check 39/39, package 266/266 green,
+hit-flag agreement 88/88, outputs coherent. Local same-regime delta
+(base−edited): −6.8 pp raw / −4.5 pp strict, CIs overlap → no significant
+local effect on this subset. IFEval is NOT part of calibration C0; the
+overall-arm verdict waits on the decisive cap-curve and MATH cells.
+PARTIAL denominator: 44/91 (of a 91/541 subset).
 
 ### Cell 2 — token-limit cap curve (MATH-500 n=24 @4096/@8192; n=8 @32768 COMPUTE_SUBSTRIDE_32K)
-_PENDING_
+
+Frozen cap-curve prompts: MATH-500 idx=21·i (i=0..23); 32k sub-stride = first
+8 of the 24 (addendum-2 COMPUTE_SUBSTRIDE_32K n=8, recorded in run receipt).
+Within-cell cap order 4096 → 32768 → 8192 (ordering_decision row: the 32k
+point is the only published-comparable one; cap order inside the cell is not
+frozen). Hit rule: frozen `tokenLimitRate` (count ≥ cap); generator-flag
+agreement 48/48 so far.
+
+| cap | config | hits/n | rate | Wilson 95% | mean tok | power |
+|---|---|---|---|---|---|---|
+| 4096 | base | 22/24 | **91.7%** | [74.2, 97.7] | 3843 | AC, 0…+71 mA |
+| 4096 | edited | 20/24 | **83.3%** | [64.1, 93.3] | 3734 | AC, 0…+57 mA |
+| 32768 (n=8) | base | _RUNNING_ | | | | |
+| 32768 (n=8) | edited | _PENDING_ | | | | |
+| 8192 | base | _PENDING_ | | | | |
+| 8192 | edited | _PENDING_ | | | | |
+
+@4096 reading: BOTH configs saturate the 4k cap (published edited mean_tokens
+22,037 ≫ 4096) — delta −8.3 pp, CIs overlap; the config contrast is expected
+at 32k (published: base 93.0 [91.8, 94.0] → edited 33.05 [31.0, 35.1]).
+Events: base@4096 run suffered an EXTERNAL_STOP at row 22 with a stale-lock
+leak (trap killed with the process group); recovered by verified manual rmdir
+(lock_event rows in run receipt + manifest); relaunched run completed 24/24.
 
 ### Cell 3 — MATH-500 accuracy n=100 stride-5 (cap 4096, greedy)
 _PENDING_

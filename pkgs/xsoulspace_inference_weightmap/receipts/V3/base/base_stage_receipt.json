@@ -1,0 +1,123 @@
+{
+ "stage": "v3-base",
+ "snapshot": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T//wm-v3/base-dequant",
+ "layers": [
+  "18",
+  "22"
+ ],
+ "started_utc": "2026-11-06T05:23:06+00:00",
+ "power_start": " -InternalBattery-0 (id=36569187)\t95%; charging; (no estimate) present: true",
+ "loadavg_start": [
+  1.69921875,
+  1.9521484375,
+  2.03564453125
+ ],
+ "stages": [
+  {
+   "step": "capture_loop",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/../eval/capture_activations.py",
+    "--model",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T//wm-v3/base-dequant",
+    "--prompts",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/prompts_localization_loop_A3.txt",
+    "--layers",
+    "18,22",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v3/base/cap_loop.json"
+   ],
+   "exit": 0,
+   "wall_ms": 32757,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "capture_neutral",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/../eval/capture_activations.py",
+    "--model",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T//wm-v3/base-dequant",
+    "--prompts",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/prompts_localization_neutral_A3.txt",
+    "--layers",
+    "18,22",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v3/base/cap_neutral.json"
+   ],
+   "exit": 0,
+   "wall_ms": 33722,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "propose",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/a3_propose.py",
+    "--cap-loop",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v3/base/cap_loop.json",
+    "--cap-neutral",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v3/base/cap_neutral.json",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v3/base/directions_base.json"
+   ],
+   "exit": 0,
+   "wall_ms": 75,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "battery_base",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/a3_battery.py",
+    "--model",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T//wm-v3/base-dequant",
+    "--cells",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/cells_frozen_A3.json",
+    "--groups",
+    "G0,G1,G2,pilot",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v3/base/battery_base.jsonl"
+   ],
+   "exit": 0,
+   "wall_ms": 268130,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  }
+ ],
+ "lock_wait_ms": 270000,
+ "retry_interval_used": 10,
+ "verdict": "BASE_STAGE_OK",
+ "artifacts": {
+  "cap_loop.json": "b97c9b51d4db77b8b8aae10862430531c84c18faee1b96445e322cd1e9414ba6",
+  "cap_neutral.json": "5e9a31d9866fc59174874e4b4523c76f9e178d167804ec97b2cbbcff7b634ac0",
+  "directions_base.json": "752eed29e7212feb081319c2a766d35bcfc289488404c38c2774d52b5cb2d938",
+  "battery_base.jsonl": "6cc8e398d41db84f44215e70ad8063bbc4b1d6f29fa9e3d16f9794a26adc5a73"
+ },
+ "g2_base_loop_rate": 0.4166666666666667,
+ "g2_base_hits": 5,
+ "g2_base_n": 12,
+ "precheck_threshold": 0.25,
+ "precheck_pass": true,
+ "pilot_base_loop_rate": 0.25,
+ "pilot_base_hits": 4,
+ "pilot_base_n": 16,
+ "finished_utc": "2026-11-06T05:33:11+00:00",
+ "power_end": " -InternalBattery-0 (id=36569187)\t95%; charging; (no estimate) present: true",
+ "loadavg_end": [
+  2.39013671875,
+  2.3349609375,
+  2.134765625
+ ]
+}

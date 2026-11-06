@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """ws4_train.py - WS-4 latent/budget predictor trainer (PREREG-E, FROZEN).
 
+SCHEMA AMENDMENT (the ONLY authorized edit to this frozen file): PREREG-E
+Addendum 2026-11-06 (ledgered: VERDICTS.md WS-4 feature-v2 row) makes
+features.capture_eigen_gap OPTIONAL-ABSENT (feature-set v2 = {delta_norm,
+column_count, layer_ids, baseline_loop_rate, layer_column_bands}); the PASS
+bar, arms, seed, split law and every other frozen element are UNCHANGED, and
+the split digest re-freezes at re-run. Nothing was ever trained on v1, so
+the amendment is alignment, not a post-hoc fit.
+
 PREREG-E WS-4 (contract shape from pattern exp 0007): train five arms on the
 A3+V-1+V-3 denominator and evaluate them on holdout PLANT FAMILIES:
   (a) logistic regression
@@ -17,7 +25,10 @@ tool trains an ADVISORY predictor. It NEVER certifies an edit. Every output
 carries the banner; a PASS bar met changes eval COST, never a verdict.
 
 DENOMINATOR SCHEMA (ws4-denominator/v1) - defined and frozen HERE (this file
-is its reference; a schema change needs a new prereg row, not an edit):
+is its reference; a schema change needs a new prereg row, not an edit - the
+PREREG-E Addendum 2026-11-06 IS that row for the ONE amendment below:
+features.capture_eigen_gap became optional-absent, feature-set v2; nothing
+else in this file is touched):
 one JSON object per line; one line per candidate edit attempt in the recorded
 A3+V-1+V-3 denominator. Required keys (strict; unknown keys refuse):
 
@@ -27,19 +38,24 @@ A3+V-1+V-3 denominator. Required keys (strict; unknown keys refuse):
   family      str  plant family - THE SPLIT UNIT. Whole families go to
                    train or holdout; rows NEVER split across (leakage law:
                    a family seen in train cannot appear in holdout)
-  features    obj  frozen feature block (PREREG-E WS-4), all required:
+  features    obj  frozen feature block (PREREG-E WS-4, feature-set v2 per
+                   the Addendum 2026-11-06), all required:
     delta_norm          float >= 0  Frobenius norm of the applied delta
     column_count        int  >= 1   distinct edited columns (all layers)
     layer_ids           [int]       sorted unique, non-empty: edited layers
     baseline_loop_rate  float in [0,1]  unedited-mirror loop rate on the
                                     G2-shaped cell (PREREG-A A3)
-    capture_eigen_gap   float       capture eigen-gap at the planted rank
     layer_column_bands  [[int,int]] sorted (layer, band) co-occurrence
                                     pairs of the edited columns;
                                     band = column_id // 256 (BAND_WIDTH
                                     frozen below); may be empty only when
                                     column_count == 0 is impossible, so
                                     non-empty is required
+                   optional (ABSENT, never imputed - Addendum 2026-11-06
+                   dropped it from the trainable set because the A4-frozen
+                   capture instrument records means only; it remains a
+                   FUTURE candidate behind an instrument-change row):
+    capture_eigen_gap   float       capture eigen-gap at the planted rank
   label       obj
     battery_pass  bool  full-battery verdict from the FROZEN oracle
                         (never from a screener, never from this tool)
@@ -54,11 +70,12 @@ keep >= 1 family, so >= 2 families are required). The split is a function of
 the family SET only - row order in the file cannot change it. split_digest =
 sha256 of the canonical json {seed, train_families, holdout_families}.
 
-FEATURE ENCODING for arms (a)/(b) (frozen): x = [delta_norm, column_count,
-baseline_loop_rate, capture_eigen_gap] + multi-hot(layer_ids over the sorted
-union of train-split layer_ids); z-scored with TRAIN means/stds (a dimension
-with train std < 1e-12 is centered only, never scaled). The encoding is
-recorded verbatim in the report.
+FEATURE ENCODING for arms (a)/(b) (frozen; scalars per feature-set v2,
+Addendum 2026-11-06): x = [delta_norm, column_count, baseline_loop_rate]
+(+ capture_eigen_gap iff present on EVERY row - absent, never imputed) +
+multi-hot(layer_ids over the sorted union of train-split layer_ids); z-scored
+with TRAIN means/stds (a dimension with train std < 1e-12 is centered only,
+never scaled). The encoding is recorded verbatim in the report.
 
 ARM IMPLEMENTATIONS (frozen hyperparameters; deterministic; numpy):
   (a) logistic regression: sigmoid(w.x + b), full-batch gradient descent,
@@ -196,8 +213,14 @@ VENV_POLL_INTERVAL = 5.0
 
 FEATURE_KEYS_REQUIRED = (
     'delta_norm', 'column_count', 'layer_ids', 'baseline_loop_rate',
-    'capture_eigen_gap', 'layer_column_bands',
+    'layer_column_bands',
 )
+# capture_eigen_gap is OPTIONAL-ABSENT per the PREREG-E Addendum 2026-11-06
+# (feature-set v2; the edit authorized by that ledger row ONLY - everything
+# else in this file stays frozen). Absent = not a feature, never imputed;
+# when present it must still be a finite float, and it re-enters the
+# encoding only when present on EVERY row.
+FEATURE_KEYS_OPTIONAL = ('capture_eigen_gap',)
 ROW_KEYS_REQUIRED = ('attempt_id', 'arm', 'family', 'features', 'label')
 ROW_KEYS_OPTIONAL = ('cast', 'proposer', 'receipt_digest')
 ARM_VALUES = ('A3', 'V-1', 'V-3')
@@ -284,7 +307,8 @@ def _validate_row(row, lineno, seen_ids):
             problems.append('line %d: MISSING_FIELD=features.%s'
                             % (lineno, key))
     for key in sorted(feats):
-        if key not in FEATURE_KEYS_REQUIRED:
+        if (key not in FEATURE_KEYS_REQUIRED
+                and key not in FEATURE_KEYS_OPTIONAL):
             problems.append('line %d: UNKNOWN_KEY=features.%s'
                             % (lineno, key))
     if problems:
@@ -308,9 +332,11 @@ def _validate_row(row, lineno, seen_ids):
     if not _is_finite_number(blr) or not (0.0 <= blr <= 1.0):
         problems.append('line %d: MALFORMED_FIELD=features.'
                         'baseline_loop_rate (float in [0,1])' % lineno)
-    if not _is_finite_number(feats['capture_eigen_gap']):
+    if ('capture_eigen_gap' in feats
+            and not _is_finite_number(feats['capture_eigen_gap'])):
         problems.append('line %d: MALFORMED_FIELD=features.capture_eigen_gap '
-                        '(finite float)' % lineno)
+                        '(finite float when present; optional-absent per '
+                        'PREREG-E Addendum 2026-11-06)' % lineno)
     bands = feats['layer_column_bands']
     bands_ok = (
         isinstance(bands, list) and bands
@@ -546,19 +572,27 @@ def ensure_venv_python(argv):
         time.sleep(VENV_POLL_INTERVAL)
 
 
-def _encode_features(rows, layer_vocab):
-    """Frozen encoding: 4 scalars + layer multi-hot (numpy float64 matrix)."""
+def _scalar_keys(rows):
+    """Frozen v2 scalars (Addendum 2026-11-06): capture_eigen_gap re-enters
+    ONLY when present on every row - absent, never imputed."""
+    keys = ['delta_norm', 'column_count', 'baseline_loop_rate']
+    if rows and all('capture_eigen_gap' in r['features'] for r in rows):
+        keys.append('capture_eigen_gap')
+    return keys
+
+
+def _encode_features(rows, layer_vocab, scalar_keys):
+    """Frozen encoding: v2 scalars + layer multi-hot (numpy float64)."""
     import numpy as np
-    x = np.zeros((len(rows), 4 + len(layer_vocab)), dtype=np.float64)
+    x = np.zeros((len(rows), len(scalar_keys) + len(layer_vocab)),
+                 dtype=np.float64)
     for i, r in enumerate(rows):
         f = r['features']
-        x[i, 0] = f['delta_norm']
-        x[i, 1] = float(f['column_count'])
-        x[i, 2] = f['baseline_loop_rate']
-        x[i, 3] = f['capture_eigen_gap']
+        for j, key in enumerate(scalar_keys):
+            x[i, j] = float(f[key])
         for lid in f['layer_ids']:
             if lid in layer_vocab:
-                x[i, 4 + layer_vocab[lid]] = 1.0
+                x[i, len(scalar_keys) + layer_vocab[lid]] = 1.0
     return x
 
 
@@ -673,8 +707,9 @@ def train_all_arms(train_rows, holdout_rows):
 
     layer_vocab = {lid: i for i, lid in enumerate(sorted(
         {lid for r in train_rows for lid in r['features']['layer_ids']}))}
-    x_tr = _encode_features(train_rows, layer_vocab)
-    x_ho = _encode_features(holdout_rows, layer_vocab)
+    scalar_keys = _scalar_keys(train_rows + holdout_rows)
+    x_tr = _encode_features(train_rows, layer_vocab, scalar_keys)
+    x_ho = _encode_features(holdout_rows, layer_vocab, scalar_keys)
     x_tr_s, x_ho_s, mean, std = _standardize(x_tr, x_ho)
     d = x_tr_s.shape[1]
 
@@ -753,8 +788,10 @@ def train_all_arms(train_rows, holdout_rows):
     }
 
     encoding = {
-        'scalars': ['delta_norm', 'column_count', 'baseline_loop_rate',
-                    'capture_eigen_gap'],
+        'scalars': scalar_keys,
+        'scalars_rule': ('frozen v2 scalars (PREREG-E Addendum '
+                         '2026-11-06); capture_eigen_gap included iff '
+                         'present on EVERY row (absent, never imputed)'),
         'layer_vocab': layer_vocab,
         'standardization': {
             'rule': 'train mean/std z-score; std < 1e-12 dims centered only',

@@ -1,0 +1,203 @@
+{
+ "batch": "B1",
+ "mirror_dir": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/mirrors/v12-plant1",
+ "gates": [
+  {
+   "after": "make_mirror",
+   "file": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/mirror_receipt_B1.json",
+   "key": "mirror_shard_sha256",
+   "expect": "22e52d07164ca45f379ccb7ddc42e52a39ec719f73e3d043a3551baa931f02e7",
+   "code": "MIRROR_NONREPRODUCIBLE"
+  },
+  {
+   "after": "propose_fresh",
+   "file": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/recovered_fresh.json",
+   "key": "layers.15.direction_sha256",
+   "expect": "4cb330299d496fd836905247533f6ae8d4e86577eef861f18bb18d8c45615c6d",
+   "code": "RECOVERY_NONREPRODUCIBLE"
+  },
+  {
+   "after": "propose_fresh",
+   "file": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/recovered_fresh.json",
+   "key": "layers.19.direction_sha256",
+   "expect": "15de5e61a3afb31bd7465803f9e1af8060e3d1c94f475d53693c4143e9b67555",
+   "code": "RECOVERY_NONREPRODUCIBLE"
+  }
+ ],
+ "steps": [
+  {
+   "step": "apply_delta_L15",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/eval/apply_delta.py",
+    "--base",
+    "/Users/antonio/.cache/huggingface/hub/models--mlx-community--Qwen3-0.6B-bf16/snapshots/42096995f6402fde107068cf530136fe64b604f8",
+    "--spec",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-002/specs/spec_L15.json",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/sidecars/L15"
+   ]
+  },
+  {
+   "step": "apply_delta_L19",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/eval/apply_delta.py",
+    "--base",
+    "/Users/antonio/.cache/huggingface/hub/models--mlx-community--Qwen3-0.6B-bf16/snapshots/42096995f6402fde107068cf530136fe64b604f8",
+    "--spec",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-002/specs/spec_L19.json",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/sidecars/L19"
+   ]
+  },
+  {
+   "step": "make_mirror",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py",
+    "--base",
+    "/Users/antonio/.cache/huggingface/hub/models--mlx-community--Qwen3-0.6B-bf16/snapshots/42096995f6402fde107068cf530136fe64b604f8",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/mirrors/v12-plant1",
+    "--sidecar",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/sidecars/L15",
+    "--sidecar",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/sidecars/L19",
+    "--receipt",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/mirror_receipt_B1.json"
+   ]
+  },
+  {
+   "step": "capture_loop_fresh",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/eval/capture_activations.py",
+    "--model",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/mirrors/v12-plant1",
+    "--prompts",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/prompts_localization_loop_A3.txt",
+    "--layers",
+    "15,19",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/cap_loop_fresh.json"
+   ]
+  },
+  {
+   "step": "capture_neutral_fresh",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/eval/capture_activations.py",
+    "--model",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/mirrors/v12-plant1",
+    "--prompts",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/prompts_localization_neutral_A3.txt",
+    "--layers",
+    "15,19",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/cap_neutral_fresh.json"
+   ]
+  },
+  {
+   "step": "capture_slugify",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/eval/capture_activations.py",
+    "--model",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/mirrors/v12-plant1",
+    "--prompts",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/banks/prompts_slugify_G0_A3.txt",
+    "--layers",
+    "15,19",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/cap_slugify.json"
+   ]
+  },
+  {
+   "step": "propose_fresh",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/a3_propose.py",
+    "--cap-loop",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/cap_loop_fresh.json",
+    "--cap-neutral",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/cap_neutral_fresh.json",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/recovered_fresh.json"
+   ]
+  },
+  {
+   "step": "battery_M_B1",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/a3_battery.py",
+    "--model",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/mirrors/v12-plant1",
+    "--cells",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/cells_frozen_A3.json",
+    "--groups",
+    "G0,G1,G2",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/battery_M_B1.jsonl"
+   ]
+  },
+  {
+   "step": "battery_null1",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/a3_battery.py",
+    "--model",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/mirrors/v12-plant1",
+    "--cells",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/cells_frozen_A3.json",
+    "--groups",
+    "G0,G1,G2",
+    "--repair",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/specs/null1_gaussian_spec.json",
+    "--repair-out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/battery_null1.jsonl",
+    "--repair-receipt",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/repair_receipt_null1.json"
+   ]
+  },
+  {
+   "step": "battery_null2",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/a3_battery.py",
+    "--model",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/mirrors/v12-plant1",
+    "--cells",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/cells_frozen_A3.json",
+    "--groups",
+    "G0,G1,G2",
+    "--repair",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/specs/null2_shuffle_spec.json",
+    "--repair-out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/battery_null2.jsonl",
+    "--repair-receipt",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/gen/repair_receipt_null2.json"
+   ]
+  }
+ ]
+}

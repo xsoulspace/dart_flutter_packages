@@ -1,0 +1,10 @@
+{
+ "artifact": "config_fix receipt (NAMED issue CONFIG_QUANTIZATION_RESIDUE)",
+ "at": "2026-11-06T04:36:54+00:00",
+ "issue": "v3_dequant.py popped only the 'quantization' key; the hub config ALSO carries legacy 'quantization_config' {group_size,bits} (no quant_method) which mlx_lm's legacy branch dereferences => KeyError 'quant_method' at load (base stage capture_loop failed FAST, named, before any measurement; no prompts run)",
+ "fix": "config.json rewritten = hub config minus BOTH 'quantization' and 'quantization_config'; v3_dequant.py amended for any future rebuild (script digest changes, recorded); weights model.safetensors UNTOUCHED (sha unchanged)",
+ "old_config_sha256": "01363841c3ff5568feb3c8c3070ffaa31b2b2c2752e774decde36d10a438068c",
+ "new_config_sha256": "1ddb5b89ebc90dcb417a45c213d818577e65976454d29385c8f6140771d95197",
+ "weights_sha256_unchanged": "6a6894aab26ea953d0f3f404578327c18874d8dd68456aceadf932035c8afcc3",
+ "measurements_affected": "none (failure happened at model load, zero prompts run, lock released by the failed batch)"
+}

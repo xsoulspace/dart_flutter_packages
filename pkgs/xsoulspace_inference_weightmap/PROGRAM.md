@@ -71,6 +71,16 @@ WS-0 → WS-1 → WS-2. Exit: C2 (loop closed end to end; edit is a typed
 artifact). Kill clause (ADR 0022 shape): any engine-side concept logic →
 integration claim reverts to Proposed.
 
+Addendum 2026-11-06 (WS-2 rescoped by its own live verdict): cross-engine
+agreement at tolerance 0 FAILED as measured (27/66 token-id identity on
+qwen3-0.6b-bf16; near-tie bf16 argmax convention + 1-ulp kernel drift; eos
+padding contract open). Rescope: cross-engine agreement is a REPORTED DRIFT
+STATISTIC; the GATE is the certification key law (engine rev in the key ⇒
+per-engine re-certification, which V-6 prescribes). WS-2 exit criterion is now:
+drift measured, named per cell, and keyed certifications per engine. No
+post-hoc tolerance was fitted to the observed receipt; any future tolerance is
+a new prereg row evaluated on fresh cells.
+
 ### Phase C — false-positive hardening
 V-1 (matched nulls: random / shuffled / unrelated-concept / quant-noise; a
 passing null halts the pipeline and the halt is the verdict) · V-2 (ablate →
@@ -95,6 +105,14 @@ arms; certificates; measured ROC + evals-skipped-per-false-negative) · V-6
 (certification keyed to base digest, tokenizer digest, quant, sampler config,
 engine rev; drift outside the key re-runs certification) · battery rotation
 epoch 2 · P-4 optional (kill cheap). Exit: C6.
+
+Addendum 2026-11-06b (Phase E state): WS-4 RETIRED on the current denominator
+—all five arms AUC 0.5 under FEATURE_ZERO_VARIANCE (the matched-control design
+makes every v2 feature constant); the FAIL is a denominator property, not a
+latent-prediction verdict; reopen only via a new row (eigen-gap instrument
+and/or V-3's varying draws). V-5 = NOT_RUN-SCREENER_RETIRED (both screener
+inputs retired/failed; mechanical consequence, reopens with WS-4). V-6 stands:
+per-engine re-certification is the gate that WS-2's measured drift justifies.
 
 ## 3. Statistical governance (false-positive constitution)
 

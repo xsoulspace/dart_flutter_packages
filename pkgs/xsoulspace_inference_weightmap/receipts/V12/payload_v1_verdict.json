@@ -1,0 +1,154 @@
+{
+ "kind": "v1-verdict",
+ "payload": {
+  "artifact": "V-1 verdict (floor FROZEN in PREREG-C: 0 of 4 nulls certified per edit)",
+  "at": "2026-11-06T02:45:56+00:00",
+  "target_edit": "A3 plant-1 (arm-002); denominator note: this run covers 1 of the 6 A3-certified edits (plants 1,3,4,5,6,7); family-wise completion for the remaining 5 is deferred and recorded",
+  "nulls_run": 4,
+  "nulls_certified": 1,
+  "certified_ids": [
+   "v1-null-3"
+  ],
+  "floor": "0 of 4",
+  "floor_met": false,
+  "verdict": "NULL_LEAK",
+  "halt": {
+   "code": "NULL_LEAK",
+   "rule": "PREREG-C kill clause: any certified null = NAMED NULL_LEAK -> pipeline HALT; the halt and its denominator are the verdict; V-2 not run",
+   "certified_nulls": [
+    "v1-null-3"
+   ]
+  },
+  "family_wise": {
+   "rate": "1/4",
+   "wilson95": [
+    0.04558726029536886,
+    0.6993581599030917
+   ],
+   "note": "this edit only; program-wide rate accumulates as remaining certified edits run V-1"
+  },
+  "m_continuity_vs_archived_arm002": {
+   "cells_total": 34,
+   "cells_matching": 34,
+   "cells_differing": 0,
+   "differing_cell_ids": []
+  },
+  "m_drift_flag": null,
+  "cells_sha256": "8406130623b6e85922eac6cbd92b73dd2282e6fc19538bb3c199f647f518d760",
+  "repair_plumbing_verification": {
+   "null1_gaussian": {
+    "direction_sha256_match_manifest": true,
+    "scales": [
+     -4.8
+    ],
+    "columns_64": true,
+    "tensors": [
+     "model.layers.15.mlp.down_proj.weight",
+     "model.layers.19.mlp.down_proj.weight"
+    ],
+    "columns_equal_arm002": true,
+    "model_on_disk_untouched": true,
+    "repair_receipt_sha256": "e6cdeed630cd11bbf00d254c17e3d0c993a2463ca2acc8b1d507997194827b6d"
+   },
+   "null2_shuffle": {
+    "direction_sha256_match_manifest": true,
+    "scales": [
+     -4.8
+    ],
+    "columns_64": true,
+    "tensors": [
+     "model.layers.15.mlp.down_proj.weight",
+     "model.layers.19.mlp.down_proj.weight"
+    ],
+    "columns_equal_arm002": true,
+    "model_on_disk_untouched": true,
+    "repair_receipt_sha256": "bc0dcbcca13327cd3d473ec270d70dda0c7d76fe543f8b58df731c3924b638dd"
+   },
+   "null3_unrelated": {
+    "direction_sha256_match_manifest": true,
+    "scales": [
+     -4.8
+    ],
+    "columns_64": true,
+    "tensors": [
+     "model.layers.15.mlp.down_proj.weight",
+     "model.layers.19.mlp.down_proj.weight"
+    ],
+    "columns_equal_arm002": true,
+    "model_on_disk_untouched": true,
+    "repair_receipt_sha256": "9cf28a40e2c70693aeca316784102e634ac9411a12a6e748396f925990cf78e7"
+   },
+   "null4_quantnoise": {
+    "direction_sha256_match_manifest": true,
+    "scales": [
+     -4.8
+    ],
+    "columns_64": true,
+    "tensors": [
+     "model.layers.15.mlp.down_proj.weight",
+     "model.layers.19.mlp.down_proj.weight"
+    ],
+    "columns_equal_arm002": true,
+    "model_on_disk_untouched": true,
+    "repair_receipt_sha256": "7b46a235fc2df357749fa5eb44f5ccf863a9bb02fca2385f427c1bc179406e8c"
+   }
+  },
+  "frozen_inputs_verified": {
+   "cells_sha256_match_frozen": true,
+   "certification_rule": "certified(arm) := loop_rate(R) < loop_rate(M) AND task_success(R) >= task_success(M), where M = planted/null mirror battery and R = removal-edit battery (R = M with -scale*recovered_direction merged in-memory, same columns). Strict inequality / non-strict floor per PREREG-A A3 wording ('loop-rate down', 'task success not down'). Per-cell flips recorded in arm receipts for knife-edge diagnosis."
+  },
+  "leak_diagnostics": {
+   "certified_null": "v1-null-3 (null3_unrelated: G0-slugify-vs-neutral diff-of-means on the plant mirror, frozen a3_propose.py rule)",
+   "geometry": "cos(null3,d_hat) L15=0.6809 L19=0.7175 (manifest) - this contrast pair is NOT directionally unrelated to the recovered loop direction in this activation space; both are task-vs-neutral contrasts sharing a task-engagement component",
+   "other_nulls_geometry": "|cos| <= 0.185 for nulls 1/2/4; all three WORSENED loop rate (+0.333) and were not certified",
+   "g2_knife_edge": [
+    {
+     "cell_id": "g2-b-count60",
+     "M_cap_hit": true,
+     "R_cap_hit": false,
+     "M_tokens": 256,
+     "R_tokens": 195
+    }
+   ],
+   "loop_delta_source": "single G2 cell (g2-b-count60) fell off the 256 cap: 8/12 -> 7/12",
+   "task_flips": [
+    [
+     "g0-ws",
+     false,
+     true
+    ],
+    [
+     "g1-perm-01",
+     false,
+     true
+    ],
+    [
+     "g1-perm-02",
+     false,
+     true
+    ],
+    [
+     "g1-perm-03",
+     false,
+     true
+    ],
+    [
+     "g1-perm-04",
+     false,
+     true
+    ],
+    [
+     "g1-perm-05",
+     false,
+     true
+    ],
+    [
+     "g1-perm-06",
+     false,
+     true
+    ]
+   ],
+   "interpretation_label": "INTERPRETATION (recorded, not a rule change): a direction proposed from a different task-vs-neutral contrast pair carries enough projection (~cos 0.7) onto the planted loop direction that its -4.8 removal partially un-loops the mirror; the frozen certification rule cannot distinguish that from a true recovery removal. Any remedy (cosine-gated null families, a non-task contrast pair for null3, or accepting the measured FP rate) requires a NEW prereg row - owner decision, not runner decision."
+  }
+ }
+}

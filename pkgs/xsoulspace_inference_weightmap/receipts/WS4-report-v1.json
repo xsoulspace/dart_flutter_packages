@@ -1,0 +1,96 @@
+{
+  "schema": "ws4-report-wrapper/v1",
+  "schema_note": "the FROZEN ws4_train.py refused the official denominator NAMED DENOMINATOR_EMPTY (exit 1) before any split/training, so it produced no ws4-report/v1; this wrapper preserves the tool output VERBATIM (stdout/stderr/exit code per invocation) plus provenance",
+  "created_utc": "2026-11-06T03:20:17+00:00",
+  "tool": "ws4_train.py (FROZEN machinery; NOT modified; git-clean at run)",
+  "tool_sha256": "4b7932b11fcd73615fce6ee89c64750051f5676e458fc766978c8d7b4d7c353f",
+  "builder": {
+    "tool": "ws4_denominator.py (owned by this WS-4 execution)",
+    "sha256": "7e22f8cbeb09171b12b9e2395ddb2de7d6e45729a00fd330e1fe862a4f50f89d",
+    "assembly_report": "receipts/WS4-denominator-assembly.json"
+  },
+  "propose_only": true,
+  "banner": "PROPOSE_ONLY: WS-4 is an ADVISORY predictor - it NEVER certifies an edit (PROGRAM.md propose-only law / pattern exp 0007). Metrics here change eval COST, never verdicts.",
+  "git": {
+    "branch": "ag-c",
+    "head": "3dec77acc171b6fd8ae8abc493039a4d447682e5"
+  },
+  "denominator": {
+    "path": "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/receipts/WS4-denominator.jsonl",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "rows": 0,
+    "rows_note": "EMPTY by construction: all 20 edit-attempt candidates (16 A3 + 4 V-1) lack the frozen-schema-required feature capture_eigen_gap -> excluded NAMED FEATURE_MISSING; exclusion rows live in the sidecar ledger (the frozen schema refuses unknown/null feature keys, so exclusions cannot ride inside the tool-input file)",
+    "exclusions": {
+      "path": "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/receipts/WS4-denominator-exclusions.jsonl",
+      "rows": 69,
+      "sha256": "80c0dcc5013c54442c131d3dd6aec7ec7f4fc9e92aea1dbf41a8cc5ad4538c3c",
+      "by_reason": {
+        "FEATURE_MISSING": 20,
+        "NOT_AN_EDIT_ATTEMPT": 48,
+        "V3_NOT_RUN": 1
+      }
+    }
+  },
+  "invocations": [
+    {
+      "mode": "dry-run (official denominator)",
+      "command": "python3 -I tool/runs/ws4_train.py --denominator receipts/WS4-denominator.jsonl --out <scratch>/WS4-report-dryrun.json --dry-run",
+      "exit_code": 1,
+      "stdout_verbatim": "",
+      "stderr_verbatim": "DENOMINATOR_EMPTY: receipts/WS4-denominator.jsonl has no non-blank lines\n"
+    },
+    {
+      "mode": "real (official denominator)",
+      "command": "python3 -I tool/runs/ws4_train.py --denominator receipts/WS4-denominator.jsonl --out <scratch>/WS4-report-real.json",
+      "exit_code": 1,
+      "stdout_verbatim": "",
+      "stderr_verbatim": "DENOMINATOR_EMPTY: receipts/WS4-denominator.jsonl has no non-blank lines\n",
+      "note": "refusal occurs in read_denominator BEFORE the venv gate: no numpy imported, no device/model touched (house law: CPU only)"
+    },
+    {
+      "mode": "SCHEMA SELF-TEST (scratch-only, dry-run, NOT the official run)",
+      "command": "python3 -I tool/runs/ws4_train.py --denominator <scratch>/selftest-denominator.jsonl --out <scratch>/selftest-report.json --dry-run",
+      "exit_code": 0,
+      "method": "the 20 FEATURE_MISSING exclusion rows promoted with PLACEHOLDER capture_eigen_gap=0.0 in $TMPDIR scratch; dry-run only (validates schema + prints split plan; nothing trained, nothing written by the tool); placeholder file NEVER promoted to receipts/",
+      "purpose": "falsification check that the assembled rows are schema-conformant in every other respect, and that the builder's prospective split matches the frozen tool's own split rule",
+      "observed": {
+        "rows": 20,
+        "families": 12,
+        "train_families": [
+          "null-quantnoise",
+          "null-shuffle",
+          "plant-1",
+          "plant-2",
+          "plant-3",
+          "plant-5",
+          "plant-7",
+          "plant-8"
+        ],
+        "holdout_families": [
+          "null-gaussian",
+          "null-unrelated",
+          "plant-4",
+          "plant-6"
+        ],
+        "split_digest": "bb180472a72e6534beef0d033e434f3768c9b1647e472c4862cac13a76457db1"
+      },
+      "prospective_split_digest_match": true,
+      "stderr_verbatim": ""
+    }
+  ],
+  "pass_bar": {
+    "status": "NOT_EVALUATED",
+    "rule_verbatim": "PASS bar (FROZEN, PREREG-E): (a) beats best of (c)-(e) on holdout at <=10% false-negative rate at its operating point; economics reported raw (full evals skipped per false negative). FAIL = predictor retired, recorded.",
+    "reason": "the frozen tool refused the official denominator NAMED DENOMINATOR_EMPTY before split/training; no arm produced scores, so the PASS bar could not be evaluated; this is NOT a PASS and NOT a tool FAIL of the predictor - it is a denominator gap",
+    "arms_a_to_e": "NOT_TRAINED (all five)"
+  },
+  "verdict_class": "DENOMINATOR_EMPTY_FEATURE_MISSING",
+  "verdict_note": "the task-designated class MEASURED_SMALL_N (for the anticipated ~20-row denominator) is INAPPLICABLE: n_trainable=0, no metrics exist; recorded honestly as a NAMED observation; generalization NOT claimed; predictor NEITHER retired NOR adopted (PREREG-E FAIL clause not reached - the frozen oracle never ran)",
+  "named_issues": [
+    "FEATURE_MISSING=capture_eigen_gap: PREREG-E WS-4 requires a feature the A3/V-1 instrumentation never recorded (A4-frozen capture_activations.py stores per-layer MEAN activations only - no covariance/spectrum; mechanical sweep of 78 receipt files: 0 eigen hits); remedy = capture-instrument change (record activation spectra) + new prereg row; owner decision",
+    "V3_NOT_RUN: PREREG-E denominator component V-3 absent (V-1 NULL_LEAK halt precedes it); NAMED absence, 0 rows",
+    "NOT_AN_EDIT_ATTEMPT: 48 WS-3 per-layer prior scores are not candidate edits; excluded, recorded as rows",
+    "CONFOUNDED_POSITIVE_CONTROL: v1-null-3 label=true per the frozen certification oracle despite being a null (NULL_LEAK, cos 0.68/0.72 with d_hat); provenance noted on its exclusion row",
+    "SMALL_N_CEILING (prospective): even with the eigen-gap remedy the recorded denominator is 20 attempts / 12 families - MEASURED_SMALL_N at best; no generalization claim possible from this denominator"
+  ]
+}

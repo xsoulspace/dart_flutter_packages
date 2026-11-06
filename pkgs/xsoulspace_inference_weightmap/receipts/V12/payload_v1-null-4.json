@@ -1,0 +1,55 @@
+{
+ "kind": "v1-null",
+ "payload": {
+  "artifact": "V-1 matched null (PREREG-C)",
+  "at": "2026-11-06T02:45:56+00:00",
+  "target_edit": "A3 plant-1 (arm-002) certified removal edit",
+  "null_id": "v1-null-4",
+  "null_kind": "null4_quantnoise",
+  "construction": "p_i = sign_i * halfULP_bf16(|4.8*d_hat_i|), signs=Random(seed*10+4+layer).choice((-1,1)) ascending i; L2-normalized to 1",
+  "spec_sha256": "2a0cbec62c7e0fcae4ffa98523811dc68e115ca0353e42c047fe353c30c4f510",
+  "scale": -4.8,
+  "per_layer": {
+   "15": {
+    "direction_sha256": "93c6998bba5dc78ddb43c5cf158c9866436df1755e7390868f05768520f2422d",
+    "norm": 1.0,
+    "cos_with_d_hat": -0.18464212110367523
+   },
+   "19": {
+    "direction_sha256": "27cb29ae373200186b15bb356ce64f2273171216a4a3ef84e834f67d2696a200",
+    "norm": 0.9999999999999999,
+    "cos_with_d_hat": -0.1836036635926173
+   }
+  },
+  "certification_rule": "certified(arm) := loop_rate(R) < loop_rate(M) AND task_success(R) >= task_success(M), where M = planted/null mirror battery and R = removal-edit battery (R = M with -scale*recovered_direction merged in-memory, same columns). Strict inequality / non-strict floor per PREREG-A A3 wording ('loop-rate down', 'task success not down'). Per-cell flips recorded in arm receipts for knife-edge diagnosis.",
+  "loop_rate_M": 0.6666666666666666,
+  "loop_rate_R": 1.0,
+  "loop_delta_R_minus_M": 0.33333333333333337,
+  "task_success_M": 0.045454545454545456,
+  "task_success_R": 0.13636363636363635,
+  "task_success_delta_R_minus_M": 0.0909090909090909,
+  "task_pass_M": 1,
+  "task_pass_R": 3,
+  "certified": false,
+  "flips": [
+   {
+    "cell_id": "g0-clamp",
+    "M": false,
+    "R": true
+   },
+   {
+    "cell_id": "g1-perm-05",
+    "M": false,
+    "R": true
+   }
+  ],
+  "digests": {
+   "battery_M": "f55f992b658d16e4816c77585ebb86d0c527fd0fc96957af416f233c8b88472f",
+   "battery_R": "67aadc591a3002c3cfd9de5e262518743212a6499278823b44104b3120885178",
+   "recovered_json": "MISSING",
+   "mirror_receipt": "MISSING",
+   "repair_receipt": "MISSING",
+   "arm_receipt": "MISSING"
+  }
+ }
+}

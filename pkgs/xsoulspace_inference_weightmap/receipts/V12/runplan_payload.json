@@ -1,0 +1,128 @@
+{
+ "artifact": "V12 run plan (PREREG-C V-1/V-2 on A3 plant-1 arm-002) - PRE-REGISTERED BEFORE ANY V12 MEASUREMENT",
+ "at": "2026-11-06T02:06:20+00:00",
+ "prereg": {
+  "file": "PREREG-C.md",
+  "v1_floor": "0 of 4 nulls certified per edit; any certified null = NAMED NULL_LEAK -> pipeline HALT (halt+denominator = verdict); family-wise rate with Wilson CI",
+  "v2": "three interventions; MECHANISM=PASS only if all three hold; EFFECT verdict = held-out generalization delta recorded SEPARATELY; classes PASS / EFFECT_TRUE_MECHANISM_FALSE / EFFECT_FALSE; never merged",
+  "floors_frozen": true
+ },
+ "target_edit": {
+  "real_id": "a3-plant-1",
+  "label": "arm-002",
+  "certified": true,
+  "loop_rate_M": 0.6666666666666666,
+  "loop_rate_R": 0.3333333333333333,
+  "loop_delta_R_minus_M": -0.3333333333333333,
+  "task_success_M": 0.045454545454545456,
+  "task_success_R": 0.45454545454545453,
+  "net_g1_flips": 6
+ },
+ "denominator_note": "this run covers 1 of the 6 A3-certified edits (plants 1,3,4,5,6,7); V-1 family-wise completion for the remaining 5 deferred and recorded as such",
+ "base_model": {
+  "snapshot": "/Users/antonio/.cache/huggingface/hub/models--mlx-community--Qwen3-0.6B-bf16/snapshots/42096995f6402fde107068cf530136fe64b604f8",
+  "model_safetensors_sha256": "bfe05e58f5acdecd38e5f3e64c82071682683a73db0e57fd437523885a49f2ff",
+  "law": "read-only; make_mirror.py verifies base digests before/after (BASE_MUTATED fatal)"
+ },
+ "mirror_rebuild": {
+  "per_batch": true,
+  "builders": "FROZEN A3 chain unchanged: apply_delta.py (a182479733385cbcd637e03c240f177e0644580780884323948c1aa45bb4046e) from arm-002 blind specs (spec_L15 83d4905c523fa8e0f510863f73ec941939f871ea5321e86d48b53d41e7070085, spec_L19 b4614a5b6b86c6acf8160308a6314c3e19a81c0b7e47bce90b6b97f2be9a2076) + make_mirror.py (1f71892e28cc3a098b85e67ecfb1a4628d84387fbbcc5060e601559c548c6739)",
+  "gate": "rebuilt mirror_shard_sha256 MUST equal arm-002 mirror_receipt value 22e52d07164ca45f379ccb7ddc42e52a39ec719f73e3d043a3551baa931f02e7 else NAMED MIRROR_NONREPRODUCIBLE halt",
+  "sweep": "mirror rmtree at end of every batch (probe scratch law)"
+ },
+ "d_hat_source": {
+  "canonical": "archived arm-002 recovered.json (asserted identical to repair_spec.json directions by v12_nulls.py, else NAMED D_HAT_MISMATCH)",
+  "recovered_json_sha256": "9b67392eb0af94328acafa97d2e2035062139f9bb29b37b582785b8443acb19d",
+  "join_table_recovered_json_digest": "9b67392eb0af94328acafa97d2e2035062139f9bb29b37b582785b8443acb19d",
+  "repair_spec_sha256": "65d1f5e0ed03c2cb2014a6652ef62e06810d1c6ed0a86bed4b7e242261cab35f",
+  "continuity_gate": "fresh loop+neutral captures on the rebuilt mirror + frozen a3_propose.py MUST reproduce recovered.json direction_sha256 L15=4cb330299d496fd8... L19=15de5e61a3afb31b... (full values in recovered.json) else NAMED RECOVERY_NONREPRODUCIBLE"
+ },
+ "removal_convention": "all V-1 nulls and V-2 interventions applied via FROZEN a3_battery.py --repair (in-memory merge law W[:,cols] += scale*direction fp32->bf16; model on disk untouched), same 64 columns (arm-002 repair_spec), scale=-4.8 (A3 removal of s*=4.8); battery surface frozen: chat template + ' /no_think', greedy temp 0.0, caps G0/G1=64 G2=256",
+ "v1_nulls": {
+  "seed_frozen_pre_result": 20261106,
+  "null1_gaussian": "per layer iid N(0,1) x1024 from Random(202611061+layer... exact: Random(seed*10+1+int(layer))), L2-normalized (norm-matched to ||d_hat||=1), same 64 columns",
+  "null2_shuffle": "per layer perm=Random(seed*10+2+int(layer)).sample(range(1024),1024); v[i]=d_hat[perm[i]] (same component multiset = same spectrum, wrong geometry)",
+  "null3_unrelated": "G0-slugify bank = the 10 G0 cell prompts VERBATIM from cells_frozen_A3.json (derived file sha256 b6cddecd0d7e250e2d59c874473b739da29e3038a5acd727f4b2de7327ee0e9d) vs FROZEN neutral bank (prompts_localization_neutral_A3.txt a92c0f65243ea07812965666800cb0b01af26055fd51db203365884e6d4d9caa); BOTH captured on the rebuilt plant-1 mirror via FROZEN capture_activations.py --layers 15,19; direction = FROZEN a3_propose.py rule (unit diff-of-means)",
+  "null4_quantnoise": "per layer: sign_i=Random(seed*10+4+int(layer)).choice((-1.0,1.0)) ascending i; p_i=sign_i*halfULP_bf16(|4.8*d_hat_i|), halfULP_bf16(y)=0 if y==0 else 2**(floor(log2 y)-8); p L2-normalized to 1 (scaled to recovered direction norm); zero-norm => NAMED QUANT_NULL_DEGENERATE",
+  "built_specs": {
+   "null1_gaussian": {
+    "spec_sha256": "0b87f0f167be76d2448549760d6702de18a98b37f770bcd014aeb277298b58f2",
+    "cos_with_d_hat": {
+     "15": -0.043038,
+     "19": 0.031174
+    }
+   },
+   "null2_shuffle": {
+    "spec_sha256": "20be6f5bfbf9e83c2de117a9127276f3345e8c9d60b12b0bbb9be8541c92d369",
+    "cos_with_d_hat": {
+     "15": 0.021134,
+     "19": 0.030564
+    }
+   },
+   "null4_quantnoise": {
+    "spec_sha256": "2a0cbec62c7e0fcae4ffa98523811dc68e115ca0353e42c047fe353c30c4f510",
+    "cos_with_d_hat": {
+     "15": -0.184642,
+     "19": -0.183604
+    }
+   }
+  },
+  "certification": "FROZEN a3_score.dart on assembled work-dirs; certified_k := loop_rate_G2(R_k) < loop_rate_G2(M) AND task_success(R_k) >= task_success(M); loop_rate = frozen scorers.dart tokenLimitRate over 12 G2 cells cap 256; task_success = passed/22 over G0(10)+G1(12) frozen scorers",
+  "floor_rule": "0 of 4 certified; ANY certified null => NAMED NULL_LEAK: HALT row, V-2 NOT run, halt recorded"
+ },
+ "v2_rules": {
+  "interventions": {
+   "ablate": "arm-002 repair_spec with scale:=0.0 on both tensors (removal delta zeroed on the claimed L15/L19 64 columns)",
+   "restore": "arm-002 repair_spec VERBATIM",
+   "relocate": "two entries both naming model.layers.8.mlp.down_proj.weight, same 64 columns, scale -4.8 each, directions d_hat_15 then d_hat_19 applied sequentially (full removal content relocated to control layer 8; L15/L19 stay planted)"
+  },
+  "E_ref": "A3 arm-002 loop_delta_R_minus_M = -1/3 (join-table)",
+  "tol": "|E_ref|/2 = 1/6 (pre-registered tolerance = half the removal effect)",
+  "dies(x)": "|loop_G2(x) - loop_G2(M)| <= tol",
+  "returns": "loop_G2(restore) < loop_G2(M) AND |(loop_G2(restore)-loop_G2(M)) - E_ref| <= tol",
+  "MECHANISM": "PASS iff ablate dies AND restore returns AND relocate dies",
+  "EFFECT": "held-out G1 perm cells (12): delta_G1 = net g1-perm flips(restore)/12; ref_G1 = arm-002 net g1-perm flips/12 = +0.5; EFFECT_TRUE := delta_G1 >= |ref_G1|/2 = +0.25 else EFFECT_FALSE",
+  "class": "PASS iff EFFECT_TRUE and MECHANISM=PASS; EFFECT_TRUE_MECHANISM_FALSE iff EFFECT_TRUE and MECHANISM=FAIL; EFFECT_FALSE otherwise (never merged)",
+  "held_out_caveat": "G1 perm cells are disjoint from the 128+128 loop/neutral localization banks and from the G2 cells carrying the mechanism metric; recorded caveat (claim, not waiver): in A3 G1 also contributed to the task_success half of certification",
+  "built_specs": {
+   "ablate": "14fa817bbb998b3a4c0d4efa45432cd863a608156e03694f9a4ff1f499668b0c",
+   "restore": "65d1f5e0ed03c2cb2014a6652ef62e06810d1c6ed0a86bed4b7e242261cab35f",
+   "relocate": "5c92194390d23ca727d44be2b94c47a813884b9832bd766f6af134fe43ed69d2"
+  }
+ },
+ "device_plan": {
+  "law": "serial -j1; lock protocol v3: mkdir ${TMPDIR}/wm-device.lock, 10s acquisition retries bounded 360 (1h), wait_ms receipted, rmdir + 3s courtesy after each batch; per-batch device <=20 min; ALL wall_ms rows wall_ms_claim=false (non-claims: machine under heavy external load, M1 Air 16GB); power+loadavg tagged per batch",
+  "batches": {
+   "B1": "build mirror + gates; fresh loop/neutral/slugify captures; a3_propose continuity; battery_M(B1); null1 battery; null2 battery (~8 min)",
+   "B2": "build mirror; battery_M(B2); null3 battery; null4 battery (~7 min)",
+   "B3": "only if V-1 clean: build mirror; battery_M(B3); ablate; restore; relocate batteries (~9 min)"
+  },
+  "M_per_batch": "battery_M re-run per batch; per-cell output_sha256 compared across batches and vs archived arm-002 battery_M.jsonl; mismatch => NAMED flag M_DRIFT (fresh measurement stands); ablate battery must be cell-identical to session M else NAMED ABULATE_NOT_IDENTITY; restore battery compared vs archived battery_R.jsonl else NAMED RESTORE_DRIFT"
+ },
+ "frozen_tools_run_unmodified_sha256": {
+  "apply_delta.py": "a182479733385cbcd637e03c240f177e0644580780884323948c1aa45bb4046e",
+  "capture_activations.py": "6327e048e6d884e1489d6feae6dca998ed0f11089894532334e344ddae78b22e",
+  "a3_battery.py": "ee409d7609d28d5f8dc9297601de77e615687b50e750edd370121be7b72d0769",
+  "a3_propose.py": "c9b84cfb86ce49f93e2be7358d598040826060e61c9f2c50e5cf3ab3ea079409",
+  "make_mirror.py": "1f71892e28cc3a098b85e67ecfb1a4628d84387fbbcc5060e601559c548c6739",
+  "a3_score.dart": "f4c250e6f1b5e16c98bd5cfdaf7c03794fd6a0361c924202e5de29146f2a02e6",
+  "cells_frozen_A3.json": "8406130623b6e85922eac6cbd92b73dd2282e6fc19538bb3c199f647f518d760",
+  "a3_lock.py": "0289fa49c09c6990b6761fc3e47f3bc610c75f226a6ea5e8dbc3201cb9946857",
+  "prompts_localization_loop_A3.txt": "a827b2535a4bef68b4493034756955576ccd4c3e201674fd11d688873b98038e",
+  "prompts_localization_neutral_A3.txt": "a92c0f65243ea07812965666800cb0b01af26055fd51db203365884e6d4d9caa",
+  "scorers.dart": "dfe42d43604e132ef234edc50d09d1b1a6bfca2b318e325b9f3210178baf181f"
+ },
+ "v12_owned_helpers_sha256": {
+  "v12_nulls.py": "40f50f787b2660a051a966208b4336d0117bc520847ff463210c2dbda1ddb3e9",
+  "v12_batch.py": "3af7211508abb4e1c661bd751de1ebda3b092aa1c5cc9d3d31cd55b4dcdc0849",
+  "v12_verdict.py": "24672ee64f346b3c864f15e6ff16bfe790d79bf9a18c291d3fc1a271de0cfc81"
+ },
+ "nulls_manifest_sha256": "45d45d40cb2933ff71ee742b333e4e007fd3302d13b5ccc2fe7760ccbc7ebf36",
+ "scratch_law": "$TMPDIR/wm-v12 (banks/specs/batches/gen/mirrors/scorework); durable textual evidence: receipts/V1-nulls.jsonl + receipts/V2-mechanism.jsonl (hash-chained via frozen lib ledger), receipts/V12/ copies (batch receipts, scored outputs, manifests), VERDICTS.md rows",
+ "outputs": [
+  "receipts/V1-nulls.jsonl",
+  "receipts/V2-mechanism.jsonl",
+  "receipts/V12-summary.md",
+  "VERDICTS.md: one V-1 row + one V-2 row (EFFECT/MECHANISM split)"
+ ]
+}
