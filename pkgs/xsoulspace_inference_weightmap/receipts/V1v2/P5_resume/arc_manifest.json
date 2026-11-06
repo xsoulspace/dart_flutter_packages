@@ -1,0 +1,101 @@
+{
+ "edit": "a3-plant-5",
+ "arm": "arm-015",
+ "tag": "P5",
+ "at": "2026-11-06T13:52:54+00:00",
+ "removal_scale": -4.8,
+ "columns_source": {
+  "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-015/repair_spec.json",
+  "sha256": "4d4f9e7e6634d6c81cce9f48e16d7c68dc664956a560440d6e8acd63735e37db"
+ },
+ "d_hat_source": {
+  "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-015/recovered.json",
+  "sha256": "299022ceed52a947e43a78d953ca6db84d6fb3fa894fdaad4c1653debb1ee7ec"
+ },
+ "nulls": {
+  "null1_gaussian": {
+   "spec_path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-015/null1_gaussian_spec.json",
+   "spec_sha256": "fe1d21fba1ffb542c54d4c301fb33e775e99ba4dcd384b733d0b0f060795a8ba",
+   "provenance": "BUILT_FRESH (v12_nulls.py unmodified, seed 20261106)",
+   "scale": -4.8,
+   "construction": "iid N(0,1) x1024, Random(seed*10+1+layer), L2-normalized",
+   "per_layer": {
+    "15": {
+     "direction_sha256": "6fabc159c10ffcf0a382a264fb2baf4a5f4701abcdf3ac0a071b86ef61537d38",
+     "norm": 0.9999999999999988,
+     "cos_with_d_hat": -0.04340745239825533
+    },
+    "19": {
+     "direction_sha256": "72198707edbe8d07d371dd6288e37fa469b7448bef49fcb863523e3eb7ff6ee0",
+     "norm": 0.9999999999999993,
+     "cos_with_d_hat": 0.04250770868945166
+    }
+   }
+  },
+  "null2_shuffle": {
+   "spec_path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-015/null2_shuffle_spec.json",
+   "spec_sha256": "6d3914fb56a79593ed8734bd50d4a1c7639e66745f4522bfe048a925c0a165a9",
+   "provenance": "BUILT_FRESH (v12_nulls.py unmodified, seed 20261106)",
+   "scale": -4.8,
+   "construction": "v[i]=d_hat[perm[i]], perm=Random(seed*10+2+layer).sample(range(1024),1024); norm preserved exactly",
+   "per_layer": {
+    "15": {
+     "direction_sha256": "b1949f67c9deedf5d8997d5da069c49032939ea9cdc44217e4875fd7739d84c0",
+     "norm": 0.9999999999999999,
+     "cos_with_d_hat": 0.03122539210797316
+    },
+    "19": {
+     "direction_sha256": "b6a64de5c32920f58a876e008c31ed352672056bd1877dd72b5ff6f47effe3ba",
+     "norm": 1.0000000000000002,
+     "cos_with_d_hat": 0.03004101718927862
+    }
+   }
+  },
+  "null4_quantnoise": {
+   "spec_path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-015/null4_quantnoise_spec.json",
+   "spec_sha256": "b4c0137c362252abe3f5e891d8ea12d35eeb11276d2bdf58b22bd20a2f715050",
+   "provenance": "BUILT_FRESH (v12_nulls.py unmodified, seed 20261106)",
+   "scale": -4.8,
+   "construction": "p_i = sign_i * halfULP_bf16(|4.8*d_hat_i|), signs=Random(seed*10+4+layer).choice((-1,1)) ascending i; L2-normalized to 1",
+   "per_layer": {
+    "15": {
+     "direction_sha256": "80cc868f1788425f8760be99a56585ac3b54bdd9c646ed34628e66b0968545d3",
+     "norm": 0.999999999999999,
+     "cos_with_d_hat": -0.18204604589892157
+    },
+    "19": {
+     "direction_sha256": "acb89d6225da6c1102c1ebb307fc7ca05b3bd5eb7b7864af40fcfce65dee4790",
+     "norm": 0.9999999999999982,
+     "cos_with_d_hat": -0.0762018842358941
+    }
+   }
+  },
+  "null3_unrelated_v2": {
+   "spec_path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-015/null3v2_spec.json",
+   "status": "BUILT_AT_BATCH_TIME",
+   "builder": "v1v2_null3v2.py (arc-owned) over FROZEN a3_propose.py diff-of-means",
+   "gate": {
+    "rule": "|cos(null, d_hat)| <= 0.2 per layer {15,19}, construction-time, receipted BEFORE any certification; one re-draw (seed offset 7919), then GATE_EXHAUSTED row",
+    "threshold": 0.2,
+    "banks": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/fmt_banks.json",
+     "sha256": "46d5563beee71a2816435c347659d1271bd7e9e116c0db0f5f550413d3996425",
+     "draw_seeds": {
+      "d0": 202611063,
+      "d1": 202618982
+     },
+     "file_sha256": {
+      "d0": {
+       "upper": "b45f64efd1eb99707c7cab67fac0ee80645cecb4da60a3e68783c78470510581",
+       "lower": "e8cc651241d4469d399b89a79e79e82b350f595fb5565315d97957c53e5388eb"
+      },
+      "d1": {
+       "upper": "fd564a349a19ef957b01cc77b52679ecc023da9013b88e7b9ea11de309421534",
+       "lower": "26de6e003d08e568044cd75001898a1a7d6badb0905f737dfc4b15702255949f"
+      }
+     }
+    }
+   }
+  }
+ }
+}
