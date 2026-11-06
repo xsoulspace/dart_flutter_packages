@@ -1,0 +1,184 @@
+{
+ "stage": "pilot",
+ "started_utc": "2026-11-05T22:39:41+00:00",
+ "ladder": [
+  {
+   "scale": 0.05,
+   "started_utc": "2026-11-05T22:39:41+00:00",
+   "lock_wait_ms": 0,
+   "blocked": "Traceback (most recent call last) at step make_mirror_pilot_s0.05: Traceback (most recent call last):\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 255, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 181, in main\n    if base_arrays[name].tobytes() == check_arrays[name].tobytes():\n       ^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'mlx.core.array' object has no attribute 'tobytes'. Did you mean: 'nbytes'?\n",
+   "finished_utc": "2026-11-05T22:39:46+00:00"
+  },
+  {
+   "scale": 0.1,
+   "started_utc": "2026-11-05T22:39:46+00:00",
+   "lock_wait_ms": 0,
+   "blocked": "Traceback (most recent call last) at step make_mirror_pilot_s0.1: Traceback (most recent call last):\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 255, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 181, in main\n    if base_arrays[name].tobytes() == check_arrays[name].tobytes():\n       ^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'mlx.core.array' object has no attribute 'tobytes'. Did you mean: 'nbytes'?\n",
+   "finished_utc": "2026-11-05T22:39:50+00:00"
+  },
+  {
+   "scale": 0.2,
+   "started_utc": "2026-11-05T22:39:50+00:00",
+   "lock_wait_ms": 0,
+   "blocked": "Traceback (most recent call last) at step make_mirror_pilot_s0.2: Traceback (most recent call last):\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 255, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 181, in main\n    if base_arrays[name].tobytes() == check_arrays[name].tobytes():\n       ^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'mlx.core.array' object has no attribute 'tobytes'. Did you mean: 'nbytes'?\n",
+   "finished_utc": "2026-11-05T22:39:55+00:00"
+  },
+  {
+   "scale": 0.4,
+   "started_utc": "2026-11-05T22:39:55+00:00",
+   "lock_wait_ms": 0,
+   "blocked": "Traceback (most recent call last) at step make_mirror_pilot_s0.4: Traceback (most recent call last):\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 255, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 181, in main\n    if base_arrays[name].tobytes() == check_arrays[name].tobytes():\n       ^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'mlx.core.array' object has no attribute 'tobytes'. Did you mean: 'nbytes'?\n",
+   "finished_utc": "2026-11-05T22:40:02+00:00"
+  },
+  {
+   "scale": 0.8,
+   "started_utc": "2026-11-05T22:40:02+00:00",
+   "lock_wait_ms": 0,
+   "blocked": "Traceback (most recent call last) at step make_mirror_pilot_s0.8: Traceback (most recent call last):\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 255, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 181, in main\n    if base_arrays[name].tobytes() == check_arrays[name].tobytes():\n       ^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'mlx.core.array' object has no attribute 'tobytes'. Did you mean: 'nbytes'?\n",
+   "finished_utc": "2026-11-05T22:40:06+00:00"
+  },
+  {
+   "scale": 1.6,
+   "started_utc": "2026-11-05T22:40:06+00:00",
+   "lock_wait_ms": 0,
+   "blocked": "Traceback (most recent call last) at step make_mirror_pilot_s1.6: Traceback (most recent call last):\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 255, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 181, in main\n    if base_arrays[name].tobytes() == check_arrays[name].tobytes():\n       ^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'mlx.core.array' object has no attribute 'tobytes'. Did you mean: 'nbytes'?\n",
+   "finished_utc": "2026-11-05T22:40:11+00:00"
+  }
+ ],
+ "base_pilot_loop_rate": 0.1875,
+ "lift_target": 0.2,
+ "columns_procedure": "a3_design.pair_columns(1)",
+ "columns_sha256": "e13b692ce9c4bad0f4dfbfd6b3cfe59efa84c97483cd5bdbca038eb3c1e8bdff",
+ "stages": [
+  {
+   "step": "apply_delta_pilot_s0.05_L15",
+   "exit": 0,
+   "wall_ms": 200,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s0.05_L19",
+   "exit": 0,
+   "wall_ms": 151,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s0.05",
+   "exit": 1,
+   "wall_ms": 4498,
+   "wall_ms_claim": false,
+   "stderr_tail": "ine 255, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 181, in main\n    if base_arrays[name].tobytes() == check_arrays[name].tobytes():\n       ^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'mlx.core.array' object has no attribute 'tobytes'. Did you mean: 'nbytes'?\n"
+  },
+  {
+   "step": "apply_delta_pilot_s0.1_L15",
+   "exit": 0,
+   "wall_ms": 161,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s0.1_L19",
+   "exit": 0,
+   "wall_ms": 152,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s0.1",
+   "exit": 1,
+   "wall_ms": 4258,
+   "wall_ms_claim": false,
+   "stderr_tail": "ine 255, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 181, in main\n    if base_arrays[name].tobytes() == check_arrays[name].tobytes():\n       ^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'mlx.core.array' object has no attribute 'tobytes'. Did you mean: 'nbytes'?\n"
+  },
+  {
+   "step": "apply_delta_pilot_s0.2_L15",
+   "exit": 0,
+   "wall_ms": 179,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s0.2_L19",
+   "exit": 0,
+   "wall_ms": 172,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s0.2",
+   "exit": 1,
+   "wall_ms": 4131,
+   "wall_ms_claim": false,
+   "stderr_tail": "ine 255, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 181, in main\n    if base_arrays[name].tobytes() == check_arrays[name].tobytes():\n       ^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'mlx.core.array' object has no attribute 'tobytes'. Did you mean: 'nbytes'?\n"
+  },
+  {
+   "step": "apply_delta_pilot_s0.4_L15",
+   "exit": 0,
+   "wall_ms": 171,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s0.4_L19",
+   "exit": 0,
+   "wall_ms": 169,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s0.4",
+   "exit": 1,
+   "wall_ms": 6406,
+   "wall_ms_claim": false,
+   "stderr_tail": "ine 255, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 181, in main\n    if base_arrays[name].tobytes() == check_arrays[name].tobytes():\n       ^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'mlx.core.array' object has no attribute 'tobytes'. Did you mean: 'nbytes'?\n"
+  },
+  {
+   "step": "apply_delta_pilot_s0.8_L15",
+   "exit": 0,
+   "wall_ms": 161,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s0.8_L19",
+   "exit": 0,
+   "wall_ms": 151,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s0.8",
+   "exit": 1,
+   "wall_ms": 4235,
+   "wall_ms_claim": false,
+   "stderr_tail": "ine 255, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 181, in main\n    if base_arrays[name].tobytes() == check_arrays[name].tobytes():\n       ^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'mlx.core.array' object has no attribute 'tobytes'. Did you mean: 'nbytes'?\n"
+  },
+  {
+   "step": "apply_delta_pilot_s1.6_L15",
+   "exit": 0,
+   "wall_ms": 173,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s1.6_L19",
+   "exit": 0,
+   "wall_ms": 174,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s1.6",
+   "exit": 1,
+   "wall_ms": 4592,
+   "wall_ms_claim": false,
+   "stderr_tail": "ine 255, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py\", line 181, in main\n    if base_arrays[name].tobytes() == check_arrays[name].tobytes():\n       ^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'mlx.core.array' object has no attribute 'tobytes'. Did you mean: 'nbytes'?\n"
+  }
+ ],
+ "chosen_scale": null,
+ "lock_wait_total_ms": 0,
+ "finished_utc": "2026-11-05T22:40:11+00:00",
+ "verdict": "SCALE_UNCALIBRATABLE"
+}

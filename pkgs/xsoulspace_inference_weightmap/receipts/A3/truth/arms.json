@@ -1,0 +1,344 @@
+{
+ "created_utc": "2026-11-06T00:14:05+00:00",
+ "scale": 4.8,
+ "direction_source": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/base/directions_base.json",
+ "direction_source_sha256": "baa51197f2b598365c1c3d31dc72d97e7543f56d01350b68662d82f476668069",
+ "arms": {
+  "a3-plant-1": {
+   "kind": "plant",
+   "pair": 1,
+   "label": "arm-002",
+   "scale": 4.8,
+   "columns_sha256": "e13b692ce9c4bad0f4dfbfd6b3cfe59efa84c97483cd5bdbca038eb3c1e8bdff",
+   "layers": {
+    "15": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-plant-1/spec_L15.json",
+     "truth_spec_sha256": "83d4905c523fa8e0f510863f73ec941939f871ea5321e86d48b53d41e7070085",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-002/specs/spec_L15.json",
+     "direction_sha256": "30e7334cfa0dae8e2ace90ff26f795e3e85f4ff129503765d9ef8573049a2408"
+    },
+    "19": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-plant-1/spec_L19.json",
+     "truth_spec_sha256": "b4614a5b6b86c6acf8160308a6314c3e19a81c0b7e47bce90b6b97f2be9a2076",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-002/specs/spec_L19.json",
+     "direction_sha256": "186ac924e0bc24b7507af084614d4691be922e530510e9664c638893649ed2e0"
+    }
+   }
+  },
+  "a3-null-1": {
+   "kind": "null",
+   "pair": 1,
+   "label": "arm-010",
+   "scale": 4.8,
+   "columns_sha256": "e13b692ce9c4bad0f4dfbfd6b3cfe59efa84c97483cd5bdbca038eb3c1e8bdff",
+   "layers": {
+    "15": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-null-1/spec_L15.json",
+     "truth_spec_sha256": "6e68cecdf49c709e4550abad258ed0fee37e3ab8c10909afefb51ceb031d189b",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-010/specs/spec_L15.json",
+     "direction_sha256": "71b471967c9e7bafb7e9b14afb4c07706b20af26bb4db45ae93506e0f5572033"
+    },
+    "19": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-null-1/spec_L19.json",
+     "truth_spec_sha256": "24e85b5ee27288370ba9d3d043bd234613e34f57c78d603a6b30fee2660fdb97",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-010/specs/spec_L19.json",
+     "direction_sha256": "86d6d44df0ad6252d0ac57bbf9843ac275de15e797eec58fef21fe91da133202"
+    }
+   }
+  },
+  "a3-plant-2": {
+   "kind": "plant",
+   "pair": 2,
+   "label": "arm-007",
+   "scale": 4.8,
+   "columns_sha256": "fc9b6b960ffa68430eb65db9a6cd9d4b1525f94ec144e5ab307eb468257f83d7",
+   "layers": {
+    "15": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-plant-2/spec_L15.json",
+     "truth_spec_sha256": "a210630c3ecb0c32d0eb2df8bf9387eb64ff69881aa7b08473a4ab9a6338dedb",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-007/specs/spec_L15.json",
+     "direction_sha256": "30e7334cfa0dae8e2ace90ff26f795e3e85f4ff129503765d9ef8573049a2408"
+    },
+    "19": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-plant-2/spec_L19.json",
+     "truth_spec_sha256": "1bf654733b555bf8fa965c6ad979c30e557427550cb5c34fb5ca968c33fb24d9",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-007/specs/spec_L19.json",
+     "direction_sha256": "186ac924e0bc24b7507af084614d4691be922e530510e9664c638893649ed2e0"
+    }
+   }
+  },
+  "a3-null-2": {
+   "kind": "null",
+   "pair": 2,
+   "label": "arm-001",
+   "scale": 4.8,
+   "columns_sha256": "fc9b6b960ffa68430eb65db9a6cd9d4b1525f94ec144e5ab307eb468257f83d7",
+   "layers": {
+    "15": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-null-2/spec_L15.json",
+     "truth_spec_sha256": "6ddf75b4e310762f110448d7b207765e718d7fd7eaf646022a2e9342f8f60cf2",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-001/specs/spec_L15.json",
+     "direction_sha256": "e52a7d7f16847e44df9e5178d0a4bf1e7bbf192190667bc2a02ca223d79763c6"
+    },
+    "19": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-null-2/spec_L19.json",
+     "truth_spec_sha256": "45105e37e11b348c4c6bcf291a3d9bceae47ba6b35000b5b9dc7faebb44ee207",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-001/specs/spec_L19.json",
+     "direction_sha256": "2a91ffa9f6ce41c0bf28295ec245ee06a6359837e497ed6d88d795634baf291b"
+    }
+   }
+  },
+  "a3-plant-3": {
+   "kind": "plant",
+   "pair": 3,
+   "label": "arm-009",
+   "scale": 4.8,
+   "columns_sha256": "e377bea4103faa3c3e687e97f7adb73248f5e66b0b1796301f8b271d88f76501",
+   "layers": {
+    "15": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-plant-3/spec_L15.json",
+     "truth_spec_sha256": "b17194fe9154a60371c98562322a4964a2e55ffd6f9978d03a8f23b13d03d989",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-009/specs/spec_L15.json",
+     "direction_sha256": "30e7334cfa0dae8e2ace90ff26f795e3e85f4ff129503765d9ef8573049a2408"
+    },
+    "19": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-plant-3/spec_L19.json",
+     "truth_spec_sha256": "99904d813f364f66e03c9335b527c4e489b45a48d86ea8895c65cf7941ade648",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-009/specs/spec_L19.json",
+     "direction_sha256": "186ac924e0bc24b7507af084614d4691be922e530510e9664c638893649ed2e0"
+    }
+   }
+  },
+  "a3-null-3": {
+   "kind": "null",
+   "pair": 3,
+   "label": "arm-014",
+   "scale": 4.8,
+   "columns_sha256": "e377bea4103faa3c3e687e97f7adb73248f5e66b0b1796301f8b271d88f76501",
+   "layers": {
+    "15": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-null-3/spec_L15.json",
+     "truth_spec_sha256": "45857e631a48366c9bfcdf3d2de1c6b967a94d16c5304937724bcfcc940a44a4",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-014/specs/spec_L15.json",
+     "direction_sha256": "17ab630b9729e640c77fcb727c6400e18af8033ad97f99f96ccf72e7c35a7e2b"
+    },
+    "19": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-null-3/spec_L19.json",
+     "truth_spec_sha256": "5bb6f2b66d8cd59878a0fd69a577f9373ab0b56502cfe38507fc7c54692a55ca",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-014/specs/spec_L19.json",
+     "direction_sha256": "6405c11920adafca1f24b48b2b389ba0dab1522a9c20748169aa3d873f37f81d"
+    }
+   }
+  },
+  "a3-plant-4": {
+   "kind": "plant",
+   "pair": 4,
+   "label": "arm-005",
+   "scale": 4.8,
+   "columns_sha256": "00d7da8c7c459828dd75bd1f14ce0dbeff451acf31656888f604a0ccb15f7223",
+   "layers": {
+    "15": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-plant-4/spec_L15.json",
+     "truth_spec_sha256": "4be063d1241290a0baf2c6faaf8b4116a10e1cb8405470200fd955a27435c272",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-005/specs/spec_L15.json",
+     "direction_sha256": "30e7334cfa0dae8e2ace90ff26f795e3e85f4ff129503765d9ef8573049a2408"
+    },
+    "19": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-plant-4/spec_L19.json",
+     "truth_spec_sha256": "5a374a1b87667c419d609054494e7e031cfc167874e413be8b6a04d8125c0b0a",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-005/specs/spec_L19.json",
+     "direction_sha256": "186ac924e0bc24b7507af084614d4691be922e530510e9664c638893649ed2e0"
+    }
+   }
+  },
+  "a3-null-4": {
+   "kind": "null",
+   "pair": 4,
+   "label": "arm-004",
+   "scale": 4.8,
+   "columns_sha256": "00d7da8c7c459828dd75bd1f14ce0dbeff451acf31656888f604a0ccb15f7223",
+   "layers": {
+    "15": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-null-4/spec_L15.json",
+     "truth_spec_sha256": "4946e5b7a3f4f269c007a583752d3dc3b450ffd9194565615b46d30bb5b8739e",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-004/specs/spec_L15.json",
+     "direction_sha256": "acb17895e59860f2e7f1886a0c24c34bbf4c060807cd8424695f4b8b796c2d7a"
+    },
+    "19": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-null-4/spec_L19.json",
+     "truth_spec_sha256": "cab39973c7f777b17cc2e0e83e35c977f2cea5c5a3b219b97b48432c458051ee",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-004/specs/spec_L19.json",
+     "direction_sha256": "e139e10bc75f34912f22e8c38bd7056d86c2ccbcb53363f7f82c7dd3ce699ff7"
+    }
+   }
+  },
+  "a3-plant-5": {
+   "kind": "plant",
+   "pair": 5,
+   "label": "arm-015",
+   "scale": 4.8,
+   "columns_sha256": "9d6b79ce205da601394efc51d11e51346b3604e08315d9eb5fef4225a00830ba",
+   "layers": {
+    "15": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-plant-5/spec_L15.json",
+     "truth_spec_sha256": "d59ca663df4f3a5764d3531bfd0afdc8dbd72d66a95f7bf3e3eb30f2306033c5",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-015/specs/spec_L15.json",
+     "direction_sha256": "30e7334cfa0dae8e2ace90ff26f795e3e85f4ff129503765d9ef8573049a2408"
+    },
+    "19": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-plant-5/spec_L19.json",
+     "truth_spec_sha256": "984e1cb0f89160367df7a4a1708dc483ed751c2cb52f23c491a32187960ff360",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-015/specs/spec_L19.json",
+     "direction_sha256": "186ac924e0bc24b7507af084614d4691be922e530510e9664c638893649ed2e0"
+    }
+   }
+  },
+  "a3-null-5": {
+   "kind": "null",
+   "pair": 5,
+   "label": "arm-008",
+   "scale": 4.8,
+   "columns_sha256": "9d6b79ce205da601394efc51d11e51346b3604e08315d9eb5fef4225a00830ba",
+   "layers": {
+    "15": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-null-5/spec_L15.json",
+     "truth_spec_sha256": "713c81ed437ebea4e260cbdc89131a0fb3a813185195de5c2a8ab5ea7b43ccab",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-008/specs/spec_L15.json",
+     "direction_sha256": "129793abc1019b150bab677cb0b5b6ff33db2136eade097a26592fac6695eb92"
+    },
+    "19": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-null-5/spec_L19.json",
+     "truth_spec_sha256": "c866512a41b594b601c13e869d3b1754c09476365e4b18f39f87a6edaf558f69",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-008/specs/spec_L19.json",
+     "direction_sha256": "9c3947fadbf4742a7c4d3cd9e03aff417ccd26a28420ab51f32bc2234264cf06"
+    }
+   }
+  },
+  "a3-plant-6": {
+   "kind": "plant",
+   "pair": 6,
+   "label": "arm-011",
+   "scale": 4.8,
+   "columns_sha256": "96db21b5520edfaf39860c5cad9fb41fa03ca417642bfe51c1accbcee491c1d4",
+   "layers": {
+    "15": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-plant-6/spec_L15.json",
+     "truth_spec_sha256": "31a8e936fb877568d256b8cbe32bd81a0e56db75658ca3083023a5bc9b56d849",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-011/specs/spec_L15.json",
+     "direction_sha256": "30e7334cfa0dae8e2ace90ff26f795e3e85f4ff129503765d9ef8573049a2408"
+    },
+    "19": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-plant-6/spec_L19.json",
+     "truth_spec_sha256": "28a043fc80cfca275f42de9d73d25c94b93fa29a078030d6338fa47f88550890",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-011/specs/spec_L19.json",
+     "direction_sha256": "186ac924e0bc24b7507af084614d4691be922e530510e9664c638893649ed2e0"
+    }
+   }
+  },
+  "a3-null-6": {
+   "kind": "null",
+   "pair": 6,
+   "label": "arm-000",
+   "scale": 4.8,
+   "columns_sha256": "96db21b5520edfaf39860c5cad9fb41fa03ca417642bfe51c1accbcee491c1d4",
+   "layers": {
+    "15": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-null-6/spec_L15.json",
+     "truth_spec_sha256": "4498da3a2c6d65ccf856715c7d4364665fa65661cd2852da63560b13ce2ee91c",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-000/specs/spec_L15.json",
+     "direction_sha256": "25114c29325a3c8ce37ef55fbafd29f195643a8a7c74a453cb7065f1ad7af66a"
+    },
+    "19": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-null-6/spec_L19.json",
+     "truth_spec_sha256": "c19bd7b91903f59a370e23a51a2fbc882288850ad243c30e9f1afd29e595501a",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-000/specs/spec_L19.json",
+     "direction_sha256": "860983fd0a605a8dd4517f01bcd4e91c128abcbe04361e23145344fe9720483a"
+    }
+   }
+  },
+  "a3-plant-7": {
+   "kind": "plant",
+   "pair": 7,
+   "label": "arm-012",
+   "scale": 4.8,
+   "columns_sha256": "baad12f59122791163f6609eafed6d64e399eeea6e8267ad38b5710c76f4b3b4",
+   "layers": {
+    "15": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-plant-7/spec_L15.json",
+     "truth_spec_sha256": "7f07324d8d1f8f4fc6e0c28d28ae2ef3bf498b01bf1efccd34111e949b2cca90",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-012/specs/spec_L15.json",
+     "direction_sha256": "30e7334cfa0dae8e2ace90ff26f795e3e85f4ff129503765d9ef8573049a2408"
+    },
+    "19": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-plant-7/spec_L19.json",
+     "truth_spec_sha256": "442a9faf3d110c553db7a3b6cf8414577d76075705f26e66da1ba9a1655d9224",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-012/specs/spec_L19.json",
+     "direction_sha256": "186ac924e0bc24b7507af084614d4691be922e530510e9664c638893649ed2e0"
+    }
+   }
+  },
+  "a3-null-7": {
+   "kind": "null",
+   "pair": 7,
+   "label": "arm-003",
+   "scale": 4.8,
+   "columns_sha256": "baad12f59122791163f6609eafed6d64e399eeea6e8267ad38b5710c76f4b3b4",
+   "layers": {
+    "15": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-null-7/spec_L15.json",
+     "truth_spec_sha256": "c93ff1601da045ee8b4d5eba50a492a2d675aa84b6834edba7c45801e08948dc",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-003/specs/spec_L15.json",
+     "direction_sha256": "4baff964d82a0f1e5ef6e12560df313a81d47dd020a18262b30c51f2a4549ecd"
+    },
+    "19": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-null-7/spec_L19.json",
+     "truth_spec_sha256": "049e957889a53eb2e92c61941ced91a1e1d6479ca472a9c683c10fd5bd489b48",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-003/specs/spec_L19.json",
+     "direction_sha256": "a7ff0d6ba9b3be44838842944c2a666435b649a25262b6f1af2642783bd8836e"
+    }
+   }
+  },
+  "a3-plant-8": {
+   "kind": "plant",
+   "pair": 8,
+   "label": "arm-006",
+   "scale": 4.8,
+   "columns_sha256": "9f57a6ed669840b3cdd3cd39e9a7d0d41753a2556628c0a732d9b05409038ccc",
+   "layers": {
+    "15": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-plant-8/spec_L15.json",
+     "truth_spec_sha256": "0413c9c23821cddd687bf22aceb0caf15f29d23c9fd94e2e61fafada841a58f7",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-006/specs/spec_L15.json",
+     "direction_sha256": "30e7334cfa0dae8e2ace90ff26f795e3e85f4ff129503765d9ef8573049a2408"
+    },
+    "19": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-plant-8/spec_L19.json",
+     "truth_spec_sha256": "1716a56a09246b575c99171516010d1d4dcb1415e7bbf463b511743687fc795f",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-006/specs/spec_L19.json",
+     "direction_sha256": "186ac924e0bc24b7507af084614d4691be922e530510e9664c638893649ed2e0"
+    }
+   }
+  },
+  "a3-null-8": {
+   "kind": "null",
+   "pair": 8,
+   "label": "arm-013",
+   "scale": 4.8,
+   "columns_sha256": "9f57a6ed669840b3cdd3cd39e9a7d0d41753a2556628c0a732d9b05409038ccc",
+   "layers": {
+    "15": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-null-8/spec_L15.json",
+     "truth_spec_sha256": "ee5878d7756173470a412eefbd41da2c847092226ac7ef3845e9da2e3c025601",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-013/specs/spec_L15.json",
+     "direction_sha256": "f9ae3b2318a7287037b11f3276439d4d118c50998402b72c0cc0ef66305c3fa8"
+    },
+    "19": {
+     "truth_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/truth/specs/a3-null-8/spec_L19.json",
+     "truth_spec_sha256": "681e4b386990c3fc5f5accf0c48e4bd45944fd4043ea4998ba74622281073c79",
+     "blind_spec": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-013/specs/spec_L19.json",
+     "direction_sha256": "76fd7a97caf8b345811c40931f23a759d30ac41e56f7e5d84821ac1f32acbfa7"
+    }
+   }
+  }
+ }
+}

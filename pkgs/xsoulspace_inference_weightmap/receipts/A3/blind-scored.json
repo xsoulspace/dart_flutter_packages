@@ -1,0 +1,794 @@
+{
+ "stage": "certifier (blind)",
+ "generated_utc": "2026-11-06T01:26:06.195257Z",
+ "cells_sha256": "8406130623b6e85922eac6cbd92b73dd2282e6fc19538bb3c199f647f518d760",
+ "certification_rule": "certified(arm) := loop_rate(R) < loop_rate(M) AND task_success(R) >= task_success(M), where M = planted/null mirror battery and R = removal-edit battery (R = M with -scale*recovered_direction merged in-memory, same columns). Strict inequality / non-strict floor per PREREG-A A3 wording ('loop-rate down', 'task success not down'). Per-cell flips recorded in arm receipts for knife-edge diagnosis.",
+ "base": {
+  "loop_rate_G2": 0.4166666666666667,
+  "task_success": 0.45454545454545453,
+  "task_pass": 10,
+  "task_total": 22,
+  "pilot_loop_rate": 0.1875,
+  "jsonl_sha256": "db87f5a3d3f893ad6fab51b8ee9983fe43143d96638bac334980937e95fe5696"
+ },
+ "arms": {
+  "arm-000": {
+   "status": "SCORED",
+   "loop_rate_M": 0.5833333333333334,
+   "loop_rate_R": 0.5833333333333334,
+   "loop_delta_R_minus_M": 0.0,
+   "loop_delta_M_minus_base": 0.16666666666666669,
+   "task_success_M": 0.45454545454545453,
+   "task_success_R": 0.4090909090909091,
+   "task_success_delta_R_minus_M": -0.045454545454545414,
+   "task_pass_M": 10,
+   "task_pass_R": 9,
+   "certified": false,
+   "flips": [
+    {
+     "cell_id": "g0-c2s",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g0-pal",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g0-clamp",
+     "M": true,
+     "R": false
+    }
+   ],
+   "digests": {
+    "battery_M": "56f6c47c7db236f4129339c30bd3c2667970aaa330862d52955adf881dbca7ab",
+    "battery_R": "ad6ceb2d2e4deab13f30aadfc11fd728e738a4e92fc83347bd30b490870f7b82",
+    "recovered_json": "67d150064939f0b95993248f48de32ebcded295da06b0478d58620686eaab9d1",
+    "mirror_receipt": "bca9393a695c182b428354cee23db0df831571ac2b1aae22d6fca80d5ce6467e",
+    "repair_receipt": "0d3f4ee1a6be82d19fd386eb3994a8313e8168281a79fae35ebc95e626814fbf",
+    "arm_receipt": "abe06eca9dcb17867f01d466764acdafa22c67870e65377e090bbf38af99214b"
+   }
+  },
+  "arm-001": {
+   "status": "SCORED",
+   "loop_rate_M": 0.4166666666666667,
+   "loop_rate_R": 0.4166666666666667,
+   "loop_delta_R_minus_M": 0.0,
+   "loop_delta_M_minus_base": 0.0,
+   "task_success_M": 0.45454545454545453,
+   "task_success_R": 0.13636363636363635,
+   "task_success_delta_R_minus_M": -0.3181818181818182,
+   "task_pass_M": 10,
+   "task_pass_R": 3,
+   "certified": false,
+   "flips": [
+    {
+     "cell_id": "g0-c2s",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-01",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-02",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-03",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-04",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-05",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-06",
+     "M": true,
+     "R": false
+    }
+   ],
+   "digests": {
+    "battery_M": "19e073988c1f46e6a90634cf3f901d943daac0b95a422f9dfd06d143b0c5b274",
+    "battery_R": "a2493ebade63ed11bd5c0cd3b4b335352181ad9f3d7c0d752f2ce93967fc54e6",
+    "recovered_json": "cf12e79cd3357fc00cd4d6fd394b71adb50d84449f562db9a81ef45b4663bb6f",
+    "mirror_receipt": "c013b8f6c773805bfdc3a65258fec8cffff32f484f385692a78c270d16211254",
+    "repair_receipt": "209b955feeed575b7f6b09367ff36ba99c9eb47d0eaa124f70a508fbd4a5014d",
+    "arm_receipt": "1c397200d3b80f357ce7150363bb89f5a36483924769f21ec5746b69b1c4ec21"
+   }
+  },
+  "arm-002": {
+   "status": "SCORED",
+   "loop_rate_M": 0.6666666666666666,
+   "loop_rate_R": 0.3333333333333333,
+   "loop_delta_R_minus_M": -0.3333333333333333,
+   "loop_delta_M_minus_base": 0.24999999999999994,
+   "task_success_M": 0.045454545454545456,
+   "task_success_R": 0.45454545454545453,
+   "task_success_delta_R_minus_M": 0.40909090909090906,
+   "task_pass_M": 1,
+   "task_pass_R": 10,
+   "certified": true,
+   "flips": [
+    {
+     "cell_id": "g0-c2s",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g0-ws",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g0-pal",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-01",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-02",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-03",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-04",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-05",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-06",
+     "M": false,
+     "R": true
+    }
+   ],
+   "digests": {
+    "battery_M": "4279f3c9d301155bf10cd9134998111846b9582277b010d73fae3f1aa2e8d816",
+    "battery_R": "e1b6dc169042a4c85700b4e2191b9ec9f5703b87f1c7f9ead750ad57ca88be64",
+    "recovered_json": "9b67392eb0af94328acafa97d2e2035062139f9bb29b37b582785b8443acb19d",
+    "mirror_receipt": "a93303a845909a2d7ad1174e3e082dad859e417dd92b3d0a4cc9a13076143c5e",
+    "repair_receipt": "4aa341cab1e02f731af0ef74846fd44c10a1523a15c439238d1ac9714c15b2b2",
+    "arm_receipt": "5e917abaaf3b6a931616b3ef377d0c23411b67571dcdd6f8400f7212925a635f"
+   }
+  },
+  "arm-003": {
+   "status": "SCORED",
+   "loop_rate_M": 0.5,
+   "loop_rate_R": 0.9166666666666666,
+   "loop_delta_R_minus_M": 0.41666666666666663,
+   "loop_delta_M_minus_base": 0.08333333333333331,
+   "task_success_M": 0.45454545454545453,
+   "task_success_R": 0.045454545454545456,
+   "task_success_delta_R_minus_M": -0.40909090909090906,
+   "task_pass_M": 10,
+   "task_pass_R": 1,
+   "certified": false,
+   "flips": [
+    {
+     "cell_id": "g0-c2s",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g0-ws",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g0-clamp",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-01",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-02",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-03",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-04",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-05",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-06",
+     "M": true,
+     "R": false
+    }
+   ],
+   "digests": {
+    "battery_M": "5351a3f6219d445e647d020dd0ebc9d1c80e82f21e307e4a44c8a2a3b0d1de26",
+    "battery_R": "3f67081ba6663b92bc48064addd22354056bb162ac40ff28fe92152ca1336d69",
+    "recovered_json": "a7610bc622a54034947e12ab4c3af70f28f2d6856b77531a08c5b69854f3e492",
+    "mirror_receipt": "4b9e08bd2b6324efacad6a9892f256123233b79dabd69f6180267916c12d0a5a",
+    "repair_receipt": "7ecc400455725b123458f0fa892fa8961add4c2350b53e0651791037d8f10824",
+    "arm_receipt": "10c5a7e0c2f117cc9711bbd7bdad791e6a93547c5729ee31637eee4270479258"
+   }
+  },
+  "arm-004": {
+   "status": "SCORED",
+   "loop_rate_M": 0.3333333333333333,
+   "loop_rate_R": 0.4166666666666667,
+   "loop_delta_R_minus_M": 0.08333333333333337,
+   "loop_delta_M_minus_base": -0.08333333333333337,
+   "task_success_M": 0.36363636363636365,
+   "task_success_R": 0.18181818181818182,
+   "task_success_delta_R_minus_M": -0.18181818181818182,
+   "task_pass_M": 8,
+   "task_pass_R": 4,
+   "certified": false,
+   "flips": [
+    {
+     "cell_id": "g0-rle",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g0-pal",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-01",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-02",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-03",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-11",
+     "M": false,
+     "R": true
+    }
+   ],
+   "digests": {
+    "battery_M": "e937bee985b208f5b97f4f72dfa667a06cf5e4b86ac90b692d5bdd1bdcc118f1",
+    "battery_R": "dba716066d7e2f72b22f6ee539fcca20b222582f2e994b89a81fc718b5193bc6",
+    "recovered_json": "738e2d58b7dfac7962f581b20bf93bedae642a02b1bd20414c0880a3f5600560",
+    "mirror_receipt": "beebc5b2c1c9d57a812018a6b72429292ff3253b6d7faa9b062ee785c908e8bc",
+    "repair_receipt": "016a43ceae6ec3f4473e8b2fa0b2e6692030adf5aba9b7d9a7ae5539157c0b30",
+    "arm_receipt": "54aee6f1f685efa0bbe145db5e6cfc8faeb0479791d29a1c75cc8338d98d0d03"
+   }
+  },
+  "arm-005": {
+   "status": "SCORED",
+   "loop_rate_M": 0.4166666666666667,
+   "loop_rate_R": 0.3333333333333333,
+   "loop_delta_R_minus_M": -0.08333333333333337,
+   "loop_delta_M_minus_base": 0.0,
+   "task_success_M": 0.36363636363636365,
+   "task_success_R": 0.45454545454545453,
+   "task_success_delta_R_minus_M": 0.09090909090909088,
+   "task_pass_M": 8,
+   "task_pass_R": 10,
+   "certified": true,
+   "flips": [
+    {
+     "cell_id": "g0-c2s",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g0-ws",
+     "M": false,
+     "R": true
+    }
+   ],
+   "digests": {
+    "battery_M": "5559b149f78ccf52294d8ddd9bcb28f021021acba22b011204c2f06cb6804a3e",
+    "battery_R": "c49536ce0c17f750fc68c47ec5565d9dc1feb8b4f6e390f2156ed674fc1bc1c0",
+    "recovered_json": "3f4927865184236fc651bc5fcd355abcd32f9998b862e9a5abb9b0288a23265d",
+    "mirror_receipt": "1e4cb4533c5ef6a6abd1662a4b899508b59e4f242ea8b56e8414ea28dfb67c19",
+    "repair_receipt": "d2f8b736b16b7f03f578ca32828a32831c1051e77b2422771148998bf35f85a6",
+    "arm_receipt": "5234459a11b7f001e6161f66d77b32b27856379dc2ffb0fd988d0c9cf9ff1d2b"
+   }
+  },
+  "arm-006": {
+   "status": "SCORED",
+   "loop_rate_M": 0.4166666666666667,
+   "loop_rate_R": 0.4166666666666667,
+   "loop_delta_R_minus_M": 0.0,
+   "loop_delta_M_minus_base": 0.0,
+   "task_success_M": 0.45454545454545453,
+   "task_success_R": 0.45454545454545453,
+   "task_success_delta_R_minus_M": 0.0,
+   "task_pass_M": 10,
+   "task_pass_R": 10,
+   "certified": false,
+   "flips": [
+    {
+     "cell_id": "g0-c2s",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g0-clamp",
+     "M": true,
+     "R": false
+    }
+   ],
+   "digests": {
+    "battery_M": "d07c300d58278163ca7a44fb61975bd6e8cdaa6260efc4c3f433c632e9996687",
+    "battery_R": "e5419c0dede6c9bb811980db7d8bf50e494db1968ef3ac6edf8b2047bcab7760",
+    "recovered_json": "bbd985d66443fe1c82182df1c738b7c637bb68b0024ac22eb30276b0d96ed872",
+    "mirror_receipt": "da0afa72c5520010ac46e1af30fd9cfdd8166084a95543b8e9d2995ad93ee7b6",
+    "repair_receipt": "b430ec91d3f5f52e9d31a0a7f0f8d8794079717b930f678efd8ffeb5961f1dd3",
+    "arm_receipt": "553f97ece4c6c4cf8107f213786ac90a3bb89ea44052964d66606b7e63f48e54"
+   }
+  },
+  "arm-007": {
+   "status": "SCORED",
+   "loop_rate_M": 0.3333333333333333,
+   "loop_rate_R": 0.4166666666666667,
+   "loop_delta_R_minus_M": 0.08333333333333337,
+   "loop_delta_M_minus_base": -0.08333333333333337,
+   "task_success_M": 0.4090909090909091,
+   "task_success_R": 0.45454545454545453,
+   "task_success_delta_R_minus_M": 0.045454545454545414,
+   "task_pass_M": 9,
+   "task_pass_R": 10,
+   "certified": false,
+   "flips": [
+    {
+     "cell_id": "g0-pal",
+     "M": false,
+     "R": true
+    }
+   ],
+   "digests": {
+    "battery_M": "581db69463a5da23300c0568b86ae1d12ce462ab10eba9a63348a6d075862e55",
+    "battery_R": "02cd6a1265564de2e453210e21dd27c93689f6d557a23af8daca6d4d2524c964",
+    "recovered_json": "b6e152fd4cf7075fbf26cf338d7834858c5e2bc1f48cd7252e84be8f694e9721",
+    "mirror_receipt": "65f67fd79c75bc271acfde39202df66669d417a7ca0061e55ee9f29978555f3c",
+    "repair_receipt": "3b30d2bd671e88a4adefe80e41fef5be08e5f691d7e285ff6213b1b3e912fa06",
+    "arm_receipt": "81210aa9f9ba313ffa43e0031ba67c034702ee2387297398f717c935de549de6"
+   }
+  },
+  "arm-008": {
+   "status": "SCORED",
+   "loop_rate_M": 0.5,
+   "loop_rate_R": 0.75,
+   "loop_delta_R_minus_M": 0.25,
+   "loop_delta_M_minus_base": 0.08333333333333331,
+   "task_success_M": 0.4090909090909091,
+   "task_success_R": 0.045454545454545456,
+   "task_success_delta_R_minus_M": -0.36363636363636365,
+   "task_pass_M": 9,
+   "task_pass_R": 1,
+   "certified": false,
+   "flips": [
+    {
+     "cell_id": "g0-rle",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g0-clamp",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-01",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-02",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-03",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-04",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-05",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-06",
+     "M": true,
+     "R": false
+    }
+   ],
+   "digests": {
+    "battery_M": "92c7cb174b9d676c8a272714ca7bf59309e85422c073b4556f538b5f56c931b8",
+    "battery_R": "af2398ca3b5960d5f7067f6043202fd37385c23ea412d9ca8d2ea8774d371216",
+    "recovered_json": "db0adebdc6934c8ebd79fcb83b8ee90ed5a6d24c3f7144fa3fddb55462f12191",
+    "mirror_receipt": "10d47b3ab78da83f62a60cf335cc5950e0044b2ebc031e689da70a647e319055",
+    "repair_receipt": "c840e980e4248b7defb684394fc2698b269c857fd923c61f17958b1274144444",
+    "arm_receipt": "2106f7a320ccfcb7e5824ce36a72238c759aa73cc917c83f17ee80677fbcbc24"
+   }
+  },
+  "arm-009": {
+   "status": "SCORED",
+   "loop_rate_M": 1.0,
+   "loop_rate_R": 0.5,
+   "loop_delta_R_minus_M": -0.5,
+   "loop_delta_M_minus_base": 0.5833333333333333,
+   "task_success_M": 0.045454545454545456,
+   "task_success_R": 0.4090909090909091,
+   "task_success_delta_R_minus_M": 0.36363636363636365,
+   "task_pass_M": 1,
+   "task_pass_R": 9,
+   "certified": true,
+   "flips": [
+    {
+     "cell_id": "g0-ws",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g0-rle",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g0-pal",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g0-clamp",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-01",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-02",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-03",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-04",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-05",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-06",
+     "M": false,
+     "R": true
+    }
+   ],
+   "digests": {
+    "battery_M": "f86072fef8757f614f954b4a8fd82d85526d781e0583aa2dfc082c777dbc70e5",
+    "battery_R": "8d3a58c3aaba931db584fec422386daf2d65106afd87a5398f2efea36656ccf3",
+    "recovered_json": "90c3bd68206a1c243140cf752994eb610a3b61c786cfd079ef311c91b4032e5b",
+    "mirror_receipt": "ea8244115332e8a68b140e97f5ab3abbd6b6b0b6cc0762a03e5e013057431495",
+    "repair_receipt": "a7ec1bd8fa527d3b1d115082ce701a55e399bcb8984248043c82616c94b59157",
+    "arm_receipt": "f0710ed19f4c7d5384688a17f448a1bc2c5361d103667c1ebc55605dee7fce95"
+   }
+  },
+  "arm-010": {
+   "status": "SCORED",
+   "loop_rate_M": 0.75,
+   "loop_rate_R": 1.0,
+   "loop_delta_R_minus_M": 0.25,
+   "loop_delta_M_minus_base": 0.3333333333333333,
+   "task_success_M": 0.4090909090909091,
+   "task_success_R": 0.045454545454545456,
+   "task_success_delta_R_minus_M": -0.36363636363636365,
+   "task_pass_M": 9,
+   "task_pass_R": 1,
+   "certified": false,
+   "flips": [
+    {
+     "cell_id": "g0-rle",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g0-acr",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-01",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-02",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-03",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-04",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-05",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g1-perm-06",
+     "M": true,
+     "R": false
+    }
+   ],
+   "digests": {
+    "battery_M": "b805a2e0f928e82f6a282eef6189070b660f405f526f82973776e186bb423adb",
+    "battery_R": "d62efc6b6bef11dcddcf10b435266c7603fe382583a04a66be5cf3ea4fa7326d",
+    "recovered_json": "80b5caa729287ae9229dcf111c23b2913cfce2abe9828c5b1179ebacfc347164",
+    "mirror_receipt": "489cdb918aaa413abd5c436d43893b228b39aff5bc538108669ead4cecec520a",
+    "repair_receipt": "a6a646a04428afbcb591a13cc1cb60733d978f4e07d672af6e26777961f0a9c4",
+    "arm_receipt": "e19bc43dc69721ef17a4ce1c3565626ba849e7766d8d609ebcd40ee15c651aec"
+   }
+  },
+  "arm-011": {
+   "status": "SCORED",
+   "loop_rate_M": 0.5,
+   "loop_rate_R": 0.3333333333333333,
+   "loop_delta_R_minus_M": -0.16666666666666669,
+   "loop_delta_M_minus_base": 0.08333333333333331,
+   "task_success_M": 0.4090909090909091,
+   "task_success_R": 0.45454545454545453,
+   "task_success_delta_R_minus_M": 0.045454545454545414,
+   "task_pass_M": 9,
+   "task_pass_R": 10,
+   "certified": true,
+   "flips": [
+    {
+     "cell_id": "g0-c2s",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g0-pal",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g0-clamp",
+     "M": true,
+     "R": false
+    }
+   ],
+   "digests": {
+    "battery_M": "44f64b54c25870c375fb3a7c8c5736c4b34b63d27360bcc4a582c242e86a9815",
+    "battery_R": "a616df10c52947b35f3dd47c7a29fccf151d1377e6dba21b23bdba8c78a8124e",
+    "recovered_json": "0678ec9777731d1c5e45b79153f660f6c938a0b33c76c737545562578f96902d",
+    "mirror_receipt": "82f9cad2b270439d6ac72f32e7b7b385a5573a7a9f45cfb63ffc146c686e3bf7",
+    "repair_receipt": "a4ce65abb45329dc6cfc9a5b16cd9bf49102f1dc717101550f2a234174d9ca44",
+    "arm_receipt": "00db46c71fdeca102348662c6c9e6a4a532e0f04ebbdecfebac6642c42b48b60"
+   }
+  },
+  "arm-012": {
+   "status": "SCORED",
+   "loop_rate_M": 0.5,
+   "loop_rate_R": 0.3333333333333333,
+   "loop_delta_R_minus_M": -0.16666666666666669,
+   "loop_delta_M_minus_base": 0.08333333333333331,
+   "task_success_M": 0.4090909090909091,
+   "task_success_R": 0.45454545454545453,
+   "task_success_delta_R_minus_M": 0.045454545454545414,
+   "task_pass_M": 9,
+   "task_pass_R": 10,
+   "certified": true,
+   "flips": [
+    {
+     "cell_id": "g0-pal",
+     "M": false,
+     "R": true
+    }
+   ],
+   "digests": {
+    "battery_M": "9802f79450084e7ce2b0c8fb73c70fea5fe092ee13dbb8ad648542b9df532b3a",
+    "battery_R": "f94e550ced56d0774c1dae4c5625e59a113fb9d28401268ba44ad42894890f59",
+    "recovered_json": "c62d45e990ff6ced12a545e946254802377880526155e704166084279fdb1fb7",
+    "mirror_receipt": "2deac4440c67b47d4edb7163da59de10c042e0237b39b9fdada1e1562730cf00",
+    "repair_receipt": "51a0e3d5876453bbe6dc6ab675616f4c30bfc1a5dbb47838febe2f902bd3b05b",
+    "arm_receipt": "8d50ada40422cb52b4afeb756f94fc26094b7cb3b47ff0cad654fab25009d84c"
+   }
+  },
+  "arm-013": {
+   "status": "SCORED",
+   "loop_rate_M": 0.5,
+   "loop_rate_R": 0.6666666666666666,
+   "loop_delta_R_minus_M": 0.16666666666666663,
+   "loop_delta_M_minus_base": 0.08333333333333331,
+   "task_success_M": 0.45454545454545453,
+   "task_success_R": 0.45454545454545453,
+   "task_success_delta_R_minus_M": 0.0,
+   "task_pass_M": 10,
+   "task_pass_R": 10,
+   "certified": false,
+   "flips": [
+    {
+     "cell_id": "g0-c2s",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g0-vowels",
+     "M": false,
+     "R": true
+    }
+   ],
+   "digests": {
+    "battery_M": "24841267525e53f5cb33f4a4b2df696735fcdc390daacab54b8d9c9c847e1d26",
+    "battery_R": "1a7fd3090bba5ac90fcaedbb80da87fcd87647fdeb40a4f9f736e068c142b4ba",
+    "recovered_json": "2674ab11cdbfcc81cd61c8ae6ec4362c5129356ae0ba98a9c9cc1617e6182ccd",
+    "mirror_receipt": "4bf2b936aa3e77da464b20c604a478b78daeb49c9b10ea364cffd1ecc33f5a1a",
+    "repair_receipt": "4122c5c14b44ecf94010335669e064bf6d1527a137a30c5a61717ff4cf2118b6",
+    "arm_receipt": "c26f7dfd871ed3ef93fce810dc49a8199924d5c43df284b30a2cbcd7007162ca"
+   }
+  },
+  "arm-014": {
+   "status": "SCORED",
+   "loop_rate_M": 1.0,
+   "loop_rate_R": 1.0,
+   "loop_delta_R_minus_M": 0.0,
+   "loop_delta_M_minus_base": 0.5833333333333333,
+   "task_success_M": 0.0,
+   "task_success_R": 0.22727272727272727,
+   "task_success_delta_R_minus_M": 0.22727272727272727,
+   "task_pass_M": 0,
+   "task_pass_R": 5,
+   "certified": false,
+   "flips": [
+    {
+     "cell_id": "g0-rle",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g0-clamp",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-02",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-03",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-04",
+     "M": false,
+     "R": true
+    }
+   ],
+   "digests": {
+    "battery_M": "f0c6036e7b27b1651e5130b64cf879d172dae11f8012e1e8e6c58724e09c6148",
+    "battery_R": "5121f9588d3ad1de81908f4e529e8ee6457efa760a5ef1092ee3c9752f6a9993",
+    "recovered_json": "b45515657f19f73d65de0df157c9b010180be1b4651c0f928aa6c7976f21aa04",
+    "mirror_receipt": "c77a755c72c4866fe34bdfcad32440378331ccc94fcae673b8b03af8f9db68be",
+    "repair_receipt": "f377c99e7bb573f0eb6f3ad8cc57dfc0cd055282e89f6de9dca7abd280c94912",
+    "arm_receipt": "91b43a3c485443a9267c7c60518eebafcf514bd2edcd247f8868d7c660f1845f"
+   }
+  },
+  "arm-015": {
+   "status": "SCORED",
+   "loop_rate_M": 0.6666666666666666,
+   "loop_rate_R": 0.4166666666666667,
+   "loop_delta_R_minus_M": -0.24999999999999994,
+   "loop_delta_M_minus_base": 0.24999999999999994,
+   "task_success_M": 0.18181818181818182,
+   "task_success_R": 0.45454545454545453,
+   "task_success_delta_R_minus_M": 0.2727272727272727,
+   "task_pass_M": 4,
+   "task_pass_R": 10,
+   "certified": true,
+   "flips": [
+    {
+     "cell_id": "g0-c2s",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-01",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-02",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-03",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-04",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-05",
+     "M": false,
+     "R": true
+    }
+   ],
+   "digests": {
+    "battery_M": "76df4769e0416ce9c86a866fd53c0170dd008764083110081e0a9814371a94c4",
+    "battery_R": "a3923c9bca16a78fd5f5d23b460837fe70daebe921155d1b6c0b724c5b6ecc01",
+    "recovered_json": "299022ceed52a947e43a78d953ca6db84d6fb3fa894fdaad4c1653debb1ee7ec",
+    "mirror_receipt": "28ca4fc0246df6202b7980c085465ae000e0a389e0c4924775679493bb60e1d5",
+    "repair_receipt": "6fce26bd64310981ee6cdb87e6d1746541fa51c45e2bf64c6661b509e76294cb",
+    "arm_receipt": "64316daf3155e239c81024add7a84dd052e551cb9cff427ce6e490be9642b82d"
+   }
+  }
+ }
+}

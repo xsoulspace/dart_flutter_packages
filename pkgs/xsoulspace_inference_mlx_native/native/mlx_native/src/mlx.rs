@@ -201,6 +201,97 @@ impl MetalKernel {
         unsafe { mlx_vector_array_free(outs) };
         Ok(arrs)
     }
+
+    /// One dispatch with PER-OUTPUT dtypes and TEMPLATE arguments — the
+    /// full mx.fast.metal_kernel call surface (python passes
+    /// `template=[("InT", dtype), ("Dk", 128), ...]` and mixed-dtype
+    /// outputs; the qwen3_5 gated-delta port needs both). `apply` above
+    /// stays the single-dtype/no-template route; this is additive.
+    #[allow(clippy::too_many_arguments)]
+    pub fn apply_templated(
+        &self,
+        inputs: &[&Array],
+        out_specs: &[(&[usize], Dtype)],
+        templates: &[TemplateArg<'_>],
+        grid: (i32, i32, i32),
+        threadgroup: (i32, i32, i32),
+        s: Stream,
+    ) -> MlxResult<Vec<Array>> {
+        let config = unsafe { mlx_fast_metal_kernel_config_new() };
+        let chk_cfg = |r: i32| -> MlxResult<()> {
+            if r != 0 {
+                unsafe { mlx_fast_metal_kernel_config_free(config) };
+                return Err(MlxError(r));
+            }
+            Ok(())
+        };
+        for (shape, dtype) in out_specs {
+            let shape_i: Vec<i32> = shape.iter().map(|d| *d as i32).collect();
+            chk_cfg(unsafe {
+                mlx_fast_metal_kernel_config_add_output_arg(
+                    config,
+                    shape_i.as_ptr(),
+                    shape_i.len(),
+                    *dtype,
+                )
+            })?;
+        }
+        for t in templates {
+            let name = std::ffi::CString::new(t.name).map_err(|_| MlxError(-970))?;
+            let r = match t.value {
+                TemplateValue::Dtype(d) => unsafe {
+                    mlx_fast_metal_kernel_config_add_template_arg_dtype(config, name.as_ptr(), d)
+                },
+                TemplateValue::Int(v) => unsafe {
+                    mlx_fast_metal_kernel_config_add_template_arg_int(config, name.as_ptr(), v)
+                },
+            };
+            chk_cfg(r)?;
+        }
+        if std::env::var_os("LAYA_MSL_VERBOSE").is_some_and(|v| !v.is_empty()) {
+            let _ = unsafe { mlx_fast_metal_kernel_config_set_verbose(config, true) };
+        }
+        chk_cfg(unsafe { mlx_fast_metal_kernel_config_set_grid(config, grid.0, grid.1, grid.2) })?;
+        chk_cfg(unsafe {
+            mlx_fast_metal_kernel_config_set_thread_group(
+                config,
+                threadgroup.0,
+                threadgroup.1,
+                threadgroup.2,
+            )
+        })?;
+        let vec = unsafe { mlx_vector_array_new() };
+        for a in inputs {
+            chk(unsafe { mlx_vector_array_append_value(vec, a.0) })?;
+        }
+        let mut outs = unsafe { std::mem::zeroed() };
+        let result =
+            chk(unsafe { mlx_fast_metal_kernel_apply(&mut outs, self.raw, vec, config, s.0) });
+        unsafe { mlx_vector_array_free(vec) };
+        unsafe { mlx_fast_metal_kernel_config_free(config) };
+        result?;
+        let n = unsafe { mlx_vector_array_size(outs) };
+        let mut arrs = Vec::with_capacity(n);
+        for i in 0..n {
+            let mut a = unsafe { std::mem::zeroed() };
+            chk(unsafe { mlx_vector_array_get(&mut a, outs, i) })?;
+            arrs.push(Array(a));
+        }
+        unsafe { mlx_vector_array_free(outs) };
+        Ok(arrs)
+    }
+}
+
+/// One metal_kernel template argument (name + dtype-or-int value), the
+/// mirror of python's `template=[("InT", mx.bfloat16), ("Dk", 128)]`.
+pub struct TemplateArg<'a> {
+    pub name: &'a str,
+    pub value: TemplateValue,
+}
+
+pub enum TemplateValue {
+    Dtype(Dtype),
+    Int(i32),
 }
 
 impl Drop for MetalKernel {
@@ -324,6 +415,18 @@ extern "C" {
     ) -> Status;
     fn mlx_softmax(res: *mut RawArray, a: RawArray, precise: bool, s: RawStream) -> Status;
     fn mlx_sigmoid(res: *mut RawArray, a: RawArray, s: RawStream) -> Status;
+    // ops.h — qwen3_5's softplus (nn.softplus == mx.logaddexp(x, 0), a
+    // bitwise-distinct kernel from log(1+exp(x))) and the greedy sampler's
+    // mx.logsumexp (a dedicated LogSumExp primitive, not a max/exp/sum/log
+    // composition). Additive bindings; no existing route changes.
+    fn mlx_logaddexp(res: *mut RawArray, a: RawArray, b: RawArray, s: RawStream) -> Status;
+    fn mlx_logsumexp_axis(
+        res: *mut RawArray,
+        a: RawArray,
+        axis: i32,
+        keepdims: bool,
+        s: RawStream,
+    ) -> Status;
     fn mlx_argmax_axis(
         res: *mut RawArray,
         a: RawArray,
@@ -536,6 +639,19 @@ extern "C" {
         t1: i32,
         t2: i32,
         t3: i32,
+    ) -> Status;
+    // fast.h — template instantiation for metal_kernel configs (the qwen3_5
+    // gated-delta port passes InT/StT/Dk/Dv/Hk/Hv exactly like the python
+    // reference's template=[...]). Additive; existing callers untouched.
+    fn mlx_fast_metal_kernel_config_add_template_arg_dtype(
+        cls: RawMetalKernelConfig,
+        name: *const std::ffi::c_char,
+        dtype: Dtype,
+    ) -> Status;
+    fn mlx_fast_metal_kernel_config_add_template_arg_int(
+        cls: RawMetalKernelConfig,
+        name: *const std::ffi::c_char,
+        value: i32,
     ) -> Status;
     fn mlx_fast_metal_kernel_apply(
         outputs: *mut RawVectorArray,
@@ -927,6 +1043,24 @@ impl Array {
     pub fn sigmoid(&self, s: Stream) -> MlxResult<Array> {
         let mut out = unsafe { std::mem::zeroed() };
         chk(unsafe { mlx_sigmoid(&mut out, self.0, s.0) })?;
+        Ok(Array(out))
+    }
+
+    /// `mx.logaddexp` — the kernel behind `nn.softplus(x) = logaddexp(x, 0)`.
+    /// Distinct bits from a log(1+exp(x)) composition (measured, qwen3_5
+    /// parity probe 2026-11-05), so the reference's softplus routes here.
+    pub fn logaddexp(&self, other: &Array, s: Stream) -> MlxResult<Array> {
+        let mut out = unsafe { std::mem::zeroed() };
+        chk(unsafe { mlx_logaddexp(&mut out, self.0, other.0, s.0) })?;
+        Ok(Array(out))
+    }
+
+    /// `mx.logsumexp(a, axis, keepdims)` — the dedicated LogSumExp primitive
+    /// the mlx-lm greedy sampler normalizes logits with (`argmax(y -
+    /// logsumexp(y))`); reduce-last-dim runs the fused kernel in f32.
+    pub fn logsumexp_axis(&self, axis: i32, keepdims: bool, s: Stream) -> MlxResult<Array> {
+        let mut out = unsafe { std::mem::zeroed() };
+        chk(unsafe { mlx_logsumexp_axis(&mut out, self.0, axis, keepdims, s.0) })?;
         Ok(Array(out))
     }
 

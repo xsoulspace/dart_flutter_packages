@@ -28,6 +28,9 @@ scripts under `tool/eval/` (PYTHON-BOUNDARY law of mlx_native).
   reason, never silently.
 - Frozen-oracle law: scoring and gate scripts under `tool/` are frozen once
   PREREG-A A4 lands; changing them requires a new prereg row, not an edit.
+- Python runners (Dart Process.run or shell) MUST set
+  PYTHONDONTWRITEBYTECODE=1: `__pycache__` in the repo tree violates the probe
+  scratch law. Sweep on sight if a runner forgets.
 
 ## Claims and evidence
 

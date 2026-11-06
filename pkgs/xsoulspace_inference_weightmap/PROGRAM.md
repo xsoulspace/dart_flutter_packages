@@ -1,6 +1,8 @@
 # Weightmap Validation Program
 
-Status: PROPOSED → Phase A on owner go. Owner: Antonio. Package:
+Status: Phase A COMPLETE (A1 verdict ledgered; A3 PASS 6/8 sensitivity, 8/8
+specificity at full denominator; A4 frozen; A2-local in flight), Phase B/C live
+runs in flight, Rust qwen3_5 parity DONE bitwise. Owner: Antonio. Package:
 `pkgs/xsoulspace_inference_weightmap` (isolated, removable).
 
 ## 0. Thesis and the unit of validation

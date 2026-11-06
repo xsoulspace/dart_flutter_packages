@@ -174,3 +174,91 @@ pub struct QuantizedTensor {
     pub scales: Array,
     pub biases: Array,
 }
+
+/// A checkpoint directory's weight store: EITHER the single
+/// `model.safetensors` file (every pre-qwen3_5 caller's layout — behavior
+/// unchanged) OR the HF sharded layout described by
+/// `model.safetensors.index.json` (qwen3_5 ships an index whose one shard
+/// is literally named `model.safetensors-00001-of-00001.safetensors`).
+/// Additive: no existing call site changes; single-file directories never
+/// read the index.
+pub struct WeightStore {
+    files: Vec<SafetensorsFile>,
+    /// Tensor name → `files` index. `None` = single-file store (file 0).
+    route: Option<HashMap<String, usize>>,
+}
+
+impl WeightStore {
+    /// Opens the store for a checkpoint directory. Single file wins when
+    /// present; otherwise the index is required.
+    pub fn open_dir(dir: &std::path::Path) -> MlxResult<WeightStore> {
+        let single = dir.join("model.safetensors");
+        if single.is_file() {
+            return Ok(WeightStore {
+                files: vec![SafetensorsFile::open(&single)?],
+                route: None,
+            });
+        }
+        let raw = std::fs::read_to_string(dir.join("model.safetensors.index.json"))
+            .map_err(|_| MlxError(-12))?;
+        let doc: serde_json::Value = serde_json::from_str(&raw).map_err(|_| MlxError(-12))?;
+        let weight_map = doc
+            .get("weight_map")
+            .and_then(|m| m.as_object())
+            .ok_or(MlxError(-12))?;
+        // Unique shard files, opened once each, in first-reference order of
+        // the sorted tensor names (deterministic across runs).
+        let mut files: Vec<SafetensorsFile> = Vec::new();
+        let mut shard_ids: HashMap<String, usize> = HashMap::new();
+        let mut route: HashMap<String, usize> = HashMap::with_capacity(weight_map.len());
+        let mut names: Vec<&String> = weight_map.keys().collect();
+        names.sort();
+        for name in names {
+            let shard = weight_map
+                .get(name)
+                .and_then(|v| v.as_str())
+                .ok_or(MlxError(-12))?;
+            let idx = match shard_ids.get(shard) {
+                Some(i) => *i,
+                None => {
+                    files.push(SafetensorsFile::open(&dir.join(shard))?);
+                    let i = files.len() - 1;
+                    shard_ids.insert(shard.to_string(), i);
+                    i
+                }
+            };
+            route.insert(name.clone(), idx);
+        }
+        Ok(WeightStore {
+            files,
+            route: Some(route),
+        })
+    }
+
+    fn file_for(&self, name: &str) -> MlxResult<&SafetensorsFile> {
+        match &self.route {
+            None => Ok(&self.files[0]),
+            Some(route) => {
+                let idx = route.get(name).ok_or(MlxError(-13))?;
+                Ok(&self.files[*idx])
+            }
+        }
+    }
+
+    /// Whether the store holds a tensor by that name.
+    pub fn has(&self, name: &str) -> bool {
+        match &self.route {
+            None => self.files[0].dtype_of(name).is_some() || self.names_contains(name),
+            Some(route) => route.contains_key(name),
+        }
+    }
+
+    fn names_contains(&self, name: &str) -> bool {
+        self.files[0].names().iter().any(|n| n == name)
+    }
+
+    /// [`SafetensorsFile::take_any`] routed through the store.
+    pub fn take_any(&self, name: &str) -> MlxResult<Array> {
+        self.file_for(name)?.take_any(name)
+    }
+}

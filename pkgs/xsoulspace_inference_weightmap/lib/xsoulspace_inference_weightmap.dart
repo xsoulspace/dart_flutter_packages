@@ -3,6 +3,8 @@
 library;
 
 export 'src/blinding.dart';
+export 'src/bridge.dart';
+export 'src/cross_engine.dart';
 export 'src/ledger.dart';
 export 'src/patch_algebra.dart';
 export 'src/probes.dart';

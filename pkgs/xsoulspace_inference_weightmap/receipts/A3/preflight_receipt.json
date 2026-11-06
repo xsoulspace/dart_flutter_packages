@@ -1,0 +1,22 @@
+{
+ "tool": "a3_preflight.dart",
+ "at": "2026-11-05T22:26:57.129547Z",
+ "verdict": "PREFLIGHT_OK",
+ "cell_refs": [
+  "G0-slugify",
+  "G1-perm",
+  "G2-loop-rate",
+  "pilot-loop-rate"
+ ],
+ "frozen_artifacts": {
+  "cells_frozen_A3.json": "8406130623b6e85922eac6cbd92b73dd2282e6fc19538bb3c199f647f518d760",
+  "prompts_localization_loop_A3.txt": "a827b2535a4bef68b4493034756955576ccd4c3e201674fd11d688873b98038e",
+  "prompts_localization_neutral_A3.txt": "a92c0f65243ea07812965666800cb0b01af26055fd51db203365884e6d4d9caa"
+ },
+ "probe_sets": {
+  "localization": 256,
+  "certification": 34,
+  "generalization_slot_pilot": 16,
+  "disjoint": true
+ }
+}

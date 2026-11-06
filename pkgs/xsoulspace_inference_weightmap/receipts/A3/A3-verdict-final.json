@@ -1,0 +1,27 @@
+{
+ "artifact": "A3-verdict-final.json",
+ "arm": "PREREG-A A3 (V-0 planted ground truth)",
+ "generated_utc": "2026-11-06T01:26:44.647581Z",
+ "verdict": "PASS",
+ "floors": {
+  "specificity": {
+   "rule": ">= 7 of 8 null arms NOT certified",
+   "measured": "8/8",
+   "met": true
+  },
+  "sensitivity": {
+   "rule": ">= 6 of 8 plant arms: mean_cosine >= 0.9 AND certified",
+   "measured": "6/8",
+   "met": true
+  },
+  "denominator_note": "full 8+8"
+ },
+ "counts": {
+  "plant_arms_scored": 8,
+  "plant_sensitivity_hits": 6,
+  "null_arms_scored": 8,
+  "null_specificity_clean": 8
+ },
+ "verdict_frozen_sha256": "a35998ca147a23c2619731d2de1308a810fa1d1f62078f800fe2325581e3571d",
+ "join_table_sha256": "f29ec5802f340dfaa7453be148f03bc6946647f0afe01dc72ee8dffdd7b8f490"
+}

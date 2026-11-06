@@ -25,6 +25,9 @@ pub mod nursery_model;
 pub mod plan;
 pub mod power;
 pub mod qwen;
+// Qwen3.5 (model_type qwen3_5) text tower — the RUST half of the house
+// python-first pattern; separate file by design (see qwen3_5.rs header).
+pub mod qwen3_5;
 pub mod qwen_batch;
 pub mod qwen_fused;
 pub mod qwen_mtp;

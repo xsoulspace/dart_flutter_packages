@@ -1,0 +1,11 @@
+{
+  "freeze": "A4 2026-11-06",
+  "sampler": "greedy",
+  "argmax_rule": "argmax(logits - logsumexp(logits, keepdims))",
+  "eos_stop": false,
+  "surface": {"A3_cells": "chat+no_think", "A2_local": "raw completions"},
+  "caps": {"IFEval": 4096, "MATH500_A2local": 4096, "GSM8K_A2local": 4096,
+           "cap_curve": [4096, 8192, 32768],
+           "A3_cells": "exact stream token counts per cells_frozen_A3.json"},
+  "note": "post-freeze change = new prereg row + re-run of affected arms"
+}

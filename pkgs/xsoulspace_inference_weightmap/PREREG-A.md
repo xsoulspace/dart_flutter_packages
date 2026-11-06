@@ -40,3 +40,20 @@ row, not an edit. Blinding seed: **20261105**. Battery law: serial `-j 1`.
 ## Stop rules
 - Phase A kill: unnamed A2 non-replication, or A3 floor miss (halt = verdict).
 - Nothing in Phase A authorizes an edit claim on any production cast.
+
+## Addendum 2026-11-05 (A2-local compute adaptation; original rows unchanged)
+Measured local decode for bf16 Qwen3.5-0.8B via mlx-lm 0.32.2: ~20–27 tok/s
+serial (receipt: PYREF bench, AC power). The paper's full protocol (500 MATH-500
+prompts × 32,768 cap × 2 configs) is tens of hours on this box — infeasible in
+one arc. A2-local therefore runs, pre-registered here:
+- IFEval verifiable subset in FULL (short outputs; feasible).
+- Token-limit-rate CAP CURVE on n=24 MATH-500 prompts at caps {4096, 8192,
+  32768} for base and edited: the loop pathology is visible at 4k, and the
+  curve preserves comparability with the paper's single 32k point.
+- MATH-500 accuracy at cap 4096 on a n=100 pre-registered stratified subset
+  (every 5th problem by dataset order), base vs edited.
+- GSM8K test n=100 (same stride) at cap 4096.
+Comparability caveat recorded with every A2-local verdict: caps and subsets
+differ from the paper; P-2/P-2b retain the full-protocol comparison when
+compute allows. Sampler/budget freeze (A4) unchanged. Datasets fetched via
+datasets-server rows API or raw github jsonl, digest-receipted before scoring.

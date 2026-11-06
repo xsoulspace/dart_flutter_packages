@@ -1,0 +1,726 @@
+{
+ "note": "raw per-arm artifacts (captures, battery jsonl, receipts) live under $TMPDIR/wm-a3/blind/<label>/ (probe scratch law); digests recorded in receipts/A3-run.jsonl arm rows and arm_receipt.json per arm",
+ "tmp_root": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind",
+ "arms": {
+  "arm-000": {
+   "verdict": "ARM_COMPLETE",
+   "artifacts": {
+    "mirror_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-000/mirror_receipt.json",
+     "sha256": "bca9393a695c182b428354cee23db0df831571ac2b1aae22d6fca80d5ce6467e",
+     "bytes": 2585
+    },
+    "recovered.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-000/recovered.json",
+     "sha256": "67d150064939f0b95993248f48de32ebcded295da06b0478d58620686eaab9d1",
+     "bytes": 55008
+    },
+    "battery_M.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-000/battery_M.jsonl",
+     "sha256": "56f6c47c7db236f4129339c30bd3c2667970aaa330862d52955adf881dbca7ab",
+     "bytes": 18797
+    },
+    "battery_R.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-000/battery_R.jsonl",
+     "sha256": "ad6ceb2d2e4deab13f30aadfc11fd728e738a4e92fc83347bd30b490870f7b82",
+     "bytes": 19113
+    },
+    "repair_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-000/repair_receipt.json",
+     "sha256": "0d3f4ee1a6be82d19fd386eb3994a8313e8168281a79fae35ebc95e626814fbf",
+     "bytes": 878
+    },
+    "repair_spec.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-000/repair_spec.json",
+     "sha256": "e60b8e332688b7a5bfc02a233b3f1c46e190d04dbe0a9f173ef489e27333e44b",
+     "bytes": 46497
+    },
+    "cap_loop.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-000/cap_loop.json",
+     "sha256": "9e563cc82553627437eb39af64dfd540b89bd938dd33abcb8f25a1a465ab23b3",
+     "bytes": 44135
+    },
+    "cap_neutral.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-000/cap_neutral.json",
+     "sha256": "53fe7f4e8e35e92d3a361cbb9671532a2400395cb7f0830f30b1fa5a7845eafb",
+     "bytes": 44444
+    }
+   }
+  },
+  "arm-001": {
+   "verdict": "ARM_COMPLETE",
+   "artifacts": {
+    "mirror_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-001/mirror_receipt.json",
+     "sha256": "c013b8f6c773805bfdc3a65258fec8cffff32f484f385692a78c270d16211254",
+     "bytes": 2583
+    },
+    "recovered.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-001/recovered.json",
+     "sha256": "cf12e79cd3357fc00cd4d6fd394b71adb50d84449f562db9a81ef45b4663bb6f",
+     "bytes": 54973
+    },
+    "battery_M.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-001/battery_M.jsonl",
+     "sha256": "19e073988c1f46e6a90634cf3f901d943daac0b95a422f9dfd06d143b0c5b274",
+     "bytes": 18652
+    },
+    "battery_R.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-001/battery_R.jsonl",
+     "sha256": "a2493ebade63ed11bd5c0cd3b4b335352181ad9f3d7c0d752f2ce93967fc54e6",
+     "bytes": 19596
+    },
+    "repair_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-001/repair_receipt.json",
+     "sha256": "209b955feeed575b7f6b09367ff36ba99c9eb47d0eaa124f70a508fbd4a5014d",
+     "bytes": 878
+    },
+    "repair_spec.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-001/repair_spec.json",
+     "sha256": "05837ca33b4fd1176c0775eac08023c2262ec8c96c2f352c912f6f4d1b6d7743",
+     "bytes": 46480
+    },
+    "cap_loop.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-001/cap_loop.json",
+     "sha256": "2ef5ad47700c6e8d8e7f4e935181e48d1baa3e6f0850764351ab24cdf47eaab3",
+     "bytes": 44279
+    },
+    "cap_neutral.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-001/cap_neutral.json",
+     "sha256": "72d375ee044c36d9323641d1aea0d0dbac559675841a6191da8af112f8a8870d",
+     "bytes": 44371
+    }
+   }
+  },
+  "arm-002": {
+   "verdict": "ARM_COMPLETE",
+   "artifacts": {
+    "mirror_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-002/mirror_receipt.json",
+     "sha256": "a93303a845909a2d7ad1174e3e082dad859e417dd92b3d0a4cc9a13076143c5e",
+     "bytes": 2587
+    },
+    "recovered.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-002/recovered.json",
+     "sha256": "9b67392eb0af94328acafa97d2e2035062139f9bb29b37b582785b8443acb19d",
+     "bytes": 54952
+    },
+    "battery_M.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-002/battery_M.jsonl",
+     "sha256": "4279f3c9d301155bf10cd9134998111846b9582277b010d73fae3f1aa2e8d816",
+     "bytes": 19194
+    },
+    "battery_R.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-002/battery_R.jsonl",
+     "sha256": "e1b6dc169042a4c85700b4e2191b9ec9f5703b87f1c7f9ead750ad57ca88be64",
+     "bytes": 19249
+    },
+    "repair_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-002/repair_receipt.json",
+     "sha256": "4aa341cab1e02f731af0ef74846fd44c10a1523a15c439238d1ac9714c15b2b2",
+     "bytes": 878
+    },
+    "repair_spec.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-002/repair_spec.json",
+     "sha256": "65d1f5e0ed03c2cb2014a6652ef62e06810d1c6ed0a86bed4b7e242261cab35f",
+     "bytes": 46439
+    },
+    "cap_loop.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-002/cap_loop.json",
+     "sha256": "64cfbde15a038fb02643b6339a755dca692fcf9ff93a61cd3b4b8c037d2cdc0a",
+     "bytes": 44244
+    },
+    "cap_neutral.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-002/cap_neutral.json",
+     "sha256": "cfc263ea1823c326126df74e20ef2052189321e592e3275f9a2238cb88c3a9c5",
+     "bytes": 44318
+    }
+   }
+  },
+  "arm-003": {
+   "verdict": "ARM_COMPLETE",
+   "artifacts": {
+    "mirror_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-003/mirror_receipt.json",
+     "sha256": "4b9e08bd2b6324efacad6a9892f256123233b79dabd69f6180267916c12d0a5a",
+     "bytes": 2584
+    },
+    "recovered.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-003/recovered.json",
+     "sha256": "a7610bc622a54034947e12ab4c3af70f28f2d6856b77531a08c5b69854f3e492",
+     "bytes": 54958
+    },
+    "battery_M.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-003/battery_M.jsonl",
+     "sha256": "5351a3f6219d445e647d020dd0ebc9d1c80e82f21e307e4a44c8a2a3b0d1de26",
+     "bytes": 17969
+    },
+    "battery_R.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-003/battery_R.jsonl",
+     "sha256": "3f67081ba6663b92bc48064addd22354056bb162ac40ff28fe92152ca1336d69",
+     "bytes": 20581
+    },
+    "repair_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-003/repair_receipt.json",
+     "sha256": "7ecc400455725b123458f0fa892fa8961add4c2350b53e0651791037d8f10824",
+     "bytes": 878
+    },
+    "repair_spec.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-003/repair_spec.json",
+     "sha256": "3ab00b8e67e9e41a959c3584eabc8f7e8c0d4a975e9edf41ee120a38baf33825",
+     "bytes": 46459
+    },
+    "cap_loop.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-003/cap_loop.json",
+     "sha256": "b0b5beafede4d03456febc418f61a447426a01d16d5a8f78d4c1ad62f2db228f",
+     "bytes": 44227
+    },
+    "cap_neutral.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-003/cap_neutral.json",
+     "sha256": "2c0971ce8483dd74a3f5e407cb1a07358198aa0a3d5a51849791ed6334a5b767",
+     "bytes": 44417
+    }
+   }
+  },
+  "arm-004": {
+   "verdict": "ARM_COMPLETE",
+   "artifacts": {
+    "mirror_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-004/mirror_receipt.json",
+     "sha256": "beebc5b2c1c9d57a812018a6b72429292ff3253b6d7faa9b062ee785c908e8bc",
+     "bytes": 2583
+    },
+    "recovered.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-004/recovered.json",
+     "sha256": "738e2d58b7dfac7962f581b20bf93bedae642a02b1bd20414c0880a3f5600560",
+     "bytes": 54972
+    },
+    "battery_M.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-004/battery_M.jsonl",
+     "sha256": "e937bee985b208f5b97f4f72dfa667a06cf5e4b86ac90b692d5bdd1bdcc118f1",
+     "bytes": 19051
+    },
+    "battery_R.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-004/battery_R.jsonl",
+     "sha256": "dba716066d7e2f72b22f6ee539fcca20b222582f2e994b89a81fc718b5193bc6",
+     "bytes": 19192
+    },
+    "repair_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-004/repair_receipt.json",
+     "sha256": "016a43ceae6ec3f4473e8b2fa0b2e6692030adf5aba9b7d9a7ae5539157c0b30",
+     "bytes": 878
+    },
+    "repair_spec.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-004/repair_spec.json",
+     "sha256": "72d32129c22b56165941e3cdccd180a2bcdbc467265f7b534d912379056e1bfd",
+     "bytes": 46452
+    },
+    "cap_loop.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-004/cap_loop.json",
+     "sha256": "9f26ca712660b58c3ace2d92c0e1d713ee9aa5dc7e452bf30f96d7699fd87c8b",
+     "bytes": 44219
+    },
+    "cap_neutral.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-004/cap_neutral.json",
+     "sha256": "1276edf805c1d310d3bc493b47b809a29ba25113f20734b0f1176ba6a6551cbf",
+     "bytes": 44387
+    }
+   }
+  },
+  "arm-005": {
+   "verdict": "ARM_COMPLETE",
+   "artifacts": {
+    "mirror_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-005/mirror_receipt.json",
+     "sha256": "1e4cb4533c5ef6a6abd1662a4b899508b59e4f242ea8b56e8414ea28dfb67c19",
+     "bytes": 2587
+    },
+    "recovered.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-005/recovered.json",
+     "sha256": "3f4927865184236fc651bc5fcd355abcd32f9998b862e9a5abb9b0288a23265d",
+     "bytes": 54787
+    },
+    "battery_M.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-005/battery_M.jsonl",
+     "sha256": "5559b149f78ccf52294d8ddd9bcb28f021021acba22b011204c2f06cb6804a3e",
+     "bytes": 18521
+    },
+    "battery_R.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-005/battery_R.jsonl",
+     "sha256": "c49536ce0c17f750fc68c47ec5565d9dc1feb8b4f6e390f2156ed674fc1bc1c0",
+     "bytes": 19170
+    },
+    "repair_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-005/repair_receipt.json",
+     "sha256": "d2f8b736b16b7f03f578ca32828a32831c1051e77b2422771148998bf35f85a6",
+     "bytes": 878
+    },
+    "repair_spec.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-005/repair_spec.json",
+     "sha256": "817dac488d6d488602be44440048a8aeb982bc10c265e6a86918959a2e88cc56",
+     "bytes": 46267
+    },
+    "cap_loop.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-005/cap_loop.json",
+     "sha256": "c97883a0bc761579ec7168f612f38af20a4be0aa14277e297f58f0307bc78a5f",
+     "bytes": 44200
+    },
+    "cap_neutral.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-005/cap_neutral.json",
+     "sha256": "2538c816ee2f880a9c1e0a230214395894b38405f4fac3d3ec65bbca34b9d4c5",
+     "bytes": 44423
+    }
+   }
+  },
+  "arm-006": {
+   "verdict": "ARM_COMPLETE",
+   "artifacts": {
+    "mirror_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-006/mirror_receipt.json",
+     "sha256": "da0afa72c5520010ac46e1af30fd9cfdd8166084a95543b8e9d2995ad93ee7b6",
+     "bytes": 2587
+    },
+    "recovered.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-006/recovered.json",
+     "sha256": "bbd985d66443fe1c82182df1c738b7c637bb68b0024ac22eb30276b0d96ed872",
+     "bytes": 54991
+    },
+    "battery_M.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-006/battery_M.jsonl",
+     "sha256": "d07c300d58278163ca7a44fb61975bd6e8cdaa6260efc4c3f433c632e9996687",
+     "bytes": 19057
+    },
+    "battery_R.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-006/battery_R.jsonl",
+     "sha256": "e5419c0dede6c9bb811980db7d8bf50e494db1968ef3ac6edf8b2047bcab7760",
+     "bytes": 19398
+    },
+    "repair_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-006/repair_receipt.json",
+     "sha256": "b430ec91d3f5f52e9d31a0a7f0f8d8794079717b930f678efd8ffeb5961f1dd3",
+     "bytes": 878
+    },
+    "repair_spec.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-006/repair_spec.json",
+     "sha256": "e10caa59c2f3eecf0f285ce73bbaed9561d9efdcfe2e2873bebb7f94b4466f20",
+     "bytes": 46472
+    },
+    "cap_loop.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-006/cap_loop.json",
+     "sha256": "828ad6f36b5b99bf95b4a355dcaf4ac369f8cea21108fe607f308cb8449900c3",
+     "bytes": 44190
+    },
+    "cap_neutral.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-006/cap_neutral.json",
+     "sha256": "d3f2ffb63738326d3a206fc02b153906034d88d119a7ed45b4d97f6c7cfab3e7",
+     "bytes": 44165
+    }
+   }
+  },
+  "arm-007": {
+   "verdict": "ARM_COMPLETE",
+   "artifacts": {
+    "mirror_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-007/mirror_receipt.json",
+     "sha256": "65f67fd79c75bc271acfde39202df66669d417a7ca0061e55ee9f29978555f3c",
+     "bytes": 2587
+    },
+    "recovered.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-007/recovered.json",
+     "sha256": "b6e152fd4cf7075fbf26cf338d7834858c5e2bc1f48cd7252e84be8f694e9721",
+     "bytes": 54901
+    },
+    "battery_M.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-007/battery_M.jsonl",
+     "sha256": "581db69463a5da23300c0568b86ae1d12ce462ab10eba9a63348a6d075862e55",
+     "bytes": 18593
+    },
+    "battery_R.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-007/battery_R.jsonl",
+     "sha256": "02cd6a1265564de2e453210e21dd27c93689f6d557a23af8daca6d4d2524c964",
+     "bytes": 18978
+    },
+    "repair_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-007/repair_receipt.json",
+     "sha256": "3b30d2bd671e88a4adefe80e41fef5be08e5f691d7e285ff6213b1b3e912fa06",
+     "bytes": 878
+    },
+    "repair_spec.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-007/repair_spec.json",
+     "sha256": "8d91a9981a49e239b9c217a7661fa438a5064dadb66774b95bc53b9ec1461597",
+     "bytes": 46409
+    },
+    "cap_loop.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-007/cap_loop.json",
+     "sha256": "b362da81ff89afa3ae34a83a426366fd9ce2e766aa61ecbefa89ce47c13c139e",
+     "bytes": 44140
+    },
+    "cap_neutral.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-007/cap_neutral.json",
+     "sha256": "b9b5275d27e64cc557f2da79f2850b506541a651967381e7651026bd7a9596ea",
+     "bytes": 44327
+    }
+   }
+  },
+  "arm-008": {
+   "verdict": "ARM_COMPLETE",
+   "artifacts": {
+    "mirror_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-008/mirror_receipt.json",
+     "sha256": "10d47b3ab78da83f62a60cf335cc5950e0044b2ebc031e689da70a647e319055",
+     "bytes": 2584
+    },
+    "recovered.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-008/recovered.json",
+     "sha256": "db0adebdc6934c8ebd79fcb83b8ee90ed5a6d24c3f7144fa3fddb55462f12191",
+     "bytes": 54969
+    },
+    "battery_M.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-008/battery_M.jsonl",
+     "sha256": "92c7cb174b9d676c8a272714ca7bf59309e85422c073b4556f538b5f56c931b8",
+     "bytes": 18793
+    },
+    "battery_R.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-008/battery_R.jsonl",
+     "sha256": "af2398ca3b5960d5f7067f6043202fd37385c23ea412d9ca8d2ea8774d371216",
+     "bytes": 22124
+    },
+    "repair_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-008/repair_receipt.json",
+     "sha256": "c840e980e4248b7defb684394fc2698b269c857fd923c61f17958b1274144444",
+     "bytes": 878
+    },
+    "repair_spec.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-008/repair_spec.json",
+     "sha256": "6efef1058b5bdc67bca313c1f33b20893aa2fbbcff6435f512bd74d7a78d8ae8",
+     "bytes": 46456
+    },
+    "cap_loop.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-008/cap_loop.json",
+     "sha256": "b8cf422ccb4ccbdc527371c034441ef6756a3eaf4c2bbd68f16b7ddd9d7b5ae7",
+     "bytes": 43956
+    },
+    "cap_neutral.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-008/cap_neutral.json",
+     "sha256": "53694425a3e3ad37ed83461db375851203a84bd5f4061f677ad134f5e5df1e34",
+     "bytes": 44312
+    }
+   }
+  },
+  "arm-009": {
+   "verdict": "ARM_COMPLETE",
+   "artifacts": {
+    "mirror_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-009/mirror_receipt.json",
+     "sha256": "ea8244115332e8a68b140e97f5ab3abbd6b6b0b6cc0762a03e5e013057431495",
+     "bytes": 2587
+    },
+    "recovered.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-009/recovered.json",
+     "sha256": "90c3bd68206a1c243140cf752994eb610a3b61c786cfd079ef311c91b4032e5b",
+     "bytes": 54985
+    },
+    "battery_M.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-009/battery_M.jsonl",
+     "sha256": "f86072fef8757f614f954b4a8fd82d85526d781e0583aa2dfc082c777dbc70e5",
+     "bytes": 28664
+    },
+    "battery_R.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-009/battery_R.jsonl",
+     "sha256": "8d3a58c3aaba931db584fec422386daf2d65106afd87a5398f2efea36656ccf3",
+     "bytes": 19039
+    },
+    "repair_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-009/repair_receipt.json",
+     "sha256": "a7ec1bd8fa527d3b1d115082ce701a55e399bcb8984248043c82616c94b59157",
+     "bytes": 878
+    },
+    "repair_spec.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-009/repair_spec.json",
+     "sha256": "690c1000fed8cd911922526573f69f06c4a3e8d66fc1c90035e7060a170e6dac",
+     "bytes": 46471
+    },
+    "cap_loop.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-009/cap_loop.json",
+     "sha256": "b8065acd3453eea255f35bea2c53a35dd8ca43ab7514f754fccfc3bb72ced4f6",
+     "bytes": 43934
+    },
+    "cap_neutral.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-009/cap_neutral.json",
+     "sha256": "24602898d9b25a03b6ed6f6056811c13f05a878ec2305734331e2975e0abfab1",
+     "bytes": 43684
+    }
+   }
+  },
+  "arm-010": {
+   "verdict": "ARM_COMPLETE",
+   "artifacts": {
+    "mirror_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-010/mirror_receipt.json",
+     "sha256": "489cdb918aaa413abd5c436d43893b228b39aff5bc538108669ead4cecec520a",
+     "bytes": 2585
+    },
+    "recovered.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-010/recovered.json",
+     "sha256": "80b5caa729287ae9229dcf111c23b2913cfce2abe9828c5b1179ebacfc347164",
+     "bytes": 54863
+    },
+    "battery_M.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-010/battery_M.jsonl",
+     "sha256": "b805a2e0f928e82f6a282eef6189070b660f405f526f82973776e186bb423adb",
+     "bytes": 20993
+    },
+    "battery_R.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-010/battery_R.jsonl",
+     "sha256": "d62efc6b6bef11dcddcf10b435266c7603fe382583a04a66be5cf3ea4fa7326d",
+     "bytes": 27346
+    },
+    "repair_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-010/repair_receipt.json",
+     "sha256": "a6a646a04428afbcb591a13cc1cb60733d978f4e07d672af6e26777961f0a9c4",
+     "bytes": 878
+    },
+    "repair_spec.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-010/repair_spec.json",
+     "sha256": "18d317bef99c30070d0b9b54796bb2e93250165fff48b5656cb4b88d22432e00",
+     "bytes": 46351
+    },
+    "cap_loop.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-010/cap_loop.json",
+     "sha256": "1e5c610243379e14684a52357cc00920788e8e61e16a6ff2f896a990ef64b762",
+     "bytes": 44186
+    },
+    "cap_neutral.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-010/cap_neutral.json",
+     "sha256": "22bf9546d9d6a727a3a5d1b703a16da69066f2b8e11780d9851a24ac1edf7eda",
+     "bytes": 44335
+    }
+   }
+  },
+  "arm-011": {
+   "verdict": "ARM_COMPLETE",
+   "artifacts": {
+    "mirror_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-011/mirror_receipt.json",
+     "sha256": "82f9cad2b270439d6ac72f32e7b7b385a5573a7a9f45cfb63ffc146c686e3bf7",
+     "bytes": 2587
+    },
+    "recovered.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-011/recovered.json",
+     "sha256": "0678ec9777731d1c5e45b79153f660f6c938a0b33c76c737545562578f96902d",
+     "bytes": 54955
+    },
+    "battery_M.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-011/battery_M.jsonl",
+     "sha256": "44f64b54c25870c375fb3a7c8c5736c4b34b63d27360bcc4a582c242e86a9815",
+     "bytes": 21053
+    },
+    "battery_R.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-011/battery_R.jsonl",
+     "sha256": "a616df10c52947b35f3dd47c7a29fccf151d1377e6dba21b23bdba8c78a8124e",
+     "bytes": 18186
+    },
+    "repair_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-011/repair_receipt.json",
+     "sha256": "a4ce65abb45329dc6cfc9a5b16cd9bf49102f1dc717101550f2a234174d9ca44",
+     "bytes": 878
+    },
+    "repair_spec.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-011/repair_spec.json",
+     "sha256": "37ed6f82e467073dd6e46f44da52134f72f0fea3c1684d5a2b9798feeca8d6ab",
+     "bytes": 46444
+    },
+    "cap_loop.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-011/cap_loop.json",
+     "sha256": "f3802044cfc72614f898ceb4a9366bb43042bb07f88702cffaebe963cc491f4e",
+     "bytes": 44215
+    },
+    "cap_neutral.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-011/cap_neutral.json",
+     "sha256": "679c8f0a303c8deac1ee10d449059dcd69c8e41d66a4d17601b76e7d5fe80fc3",
+     "bytes": 44337
+    }
+   }
+  },
+  "arm-012": {
+   "verdict": "ARM_COMPLETE",
+   "artifacts": {
+    "mirror_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-012/mirror_receipt.json",
+     "sha256": "2deac4440c67b47d4edb7163da59de10c042e0237b39b9fdada1e1562730cf00",
+     "bytes": 2587
+    },
+    "recovered.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-012/recovered.json",
+     "sha256": "c62d45e990ff6ced12a545e946254802377880526155e704166084279fdb1fb7",
+     "bytes": 54963
+    },
+    "battery_M.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-012/battery_M.jsonl",
+     "sha256": "9802f79450084e7ce2b0c8fb73c70fea5fe092ee13dbb8ad648542b9df532b3a",
+     "bytes": 19419
+    },
+    "battery_R.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-012/battery_R.jsonl",
+     "sha256": "f94e550ced56d0774c1dae4c5625e59a113fb9d28401268ba44ad42894890f59",
+     "bytes": 19004
+    },
+    "repair_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-012/repair_receipt.json",
+     "sha256": "51a0e3d5876453bbe6dc6ab675616f4c30bfc1a5dbb47838febe2f902bd3b05b",
+     "bytes": 878
+    },
+    "repair_spec.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-012/repair_spec.json",
+     "sha256": "6e74e017d14b20e69d1acd3298821862085cde9fe678bf55591312a032525f23",
+     "bytes": 46464
+    },
+    "cap_loop.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-012/cap_loop.json",
+     "sha256": "e9d8136b22d55498a8bc5f126c0abfb0b5335567b07df74675ad49422944c81a",
+     "bytes": 44211
+    },
+    "cap_neutral.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-012/cap_neutral.json",
+     "sha256": "ca5dc372e8920fa90e7e1b85e24beedff67d8d23fcc7743f711301cebe121b6e",
+     "bytes": 44091
+    }
+   }
+  },
+  "arm-013": {
+   "verdict": "ARM_COMPLETE",
+   "artifacts": {
+    "mirror_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-013/mirror_receipt.json",
+     "sha256": "4bf2b936aa3e77da464b20c604a478b78daeb49c9b10ea364cffd1ecc33f5a1a",
+     "bytes": 2583
+    },
+    "recovered.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-013/recovered.json",
+     "sha256": "2674ab11cdbfcc81cd61c8ae6ec4362c5129356ae0ba98a9c9cc1617e6182ccd",
+     "bytes": 54995
+    },
+    "battery_M.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-013/battery_M.jsonl",
+     "sha256": "24841267525e53f5cb33f4a4b2df696735fcdc390daacab54b8d9c9c847e1d26",
+     "bytes": 19197
+    },
+    "battery_R.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-013/battery_R.jsonl",
+     "sha256": "1a7fd3090bba5ac90fcaedbb80da87fcd87647fdeb40a4f9f736e068c142b4ba",
+     "bytes": 19763
+    },
+    "repair_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-013/repair_receipt.json",
+     "sha256": "4122c5c14b44ecf94010335669e064bf6d1527a137a30c5a61717ff4cf2118b6",
+     "bytes": 878
+    },
+    "repair_spec.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-013/repair_spec.json",
+     "sha256": "b36430791973c1626acdc0174fc9f0b1ba51f38feb62227b3dc1422f97121f8e",
+     "bytes": 46476
+    },
+    "cap_loop.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-013/cap_loop.json",
+     "sha256": "2291a72849fc5b275b9ff8efe6fcf127d13192c034d1b61196c0b378244cbe19",
+     "bytes": 44168
+    },
+    "cap_neutral.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-013/cap_neutral.json",
+     "sha256": "0be4b6b7bfc68370301463802c8b29bedd60d24e28f59bbf841b68759cff3db9",
+     "bytes": 44339
+    }
+   }
+  },
+  "arm-014": {
+   "verdict": "ARM_COMPLETE",
+   "artifacts": {
+    "mirror_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-014/mirror_receipt.json",
+     "sha256": "c77a755c72c4866fe34bdfcad32440378331ccc94fcae673b8b03af8f9db68be",
+     "bytes": 2584
+    },
+    "recovered.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-014/recovered.json",
+     "sha256": "b45515657f19f73d65de0df157c9b010180be1b4651c0f928aa6c7976f21aa04",
+     "bytes": 54953
+    },
+    "battery_M.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-014/battery_M.jsonl",
+     "sha256": "f0c6036e7b27b1651e5130b64cf879d172dae11f8012e1e8e6c58724e09c6148",
+     "bytes": 28000
+    },
+    "battery_R.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-014/battery_R.jsonl",
+     "sha256": "5121f9588d3ad1de81908f4e529e8ee6457efa760a5ef1092ee3c9752f6a9993",
+     "bytes": 25800
+    },
+    "repair_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-014/repair_receipt.json",
+     "sha256": "f377c99e7bb573f0eb6f3ad8cc57dfc0cd055282e89f6de9dca7abd280c94912",
+     "bytes": 878
+    },
+    "repair_spec.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-014/repair_spec.json",
+     "sha256": "4011a880f04b7dd478ff2a052d374c627a0989b3ddcdfe27e79f2a9a2b334deb",
+     "bytes": 46438
+    },
+    "cap_loop.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-014/cap_loop.json",
+     "sha256": "b7e72687bee7fde850f0f2fe62063422d13a01670b6463ee42e1cd7bc4a6b1ca",
+     "bytes": 43845
+    },
+    "cap_neutral.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-014/cap_neutral.json",
+     "sha256": "7601db7e81cd377d5eb2de2d62913222dfcb04bae9861891dd9e1578e2e61953",
+     "bytes": 44016
+    }
+   }
+  },
+  "arm-015": {
+   "verdict": "ARM_COMPLETE",
+   "artifacts": {
+    "mirror_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-015/mirror_receipt.json",
+     "sha256": "28ca4fc0246df6202b7980c085465ae000e0a389e0c4924775679493bb60e1d5",
+     "bytes": 2587
+    },
+    "recovered.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-015/recovered.json",
+     "sha256": "299022ceed52a947e43a78d953ca6db84d6fb3fa894fdaad4c1653debb1ee7ec",
+     "bytes": 54992
+    },
+    "battery_M.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-015/battery_M.jsonl",
+     "sha256": "76df4769e0416ce9c86a866fd53c0170dd008764083110081e0a9814371a94c4",
+     "bytes": 21863
+    },
+    "battery_R.jsonl": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-015/battery_R.jsonl",
+     "sha256": "a3923c9bca16a78fd5f5d23b460837fe70daebe921155d1b6c0b724c5b6ecc01",
+     "bytes": 19242
+    },
+    "repair_receipt.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-015/repair_receipt.json",
+     "sha256": "6fce26bd64310981ee6cdb87e6d1746541fa51c45e2bf64c6661b509e76294cb",
+     "bytes": 878
+    },
+    "repair_spec.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-015/repair_spec.json",
+     "sha256": "4d4f9e7e6634d6c81cce9f48e16d7c68dc664956a560440d6e8acd63735e37db",
+     "bytes": 46479
+    },
+    "cap_loop.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-015/cap_loop.json",
+     "sha256": "988ae529c68e7d8e22d36a46c40a63088e1f6c6bdc1a1be6a1fb47b0ca86c3ad",
+     "bytes": 44204
+    },
+    "cap_neutral.json": {
+     "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-015/cap_neutral.json",
+     "sha256": "0ad771b36924afa59e265ba51dc5bc352b87c0202ae021fbd56dd35ec5379c50",
+     "bytes": 44133
+    }
+   }
+  }
+ }
+}

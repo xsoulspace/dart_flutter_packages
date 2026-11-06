@@ -1,0 +1,141 @@
+{
+ "stage": "pilot",
+ "started_utc": "2026-11-06T00:00:13+00:00",
+ "ladder": [
+  {
+   "scale": 2.0,
+   "started_utc": "2026-11-06T00:00:13+00:00",
+   "lock_wait_ms": 80000,
+   "retry_interval_used": 10,
+   "loop_rate": 0.1875,
+   "hits": 3,
+   "n": 16,
+   "lift_pp": 0.0,
+   "finished_utc": "2026-11-06T00:02:37+00:00"
+  },
+  {
+   "scale": 3.2,
+   "started_utc": "2026-11-06T00:02:37+00:00",
+   "lock_wait_ms": 0,
+   "retry_interval_used": 10,
+   "loop_rate": 0.3125,
+   "hits": 5,
+   "n": 16,
+   "lift_pp": 12.5,
+   "finished_utc": "2026-11-06T00:03:48+00:00"
+  },
+  {
+   "scale": 4.8,
+   "started_utc": "2026-11-06T00:03:48+00:00",
+   "lock_wait_ms": 0,
+   "retry_interval_used": 10,
+   "loop_rate": 0.6875,
+   "hits": 11,
+   "n": 16,
+   "lift_pp": 50.0,
+   "finished_utc": "2026-11-06T00:06:06+00:00"
+  }
+ ],
+ "ladder_scales": [
+  2.0,
+  3.2,
+  4.8,
+  6.4,
+  9.6,
+  12.8
+ ],
+ "base_pilot_loop_rate": 0.1875,
+ "lift_target": 0.2,
+ "columns_procedure": "a3_design.pair_columns(1)",
+ "columns_sha256": "e13b692ce9c4bad0f4dfbfd6b3cfe59efa84c97483cd5bdbca038eb3c1e8bdff",
+ "stages": [
+  {
+   "step": "apply_delta_pilot_s2.0_L15",
+   "exit": 0,
+   "wall_ms": 213,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s2.0_L19",
+   "exit": 0,
+   "wall_ms": 169,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s2.0",
+   "exit": 0,
+   "wall_ms": 7852,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "battery_pilot_s2.0",
+   "exit": 0,
+   "wall_ms": 54980,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s3.2_L15",
+   "exit": 0,
+   "wall_ms": 299,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s3.2_L19",
+   "exit": 0,
+   "wall_ms": 273,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s3.2",
+   "exit": 0,
+   "wall_ms": 6694,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "battery_pilot_s3.2",
+   "exit": 0,
+   "wall_ms": 62656,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s4.8_L15",
+   "exit": 0,
+   "wall_ms": 309,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "apply_delta_pilot_s4.8_L19",
+   "exit": 0,
+   "wall_ms": 393,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "make_mirror_pilot_s4.8",
+   "exit": 0,
+   "wall_ms": 12279,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  },
+  {
+   "step": "battery_pilot_s4.8",
+   "exit": 0,
+   "wall_ms": 124646,
+   "wall_ms_claim": false,
+   "stderr_tail": ""
+  }
+ ],
+ "chosen_scale": 4.8,
+ "lock_wait_total_ms": 80000,
+ "finished_utc": "2026-11-06T00:06:06+00:00",
+ "verdict": "PILOT_OK scale=4.8"
+}

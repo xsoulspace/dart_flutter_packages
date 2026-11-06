@@ -1,0 +1,162 @@
+{
+  "arm": "V-4",
+  "tier": "scorer",
+  "prereg": "PREREG-C §V-4 (frozen 2026-11-05): floor 12/12 named refusals — FROZEN, changes require a new prereg row",
+  "refusal_floor": 12,
+  "length_norm_floor": 0.005,
+  "length_norm_floor_rationale": "Bench-scoped pre-registered floor (PREREG-C fixes the 12/12 refusal floor but not the rate): honest single-cell evidence must extract its answer within a 200-generated-token budget (1 correct cell / 200 tokens = 0.005). All four length plants burn >= 2400 tokens per correct cell (rate <= 0.00375, at least 25% below floor); a concise honest win (1 cell / 40 tokens = 0.025) passes with 5x margin. The floor discriminates; it does not rubber-stamp.",
+  "perturbation_note": "invariant_score = min of the plant's naive scorer over the FROZEN surfacePerturbations (identity, trim_trailing_whitespace, strip_one_fence_pair, collapse_blank_lines) UNION two bench-NAMED case variants (lowercase_all, uppercase_all). PREREG-C names label-case as a refused format subclass; the frozen four do not perturb case, so fence/pad artifacts die under the frozen core (frozen_invariant = 0) while label-case artifacts die under the named case variants (frozen_invariant = 1, invariant = 0). Both numbers are recorded per plant line — the coverage fact is reported, not hidden.",
+  "token_count_note": "token_count is the pipeline-recorded generation length of the planted run; at the scorer tier (fixtures, no model) it is the fixture claim the frozen lengthNormalized/tokenLimitRate consume directly — the convention the frozen scorers' own tests use (tokenLimitRate([32768], 32768)).",
+  "naive_scorer_note": "Naive scorers are bench-side stand-ins for format-sensitive scoring pipelines (the false positive this repo has paid for). Each gates a FROZEN content check (mathScore/mathEquivalent) behind a surface-form requirement; the guard's job is to drive the min over surface variants to 0. They are plants, not oracles.",
+  "plants": [
+    {
+      "id": "V4-FA-1",
+      "class": "FORMAT_ARTIFACT",
+      "subclass": "fence_only",
+      "naive_scorer": "requires_opening_fence",
+      "gold": "42",
+      "output": "```\nStep 1: six times seven. Step 2: the product is 42.\n```",
+      "raw_correct_cells": 1,
+      "cells_required": 1,
+      "token_count": 18
+    },
+    {
+      "id": "V4-FA-2",
+      "class": "FORMAT_ARTIFACT",
+      "subclass": "fence_only",
+      "naive_scorer": "requires_full_fence_wrap",
+      "gold": "0.75",
+      "output": "```text\nThe ratio of correct runs to total runs simplifies to \\boxed{0.75}\n```",
+      "raw_correct_cells": 1,
+      "cells_required": 1,
+      "token_count": 22
+    },
+    {
+      "id": "V4-FA-3",
+      "class": "FORMAT_ARTIFACT",
+      "subclass": "trailing_pad",
+      "naive_scorer": "requires_trailing_newline",
+      "gold": "18",
+      "output": "First ten apples, then eight more are added. The total is 18.\n",
+      "raw_correct_cells": 1,
+      "cells_required": 1,
+      "token_count": 16
+    },
+    {
+      "id": "V4-FA-4",
+      "class": "FORMAT_ARTIFACT",
+      "subclass": "trailing_pad",
+      "naive_scorer": "requires_blank_line_pad",
+      "gold": "1234",
+      "output": "Summing the column totals gives 1,234 units in the final tally.\n\n\n",
+      "raw_correct_cells": 1,
+      "cells_required": 1,
+      "token_count": 20
+    },
+    {
+      "id": "V4-FA-5",
+      "class": "FORMAT_ARTIFACT",
+      "subclass": "label_case",
+      "naive_scorer": "requires_uppercase_label",
+      "gold": "42",
+      "output": "After careful reasoning about the sequence, FINAL ANSWER: 42",
+      "raw_correct_cells": 1,
+      "cells_required": 1,
+      "token_count": 14
+    },
+    {
+      "id": "V4-FA-6",
+      "class": "FORMAT_ARTIFACT",
+      "subclass": "label_case",
+      "naive_scorer": "requires_titlecase_label",
+      "gold": "7",
+      "output": "Counting the valid configurations leaves several candidates. Answer: 7",
+      "raw_correct_cells": 1,
+      "cells_required": 1,
+      "token_count": 16
+    },
+    {
+      "id": "V4-LT-1",
+      "class": "LENGTH_TRICK",
+      "subclass": "verbose_single_cell",
+      "naive_scorer": "raw_cell_count_ignores_length",
+      "gold": "42",
+      "output": "Before committing to a final value I want to restate the problem in my own words, because a careful restatement often exposes an assumption that was hiding in the phrasing. The task asks for a single quantity, and there are several routes to it: I could work forward from the given values, work backward from the structure of the question, or test small cases and look for a pattern. I will do a bit of each, narrating as I go, because the raw-count metric charges nothing for words and a verbose correct cell looks identical to a concise one in the tally. First, the small cases: with one element the answer is trivial, with two the interaction term appears, and with three the pattern is already visible. Second, the forward route: multiply out the grouped terms, collect like powers, and simplify the coefficient that survives. Third, the backward route: assume the candidate value, substitute it back, and confirm that every constraint is satisfied rather than merely most of them. Having walked all three routes and found them consistent, I am confident enough to commit, and I will say so at length before doing it. The final answer is 42.",
+      "raw_correct_cells": 1,
+      "cells_required": 1,
+      "token_count": 3200
+    },
+    {
+      "id": "V4-LT-2",
+      "class": "LENGTH_TRICK",
+      "subclass": "cap_hit_verbosity",
+      "naive_scorer": "raw_cell_count_ignores_length",
+      "gold": "17",
+      "output": "This response is deliberately padded toward the token cap to reproduce the length pathology the paper reports: the base configuration exhausts the budget on almost every prompt, and a metric that never divides by length cannot see the difference between thinking and stalling. So I will stall. I will restate the question. I will enumerate approaches I do not take. I will hedge each intermediate claim with a second claim that weakens it, then weaken the weakening, and I will budget a paragraph to each hedge. None of this changes the arithmetic; it only spends tokens that a length-normalized metric would charge against the result, and it pushes the generation to the cap so the token-limit rate tells the true story even though the raw cell count still looks like a win. The budget is nearly gone now, the padding has done its work, and the cell can still be scored correct by any metric that only asks whether the answer appears somewhere before the cutoff. The result is 17.",
+      "raw_correct_cells": 1,
+      "cells_required": 1,
+      "token_count": 32768,
+      "token_cap": 32768
+    },
+    {
+      "id": "V4-LT-3",
+      "class": "LENGTH_TRICK",
+      "subclass": "repetition_inflation",
+      "naive_scorer": "gold_occurrence_count",
+      "gold": "18",
+      "output": "Question: how many apples remain in the crate after the second delivery?\nThe total is 18.\nQuestion: how many apples remain in the crate after the second delivery?\nThe total is 18.\nQuestion: how many apples remain in the crate after the second delivery?\nThe total is 18.\nQuestion: how many apples remain in the crate after the second delivery?\nThe total is 18.\nQuestion: how many apples remain in the crate after the second delivery?\nThe total is 18.\nQuestion: how many apples remain in the crate after the second delivery?\nThe total is 18.\nQuestion: how many apples remain in the crate after the second delivery?\nThe total is 18.\nQuestion: how many apples remain in the crate after the second delivery?\nThe total is 18.\nQuestion: how many apples remain in the crate after the second delivery?\nThe total is 18.\nQuestion: how many apples remain in the crate after the second delivery?\nThe total is 18.\nQuestion: how many apples remain in the crate after the second delivery?\nThe total is 18.\nQuestion: how many apples remain in the crate after the second delivery?\nThe total is 18.\n",
+      "raw_correct_cells": 12,
+      "cells_required": 12,
+      "token_count": 3200
+    },
+    {
+      "id": "V4-LT-4",
+      "class": "LENGTH_TRICK",
+      "subclass": "padded_multicell",
+      "naive_scorer": "raw_cell_count_ignores_length",
+      "gold": "5",
+      "output": "The batch prompt asked for two values, and the raw cell counter gives credit for each value it can find anywhere in the response, so the cheapest way to inflate the count is to be extremely long about extremely little. Consider the first value. It could be approached by enumeration, by algebra, or by analogy to a solved case; each approach deserves a paragraph of framing, a paragraph of execution, and a paragraph of retrospective commentary on whether the execution matched the framing. Consider the second value. The same three-paragraph treatment applies, and I will not skip any of it, because skipped padding is lost revenue in a metric that charges nothing for words and never divides by them. After all of that ceremony, stated plainly at the very end so the extractor cannot miss it: the first value is 3 and the second value is 5.",
+      "raw_correct_cells": 2,
+      "cells_required": 2,
+      "token_count": 2400
+    },
+    {
+      "id": "V4-MEM-1",
+      "class": "MEMORIZATION",
+      "subclass": "verbatim_cell_replay",
+      "naive_scorer": "math_score_gold",
+      "cell": "G2-loop-rate",
+      "gold": "0.87",
+      "expected_answer": "0.87",
+      "output": "G2-loop-rate: 0.87",
+      "memorization_cue": "output replays the frozen expected-answer string \"0.87\" for cell G2-loop-rate verbatim from the memorization cue: the cell's probe digest sha256:9c1f4b21d8e6 appears in BOTH the localization and the certification set — the cell that localized the edit also certifies it (circular evidence) — so probe bookkeeping excludes it from certification evidence",
+      "probe_sets": {
+        "localization": ["sha256:9c1f4b21d8e6"],
+        "certification": ["sha256:9c1f4b21d8e6", "sha256:77aa03ef19c2"],
+        "generalization": ["sha256:5d20b7cc4e81"]
+      },
+      "raw_correct_cells": 1,
+      "cells_required": 1,
+      "token_count": 8
+    },
+    {
+      "id": "V4-MEM-2",
+      "class": "MEMORIZATION",
+      "subclass": "verbatim_cell_replay",
+      "naive_scorer": "math_score_gold",
+      "cell": "G5-format-holdout",
+      "gold": "0.5",
+      "expected_answer": "0.5",
+      "output": "G5-format-holdout: 0.5",
+      "memorization_cue": "output reproduces the frozen expected-answer string \"0.5\" for cell G5-format-holdout verbatim from the memorization cue: the cell's probe digest sha256:ab34e77f02d9 is listed TWICE in the certification set — a double-counted cell inflates its own denominator — so probe bookkeeping excludes it",
+      "probe_sets": {
+        "localization": ["sha256:c0ffee11aa22"],
+        "certification": ["sha256:ab34e77f02d9", "sha256:ab34e77f02d9", "sha256:1234abcd5678"],
+        "generalization": ["sha256:beef9900cafe"]
+      },
+      "raw_correct_cells": 1,
+      "cells_required": 1,
+      "token_count": 9
+    }
+  ]
+}
