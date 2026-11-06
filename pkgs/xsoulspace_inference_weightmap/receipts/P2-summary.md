@@ -12,22 +12,27 @@
 > @32k base ≈93.0, edited(p50c) 31–33 (33.05). p10c 12.3/25.7/49.0; p25c
 > 14.1/25.1/39.9; p50c 48.1/67.1/62.3.
 
-Status (arc-2, updated 2026-11-06 ~17:00 local): **PARTIAL — denominators:
-glue 2/2 (+1 glue amendment p2_cell.sh LOCK_SLEEP_S); pools 2/2 with BOTH P-2b
-legs COMPLETE (gsm8k derived-input leg closed per addendum 2026-11-06b); base
-sides 3/3 cells (live digest re-verified arc-2); edited sides 0/4; practice
-passes 0/10 complete (pass 1 at 88/128 rows, chunks 00-10); mirrors 0/3;
-P-2b delta NOT_REACHED (pool READY, derivation precheck PASSED)** — arc-2 is
-in **FLEET_YIELD_V12 HOLD** (coordinator order 16:58 local: device yielded to
-V-1v2; zero lock acquisitions until coordinator go; resume pointer = receipts
-seq 17: pass 1 next chunk index 11). Arc-2 device wall used ≈1355 s of the 3 h
-ceiling (device-batch seconds; lock waits receipted separately as non-claims).
-Arc-1 status (battery-bound, 40/128 rows) is superseded but retained in the
-chained receipts. Run receipt: `receipts/P2-run.jsonl` (chained rows, seq
-0-17). Scratch state (resume authority): `$TMPDIR/p2-artifacts/run/
-manifest.jsonl` + per-pass dirs. Absolute ms/tok_s are NON-CLAIMS (POWER.md);
-arc-2 runs on **AC power (charging)** — no battery constraint; contention
-lock-waits receipted non-claims (sibling A2 32k arm until ~17:0x, then V-1v2).
+Status (arc-2 FINAL at OWNER STOP, 2026-11-06 ~18:15 local): **PARTIAL —
+denominators: glue 2/2 (+1 glue amendment p2_cell.sh LOCK_SLEEP_S); pools 2/2
+with BOTH P-2b legs COMPLETE (gsm8k derived-input leg closed per addendum
+2026-11-06b); base sides 3/3 cells (live digest re-verified arc-2); edited
+sides 0/4; practice passes 0/10 complete (pass 1 at 88/128 rows, chunks
+00-10); mirrors 0/3; P-2b delta NOT_REACHED (pool READY, derivation precheck
+PASSED, procedure recorded); budgets 25/50 BUDGET_PARTIAL** — arc-2 sequence:
+device resume 15:06 (AC restored) → chunks 07-10 under receipted contention
+(sibling A2 32k arm) → EXTERNAL_SIGTERM_UNKNOWN_SOURCE 16:26 (relaunched
+detached) → FLEET_YIELD_V12 executed clean at chunk boundary 16:58 (V-1v2
+acquired) → HOLD compliant (zero acquisitions; non-device work only) → OWNER
+STOP ORDER (network lag) received during hold; coordinator override confirmed
+no-go; run ended with no live P-2 children and no lock held by this actor.
+Arc-2 device wall ≈1692 s of the 3 h ceiling; POWER rule never triggered (AC
+throughout, battery 100% at stop). **Resume pointer: receipts/P2-run.jsonl
+seq 19 (owner_stop row: pass 1 next chunk index 11, exact detached launch
+command, full cell runbook 1-4, p2b derivation procedure, passes 2-10
+policy).** Run receipt: `receipts/P2-run.jsonl` (chain INTACT, seq 0-19, file
+sha256 0120af5e…). Scratch state (resume authority):
+`$TMPDIR/p2-artifacts/run/manifest.jsonl` + per-pass dirs. Absolute ms/tok_s
+are NON-CLAIMS (POWER.md); contention lock-waits receipted non-claims.
 
 ## Glue (both NAMED gaps CLOSED; VERDICTS row 2026-11-06)
 

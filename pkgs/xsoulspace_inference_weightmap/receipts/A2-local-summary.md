@@ -1,9 +1,15 @@
 # A2-LOCAL summary — PREREG-A arm A2 (addendum 2026-11-05 + addendum 3 2026-11-06)
 
-Status: **IN PROGRESS — HELD at fleet decision 2** (unified rewrite by resume
-actor 2, updated 2026-11-06 ~15:45Z). Remaining scope per **PREREG-A addendum
-3**: capcurve edited 32768 completion (n=8; rows 5-7 pending coordinator go)
-— everything else below is COMPLETE or COMPUTE_DEFERRED with resume pointers.
+Status: **STOPPED — OWNER STOP ORDER 2026-11-06 16:15Z** (network lag; relayed
+by coordinator during the V-1v2 halt-closing hold). Arm verdict class this
+arc: **PARTIAL with denominators achieved** (named cause OWNER_STOP_NETWORK_
+LAG; addendum law: PARTIAL-with-denominator is a verdict). Exact resume
+pointer: run receipt `owner_stop` row — capcurve edited 32768 rows 5-7
+(chunk05; rows 0-4 manifested: hits 3/5), relaunch command + launch
+accounting + post-completion steps recorded there. Unified rewrite by resume
+actor 2; remaining scope per **PREREG-A addendum 3**: capcurve edited 32768
+completion (n=8) — everything else below is COMPLETE or COMPUTE_DEFERRED
+with resume pointers.
 Run receipt: `A2-local-run.jsonl` (append-only). Scratch artifacts:
 `$TMPDIR/a2-artifacts/` — digested in the run receipt; absolute ms/tok_s are
 NON-CLAIMS (POWER.md), ratios and token counts are measurements.
@@ -106,7 +112,7 @@ Hit rule: frozen `tokenLimitRate` (count ≥ cap); generator-flag agreement
 | 4096 | base | 22/24 | **91.7%** | [74.2, 97.7] | 3843 | COMPLETE (AC) |
 | 4096 | edited | 20/24 | **83.3%** | [64.1, 93.3] | 3734 | COMPLETE (AC) |
 | 32768 (n=8) | base | 7/8 | **87.5%** | [52.9, 97.8] | 28779 | COMPLETE; published 93.0 [91.8,94.0] INSIDE our CI → base replicates directionally |
-| 32768 (n=8) | edited | 3/5 so far (r1,r3,r4 HIT; r0 1801, r2 864 no-hit) | — | — | — | **HELD at 5/8** (fleet decision 2; resume pointer in run receipt `hold_state` row; rows 5-7 on coordinator go) |
+| 32768 (n=8) | edited | 3/5 so far (r1,r3,r4 HIT; r0 1801, r2 864 no-hit) | — | — | — | **PARTIAL 5/8 at OWNER STOP 16:15Z** (held since fleet decision 2 15:33Z; resume pointer = run receipt `owner_stop` row: rows 5-7, chunk05, exact relaunch command) |
 | 8192 | base | — | — | — | — | COMPUTE_DEFERRED (addendum 3; 0 rows; resume command in `compute_deferred` row) |
 | 8192 | edited | — | — | — | — | COMPUTE_DEFERRED (addendum 3; 0 rows) |
 
@@ -145,13 +151,19 @@ prompts+gold digest-receipted, no rebuild needed). 0 rows generated.
 
 ## Verdict
 
-_PROVISIONAL — final arm verdict class lands when the edited-32k cell
-completes (rows 5-7, HELD pending coordinator go). Current standings:
-IFEval NON_REPLICATE (91/91, named causes, comparability DIRECTIONAL ONLY);
-cap-curve base@32k directional REPLICATE of the published 93.0 cut (pub
-point inside our n=8 CI); math24 PARTIAL (direction replicated, edited CI
-marginally excludes published under truncation suppression); cap-curve
-edited@32k at 5/8 (hits 3/5 — early trend BELOW the base 7/8 rate, i.e.
-toward the published direction, NOT yet scored); 8192 pair + MATH-100 +
-GSM8K-100 COMPUTE_DEFERRED with pointers. Comparability caveat attached to
-every A2-local verdict per addendum law._
+**This arc: PARTIAL with denominators achieved** (owner stop 16:15Z during
+the V-1v2 priority hold; named cause OWNER_STOP_NETWORK_LAG). Cell standings
+as delivered: IFEval **NON_REPLICATE** (91/91 both configs, named causes,
+comparability DIRECTIONAL ONLY per pre-score receipt rows); cap-curve
+base@32k **directional REPLICATE** of the published 93.0 cut (pub point
+inside our n=8 CI [52.9, 97.8]); math24 **PARTIAL** (direction replicated
++8.3pp edited>base; published base point inside our CI; published edited
+point marginally outside, 1.2pp, under CAP_4096 truncation suppression);
+cap-curve edited@32k **PARTIAL 5/8** (hits 3/5 — early trend below the base
+87.5%, i.e. toward the published direction; NOT scored, no verdict);
+capcurve 8192 pair + MATH-100 + GSM8K-100 **COMPUTE_DEFERRED** with exact
+resume pointers (addendum 3; never silent drops). The FINAL arm verdict
+class lands when edited-32k rows 5-7 complete per the `owner_stop` resume
+pointer. Comparability caveat attached to every A2-local verdict per
+addendum law: caps/subsets/sampler differ from the paper; P-2/P-2b retain
+the full-protocol comparison when compute allows.
