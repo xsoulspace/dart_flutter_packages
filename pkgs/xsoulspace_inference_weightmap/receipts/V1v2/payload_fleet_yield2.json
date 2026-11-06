@@ -1,0 +1,9 @@
+{
+ "kind": "v1v2-ops-note",
+ "payload": {
+  "artifact": "ops note: second fleet yield + P1B completion",
+  "at": "2026-11-06T15:37:01+00:00",
+  "code": "FLEET_YIELD_A2_RECEIVED",
+  "detail": "coordinator fleet decision 2 (~17:35 local): A2 arm ordered to HOLD at its next chunk boundary (its in-flight 32k chunk finished+manifested first; P1B acquired the lock after a receipted 980s wait behind that chunk); device yielded to this arc for the remaining batches through the final verdict row; P-2 remains held; A2/V6 may still slot batch-sized slices at per-batch releases (protocol-compliant). P1B BATCH_COMPLETE: gate PASS (mirror 22e52d07...), null3v2 GATE_PASS on draw d0 (cos L15=0.129230 L19=0.142332, both <= 0.2; d1 captures taken but NOT drawn - re-draw only on gate failure), all 10 stages exit 0, wall_ms_claim=false, power AC 96->97%, mirror swept."
+ }
+}

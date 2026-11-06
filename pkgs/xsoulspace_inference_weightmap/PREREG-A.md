@@ -57,3 +57,13 @@ Comparability caveat recorded with every A2-local verdict: caps and subsets
 differ from the paper; P-2/P-2b retain the full-protocol comparison when
 compute allows. Sampler/budget freeze (A4) unchanged. Datasets fetched via
 datasets-server rows API or raw github jsonl, digest-receipted before scoring.
+
+## Addendum 3 (2026-11-06, A2 remaining scope reduced by measured compute)
+32k-cap chunks run 30-60 min each on this box; the full remaining A2 protocol
+is infeasible within the arc. Remaining scope REDUCED to:
+- capcurve edited 32768 completion (n=8; base n=8 done);
+- MATH-500 accuracy n=24 stride-21 @4096, base vs edited (base side may reuse
+  digest-verified P-2/A2 gens).
+DEFERRED with resume pointers (named COMPUTE_DEFERRED, not dropped): capcurve
+8192 both configs, MATH n=100, GSM8K n=100. IFEval 91/91 both configs stands
+complete. Verdict classes and comparability caveats unchanged.

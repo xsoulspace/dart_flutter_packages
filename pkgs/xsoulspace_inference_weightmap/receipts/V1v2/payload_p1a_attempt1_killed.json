@@ -1,0 +1,12 @@
+{
+ "kind": "v1v2-ops-note",
+ "payload": {
+  "artifact": "ops note: P1A attempt 1 killed externally mid-batch; named, quarantined, relaunched clean",
+  "at": "2026-11-06T15:04:40+00:00",
+  "code": "P1A_ATTEMPT1_KILLED",
+  "detail": "P1A acquired the device lock 16:58:05 local (fleet-yield boundary) and ran steps serially: apply_delta x2, make_mirror (GATE PASS: mirror_shard_sha256 22e52d07... == arm-002 archive), capture loop+neutral, propose_fresh (GATES PASS: direction_sha256 L15 4cb33029... L19 15de5e61... == arm-002 recovered.json), battery_M_A COMPLETE 34/34 rows, battery_null1 R stage KILLED at 27/34 rows; battery_null2 NOT STARTED. The v12_batch runner + children received SIGKILL (exit 137) ~17:01-17:02 local, source not attributable from this seat (coincides with the fleet yield window; if the coordinator's hold enforcement pkilled device processes it caught this runner too). finally-block skipped => orphan lock (own, mtime 16:58:05) + orphan mirror left behind.",
+  "recovery": "no holder process verified (ps empty) => own orphan lock rmdir'd 17:04 local (STALE_LOCK_CLEARED_OWN_ORPHAN); mirror swept (probe scratch law); partial outputs QUARANTINED to $TMPDIR/wm-v1v2/gen/P1_attempt1_killed/ (textual, kept as evidence); sidecars removed; NOTHING from attempt 1 is scored or used - P1A relaunched from zero as attempt 2 with a fresh receipt",
+  "measurements_affected": "none (attempt-1 batteries never entered scoring; attempt-2 fresh measurements stand)",
+  "law": "serial -j1 preserved; lock protocol v3 unchanged; honest-evidence: failure recorded with named owner gap (kill source unattributed), no silent retry"
+ }
+}

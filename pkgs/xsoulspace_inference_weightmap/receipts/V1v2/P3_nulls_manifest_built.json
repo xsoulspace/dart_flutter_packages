@@ -1,0 +1,257 @@
+{
+ "tool": "v12_nulls.py",
+ "created_utc": "2026-11-06T13:52:53+00:00",
+ "seed": 20261106,
+ "d_hat_source": {
+  "recovered_json": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-009/recovered.json",
+  "recovered_json_sha256": "90c3bd68206a1c243140cf752994eb610a3b61c786cfd079ef311c91b4032e5b",
+  "repair_spec_sha256": "690c1000fed8cd911922526573f69f06c4a3e8d66fc1c90035e7060a170e6dac",
+  "per_layer_direction_sha256": {
+   "15": "42dbaf173742e44af708394f4900fc180f78812b4ad52d71d724aa9be467cb8c",
+   "19": "6de9987b916c69a3376acbd4c3c7a8125bbc9987bb4af7f60af1cf072fa11a49"
+  },
+  "per_layer_norm": {
+   "15": 1.0000000000000002,
+   "19": 0.9999999999999996
+  }
+ },
+ "removal_scale": -4.8,
+ "columns_per_layer": {
+  "15": [
+   28,
+   40,
+   180,
+   188,
+   204,
+   236,
+   319,
+   352,
+   533,
+   569,
+   628,
+   637,
+   647,
+   674,
+   687,
+   719,
+   736,
+   849,
+   856,
+   943,
+   955,
+   956,
+   957,
+   976,
+   1086,
+   1158,
+   1174,
+   1214,
+   1227,
+   1254,
+   1310,
+   1316,
+   1368,
+   1396,
+   1467,
+   1490,
+   1580,
+   1753,
+   1875,
+   1927,
+   1958,
+   1968,
+   2060,
+   2071,
+   2084,
+   2120,
+   2157,
+   2226,
+   2315,
+   2324,
+   2339,
+   2354,
+   2360,
+   2477,
+   2515,
+   2538,
+   2558,
+   2586,
+   2601,
+   2649,
+   2690,
+   2730,
+   2966,
+   2982
+  ],
+  "19": [
+   28,
+   40,
+   180,
+   188,
+   204,
+   236,
+   319,
+   352,
+   533,
+   569,
+   628,
+   637,
+   647,
+   674,
+   687,
+   719,
+   736,
+   849,
+   856,
+   943,
+   955,
+   956,
+   957,
+   976,
+   1086,
+   1158,
+   1174,
+   1214,
+   1227,
+   1254,
+   1310,
+   1316,
+   1368,
+   1396,
+   1467,
+   1490,
+   1580,
+   1753,
+   1875,
+   1927,
+   1958,
+   1968,
+   2060,
+   2071,
+   2084,
+   2120,
+   2157,
+   2226,
+   2315,
+   2324,
+   2339,
+   2354,
+   2360,
+   2477,
+   2515,
+   2538,
+   2558,
+   2586,
+   2601,
+   2649,
+   2690,
+   2730,
+   2966,
+   2982
+  ]
+ },
+ "nulls": {
+  "null1_gaussian": {
+   "spec_path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-009/null1_gaussian_spec.json",
+   "spec_sha256": "a2d19e1ad8d408d355561463b54d594d58b96473435f0bd7325b09026ba43991",
+   "scale": -4.8,
+   "per_layer": {
+    "15": {
+     "direction_sha256": "6fabc159c10ffcf0a382a264fb2baf4a5f4701abcdf3ac0a071b86ef61537d38",
+     "norm": 0.9999999999999988,
+     "cos_with_d_hat": -0.040045858753797986
+    },
+    "19": {
+     "direction_sha256": "72198707edbe8d07d371dd6288e37fa469b7448bef49fcb863523e3eb7ff6ee0",
+     "norm": 0.9999999999999993,
+     "cos_with_d_hat": 0.04111445214377497
+    }
+   },
+   "construction": "iid N(0,1) x1024, Random(seed*10+1+layer), L2-normalized"
+  },
+  "null2_shuffle": {
+   "spec_path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-009/null2_shuffle_spec.json",
+   "spec_sha256": "69fac10806551b2edf4d1525df0adfd01c9b6aa2215bbafe4832e32b6b755e43",
+   "scale": -4.8,
+   "per_layer": {
+    "15": {
+     "direction_sha256": "b9d0e36f324ad81830ff54402889131abfd3bed458a22207e33232d9aa178d2b",
+     "norm": 1.0000000000000002,
+     "cos_with_d_hat": 0.034284692943692394
+    },
+    "19": {
+     "direction_sha256": "6279cd167f533ed12888ceafb8b9a8974704d91d83ec3858cae25fdced1920d5",
+     "norm": 1.0000000000000002,
+     "cos_with_d_hat": 0.03082638702297088
+    }
+   },
+   "construction": "v[i]=d_hat[perm[i]], perm=Random(seed*10+2+layer).sample(range(1024),1024); norm preserved exactly",
+   "perm_head_evidence": {
+    "15": [
+     565,
+     318,
+     82,
+     747,
+     131,
+     191,
+     832,
+     650
+    ],
+    "19": [
+     512,
+     0,
+     505,
+     217,
+     90,
+     408,
+     468,
+     725
+    ]
+   }
+  },
+  "null4_quantnoise": {
+   "spec_path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-009/null4_quantnoise_spec.json",
+   "spec_sha256": "1c9a40d676113609cb35cc556802f1be204fb4546ea300b62ce0218b3f53aed3",
+   "scale": -4.8,
+   "per_layer": {
+    "15": {
+     "direction_sha256": "7e5914b789a0d9c79d3f0525cd8a918516c96ed8b5ca994a46408a0b63fb461b",
+     "norm": 0.999999999999997,
+     "cos_with_d_hat": -0.1869697607224292
+    },
+    "19": {
+     "direction_sha256": "484d200cd4feba0d653d05839b914d8cca5d3979fa5af2afcdcd1dacdfe3c9e2",
+     "norm": 0.9999999999999992,
+     "cos_with_d_hat": -0.24545800144223473
+    }
+   },
+   "construction": "p_i = sign_i * halfULP_bf16(|4.8*d_hat_i|), signs=Random(seed*10+4+layer).choice((-1,1)) ascending i; L2-normalized to 1",
+   "raw_pattern_norm_before_scaling": {
+    "15": 0.013717708123011544,
+    "19": 0.014006679845940099
+   },
+   "zero_components": {
+    "15": 0,
+    "19": 1
+   }
+  }
+ },
+ "v2_specs": {
+  "ablate": {
+   "spec_path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-009/ablate_spec.json",
+   "spec_sha256": "30e7137bc0a1a1ca1a293fe9f13127ea7d0e3131f01725372a365c9a108b0ac2",
+   "construction": "arm-002 repair_spec.json with scale := 0.0 (removal delta zeroed on the claimed L15/L19 64 columns)"
+  },
+  "restore": {
+   "spec_path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-009/restore_spec.json",
+   "spec_sha256": "690c1000fed8cd911922526573f69f06c4a3e8d66fc1c90035e7060a170e6dac",
+   "source_repair_spec_sha256": "690c1000fed8cd911922526573f69f06c4a3e8d66fc1c90035e7060a170e6dac",
+   "construction": "arm-002 repair_spec.json VERBATIM"
+  },
+  "relocate": {
+   "spec_path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-009/relocate_spec.json",
+   "spec_sha256": "0f8ad4aa67e033b2f357395225088bae2d623e4e2c86243d6fcc88d6bd3f78c1",
+   "construction": "both removal components (d_hat_15, d_hat_19) applied sequentially to model.layers.8.mlp.down_proj.weight, same 64 columns, scale -4.8 each; L15/L19 stay planted"
+  }
+ }
+}

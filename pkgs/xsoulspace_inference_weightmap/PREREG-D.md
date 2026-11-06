@@ -72,3 +72,12 @@ mirrors only under a new row.
   (directions live in different weight spaces); within-mirror proposer
   agreement (diff-of-means vs WS-3 prior vs random control) is recorded as
   data, with the WS-3 prior's retired-backbone status noted on its rows.
+
+## Addendum 2026-11-06b (P-2b derived-input normalization; owner-go 2026-11-06)
+The paper's gsm8k_train line 2379 carries a literal U+2028 which the frozen
+p2b_pool_builder splitlines() lawfully refuses. Resolution as a DERIVED-INPUT
+row (builder stays frozen): inputs are pre-normalized (U+2028/U+2029 -> space)
+into $TMPDIR derived files with sha256 receipts for BOTH raw and derived; the
+builder consumes derived files; the receipt records raw-digest, derived-digest,
+and the exact transformation. P-2b gsm8k leg runs on derived input; the MATH
+leg unchanged (overlap already measured 0 on raw).

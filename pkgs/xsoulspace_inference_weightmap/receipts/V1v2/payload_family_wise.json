@@ -1,0 +1,66 @@
+{
+ "kind": "v1v2-family-wise",
+ "payload": {
+  "artifact": "V-1 v2 family-wise status (PREREG-C addendum 2026-11-06b: obligation subset {plant-1, plant-3, plant-5}; deferred edits NAMED, not silence)",
+  "at": "2026-11-06T16:03:57+00:00",
+  "edits_done": [
+   "a3-plant-1 (arm-002); family-wise subset member P1 of {plant-1, plant-3, plant-5}; remaining certified edits carry DEFERRED_FAMILY_WISE rows in the family-wise ledger row",
+   "a3-plant-3 (arm-009); family-wise subset member P3 of {plant-1, plant-3, plant-5}; remaining certified edits carry DEFERRED_FAMILY_WISE rows in the family-wise ledger row"
+  ],
+  "per_edit": [
+   {
+    "verdict": "CLEAN_0_OF_4",
+    "nulls_run": 4,
+    "nulls_certified": 0,
+    "certified_ids": [],
+    "m_drift_flag": null
+   },
+   {
+    "verdict": "NULL_LEAK",
+    "nulls_run": 4,
+    "nulls_certified": 2,
+    "certified_ids": [
+     "v1v2-p3-null1",
+     "v1v2-p3-null2"
+    ],
+    "m_drift_flag": null
+   }
+  ],
+  "edits_deferred": [
+   {
+    "edit": "a3-plant-4",
+    "arm": "arm-005",
+    "status": "DEFERRED_FAMILY_WISE"
+   },
+   {
+    "edit": "a3-plant-6",
+    "arm": "arm-011",
+    "status": "DEFERRED_FAMILY_WISE"
+   },
+   {
+    "edit": "a3-plant-7",
+    "arm": "arm-012",
+    "status": "DEFERRED_FAMILY_WISE"
+   }
+  ],
+  "halted_edits": [
+   "a3-plant-5"
+  ],
+  "null_leaks": [
+   "a3-plant-3 (arm-009); family-wise subset member P3 of {plant-1, plant-3, plant-5}; remaining certified edits carry DEFERRED_FAMILY_WISE rows in the family-wise ledger row"
+  ],
+  "nulls_run_total": 8,
+  "nulls_certified_total": 2,
+  "family_wise": {
+   "rate": "2/8",
+   "wilson95": [
+    0.07147921209795557,
+    0.5907245720727483
+   ],
+   "note": "null floor denominator only; confounded-positive-control arms are counted separately and NEVER here (addendum 2026-11-06b)"
+  },
+  "confounded_controls": {
+   "note": "old null-3 shape ran ONCE on plant-1 as CONFOUNDED_POSITIVE_CONTROL; see its ledger row for the measurement"
+  }
+ }
+}

@@ -1,0 +1,49 @@
+{
+ "kind": "v1v2-verdict",
+ "payload": {
+  "artifact": "V-1 v2 per-edit verdict (floor FROZEN in PREREG-C: 0 of 4 nulls certified per edit; constructor v2 per addendum 2026-11-06b)",
+  "at": "2026-11-06T15:38:04+00:00",
+  "target_edit": "a3-plant-1 (arm-002); family-wise subset member P1 of {plant-1, plant-3, plant-5}; remaining certified edits carry DEFERRED_FAMILY_WISE rows in the family-wise ledger row",
+  "nulls_run": 4,
+  "nulls_certified": 0,
+  "certified_ids": [],
+  "floor": "0 of 4",
+  "floor_met": true,
+  "verdict": "CLEAN_0_OF_4",
+  "gate_exhausted": null,
+  "halt": null,
+  "confounded_control": {
+   "label": "v1v2-p1-confounded",
+   "certified": true,
+   "separate_denominator": true,
+   "never_in_null_floor": true
+  },
+  "m_continuity": {
+   "session_A_vs_archived": {
+    "cells_total": 34,
+    "cells_matching": 34,
+    "cells_differing": 0,
+    "differing_cell_ids": []
+   },
+   "session_B_vs_archived": {
+    "cells_total": 34,
+    "cells_matching": 34,
+    "cells_differing": 0,
+    "differing_cell_ids": []
+   },
+   "session_A_vs_B": {
+    "cells_total": 34,
+    "cells_matching": 34,
+    "cells_differing": 0,
+    "differing_cell_ids": []
+   }
+  },
+  "m_drift_flag": null,
+  "session_m_digests": {
+   "A": "620ab96dba7e58475c7447d41da053f59870302c98e869388d785eee0a018cb2",
+   "B": "38bf31bebc450929ba7c30b37a901fb529a9fb8d69889d659ed2690185706122"
+  },
+  "cells_sha256": "8406130623b6e85922eac6cbd92b73dd2282e6fc19538bb3c199f647f518d760",
+  "certification_rule": "certified(arm) := loop_rate(R) < loop_rate(M) AND task_success(R) >= task_success(M), where M = planted/null mirror battery and R = removal-edit battery (R = M with -scale*recovered_direction merged in-memory, same columns). Strict inequality / non-strict floor per PREREG-A A3 wording ('loop-rate down', 'task success not down'). Per-cell flips recorded in arm receipts for knife-edge diagnosis."
+ }
+}

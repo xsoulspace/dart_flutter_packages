@@ -1,0 +1,15 @@
+{
+ "kind": "v1v2-ops-note",
+ "payload": {
+  "artifact": "ops note appended to the V1-v2 run-plan record (chain law: rows are never edited; this row amends the run-plan receipt record)",
+  "at": "2026-11-06T14:59:17+00:00",
+  "run_plan_row": {
+   "ledger": "receipts/V1-v2-nulls.jsonl",
+   "seq": 0,
+   "digest": "f7bf8c692e37764091d1e5d643e4eb24f0125f2a28c576a68c8154148641aec2"
+  },
+  "code": "FLEET_YIELD_RECEIVED",
+  "detail": "coordinator fleet decision 2026-11-06 ~16:57 local: sibling P-2 arm ordered to finish its current chunk and HOLD until this arc's final verdict row lands; device yielded to this arc from the next chunk boundary; this arc keeps per-batch lock releases (protocol v3) - A2/V6 siblings may slot batch-sized slices between batches (expected, protocol-compliant); supersedes the run-plan's LOCK_LIVE_SIBLING_HOLDER contention expectation; no lock cleared at any point",
+  "lock_policy_unchanged": "mkdir lock, 10s acquisition retries bounded 360, wait_ms receipted per batch, rmdir + 3s courtesy"
+ }
+}

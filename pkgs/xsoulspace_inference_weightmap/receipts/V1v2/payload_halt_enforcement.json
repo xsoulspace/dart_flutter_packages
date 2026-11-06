@@ -1,0 +1,12 @@
+{
+ "kind": "v1v2-ops-note",
+ "payload": {
+  "artifact": "ops note: NULL_LEAK halt enforcement (plant-3 verdict seq 17); plant-5 disposition",
+  "at": "2026-11-06T16:03:56+00:00",
+  "code": "HALT_ENFORCED_PLANT5_QUARANTINED",
+  "halt_trigger": "a3-plant-3 V-1 v2: 2 of 4 nulls CERTIFIED (v1v2-p3-null1 gaussian loop 1.000->0.750 task flat; v1v2-p3-null2 shuffle loop 1.000->0.917 task flat) => NAMED NULL_LEAK (verdict row seq 17 digest 06ad38af0409dfc3d23a2a970b4682b021f0a3b210e9329bde3074c23b16ba02); PREREG-C kill clause: halt+denominator = the verdict",
+  "plant5_disposition": "P5A was IN FLIGHT when the plant-3 verdict landed (launched 15:56:20Z concurrent with plant-3 scoring, pre-verdict; BATCH_COMPLETE 16:02:04Z, gates 3/3 PASS: mirror 5e3d259f... + recovery 5c91f459.../240f7b49... reproduce arm-015 archive; lock_wait 0; mirror swept). Per the halt its measurements are QUARANTINED UNSCORED: batteries never assembled, never certified, used in NO verdict; digests recorded (battery_M_A 1283922f..., battery_null1 9cd610dd..., battery_null2 02a46491...; receipts copied to receipts/V1v2/ with _QUARANTINED suffix). P5B NOT LAUNCHED. a3-plant-5 V-1 = HALTED_AFTER_NULL_LEAK (named, not silence); no process was killed (fleet rule 3).",
+  "remaining_plan": "family-wise row next (denominator = 8 run nulls over 2 edits); no further device batches this arc",
+  "interpretation_label": "INTERPRETATION (recorded, not a rule change): plant-3 leak mechanism differs from v1's null-3 geometric leak - the plant-3 mirror is SATURATED (loop_M 12/12 at cap 1.000; task_M 1/22 at floor 0.0455), so the frozen rule 'loop strictly down AND task not down' is knife-edge-fragile: any large perturbation that drops >=1 G2 cell off the cap while sparing the single passing task cell certifies. The orthogonality gate did its job (null3v2 cos 0.143/0.015 passed, and null3v2 was REFUSED only by the task floor despite loop -0.167). Any remedy (saturation-aware certification, margin requirements, or accepting the measured FP rate) requires a NEW prereg row - owner decision."
+ }
+}

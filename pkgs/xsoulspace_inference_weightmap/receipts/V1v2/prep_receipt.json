@@ -1,0 +1,204 @@
+{
+ "tool": "v1v2_prep.py",
+ "at": "2026-11-06T13:52:53+00:00",
+ "tmp": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T",
+ "seed_fmt": 202611063,
+ "seed_fmt_offset": 7919,
+ "seed_nulls": 20261106,
+ "subset_n": 64,
+ "frozen_tools_sha256": {
+  "tool/runs/a3_battery.py": "7c444278dd918c40fa7eb8c62083e1713cc15b04d0ea1d6fce20b3203d992bf5",
+  "tool/runs/a3_lock.py": "1ff1b008ffed57b68b332ab74a298e924fd99404502bfeb17529baaf2aab860b",
+  "tool/runs/a3_propose.py": "c9b84cfb86ce49f93e2be7358d598040826060e61c9f2c50e5cf3ab3ea079409",
+  "tool/runs/a3_score.dart": "f4c250e6f1b5e16c98bd5cfdaf7c03794fd6a0361c924202e5de29146f2a02e6",
+  "tool/eval/apply_delta.py": "a182479733385cbcd637e03c240f177e0644580780884323948c1aa45bb4046e",
+  "tool/eval/capture_activations.py": "6327e048e6d884e1489d6feae6dca998ed0f11089894532334e344ddae78b22e",
+  "tool/runs/cells_frozen_A3.json": "8406130623b6e85922eac6cbd92b73dd2282e6fc19538bb3c199f647f518d760",
+  "tool/runs/make_mirror.py": "271c1f049ebf35cdca0bde45551b8461924ad118f5dea6495f1a4e50d71acd95",
+  "tool/runs/prompts_localization_loop_A3.txt": "a827b2535a4bef68b4493034756955576ccd4c3e201674fd11d688873b98038e",
+  "tool/runs/prompts_localization_neutral_A3.txt": "a92c0f65243ea07812965666800cb0b01af26055fd51db203365884e6d4d9caa",
+  "lib/src/scorers.dart": "dfe42d43604e132ef234edc50d09d1b1a6bfca2b318e325b9f3210178baf181f"
+ },
+ "v12_helpers_sha256": {
+  "tool/runs/v12_batch.py": "3af7211508abb4e1c661bd751de1ebda3b092aa1c5cc9d3d31cd55b4dcdc0849",
+  "tool/runs/v12_nulls.py": "40f50f787b2660a051a966208b4336d0117bc520847ff463210c2dbda1ddb3e9",
+  "tool/runs/v12_verdict.py": "24672ee64f346b3c864f15e6ff16bfe790d79bf9a18c291d3fc1a271de0cfc81"
+ },
+ "arc_helpers_sha256": {
+  "v1v2_prep.py": "75b1981f4e51c2e1e631d72b98efd2862238e5990d9d337c8c8b815022682f4a",
+  "v1v2_null3v2.py": "d38ad59d44f4c6100602329202ee2af1841aef765339e4e19516e275e3653b1d",
+  "v1v2_verdict.py": "6563bff9076ec273cd07c3d81131ccf2c8b15d34332989c5d2c22fb6bf9b6402"
+ },
+ "fmt_banks": {
+  "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/fmt_banks.json",
+  "sha256": "46d5563beee71a2816435c347659d1271bd7e9e116c0db0f5f550413d3996425",
+  "draw_seeds": {
+   "d0": 202611063,
+   "d1": 202618982
+  },
+  "file_sha256": {
+   "d0": {
+    "upper": "b45f64efd1eb99707c7cab67fac0ee80645cecb4da60a3e68783c78470510581",
+    "lower": "e8cc651241d4469d399b89a79e79e82b350f595fb5565315d97957c53e5388eb"
+   },
+   "d1": {
+    "upper": "fd564a349a19ef957b01cc77b52679ecc023da9013b88e7b9ea11de309421534",
+    "lower": "26de6e003d08e568044cd75001898a1a7d6badb0905f737dfc4b15702255949f"
+   }
+  }
+ },
+ "archive_integrity": {
+  "a3-plant-1": {
+   "arm": "arm-002",
+   "all_match": true
+  },
+  "a3-plant-3": {
+   "arm": "arm-009",
+   "all_match": true
+  },
+  "a3-plant-5": {
+   "arm": "arm-015",
+   "all_match": true
+  }
+ },
+ "v12_nulls_manifest_sha256": "91163898bd6ddc515d40dbfccafee1ff648f1ba38a73f56a35c2e5fa26a70739",
+ "reused_v12": {
+  "null1_gaussian_spec.json": {
+   "expected_sha256": "0b87f0f167be76d2448549760d6702de18a98b37f770bcd014aeb277298b58f2",
+   "sources": [
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/receipts/V12/null1_gaussian_spec.json",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/specs/null1_gaussian_spec.json"
+   ],
+   "copied_to": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-002/null1_gaussian_spec.json"
+  },
+  "null2_shuffle_spec.json": {
+   "expected_sha256": "20be6f5bfbf9e83c2de117a9127276f3345e8c9d60b12b0bbb9be8541c92d369",
+   "sources": [
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/receipts/V12/null2_shuffle_spec.json",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/specs/null2_shuffle_spec.json"
+   ],
+   "copied_to": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-002/null2_shuffle_spec.json"
+  },
+  "null4_quantnoise_spec.json": {
+   "expected_sha256": "2a0cbec62c7e0fcae4ffa98523811dc68e115ca0353e42c047fe353c30c4f510",
+   "sources": [
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/receipts/V12/null4_quantnoise_spec.json",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/specs/null4_quantnoise_spec.json"
+   ],
+   "copied_to": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-002/null4_quantnoise_spec.json"
+  },
+  "null3_unrelated_spec.json": {
+   "expected_sha256": "b939db2fbad79082040de7993c3f113860a820c7f4f3a89677fcb1bb23ee752f",
+   "sources": [
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/receipts/V12/null3_unrelated_spec.json",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/specs/null3_unrelated_spec.json"
+   ],
+   "copied_to": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-002/null3_unrelated_spec.json"
+  },
+  "ablate_spec.json": {
+   "expected_sha256": "14fa817bbb998b3a4c0d4efa45432cd863a608156e03694f9a4ff1f499668b0c",
+   "sources": [
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/receipts/V12/ablate_spec.json",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/specs/ablate_spec.json"
+   ],
+   "copied_to": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-002/ablate_spec.json"
+  },
+  "restore_spec.json": {
+   "expected_sha256": "65d1f5e0ed03c2cb2014a6652ef62e06810d1c6ed0a86bed4b7e242261cab35f",
+   "sources": [
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/receipts/V12/restore_spec.json",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/specs/restore_spec.json"
+   ],
+   "copied_to": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-002/restore_spec.json"
+  },
+  "relocate_spec.json": {
+   "expected_sha256": "5c92194390d23ca727d44be2b94c47a813884b9832bd766f6af134fe43ed69d2",
+   "sources": [
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/receipts/V12/relocate_spec.json",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/specs/relocate_spec.json"
+   ],
+   "copied_to": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-002/relocate_spec.json"
+  },
+  "recovered_slugify.json": {
+   "expected_sha256": "b8ac36e20dfad41fb1959e64d69b3f969df5d6ea5bf7cecbb1861d7646793ac1",
+   "sources": [
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/receipts/V12/recovered_slugify.json",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v12/specs/recovered_slugify.json"
+   ],
+   "copied_to": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-002/recovered_slugify.json"
+  },
+  "B3.json": {
+   "expected_sha256": "f0cf4aa50a812b3448a4dca0316e6ba2ba062c15ba465ed06a2d1f7cce5dc06a",
+   "sources": [
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/receipts/V12/B3.json"
+   ],
+   "copied_to": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/batches/B3_v2.json",
+   "note": "V-2 batch reused VERBATIM (specs + wm-v12 sidecars must exist at run time)"
+  }
+ },
+ "built_fresh": {
+  "arm-009": {
+   "stdout": "NULLS_OK /var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-009/nulls_manifest.json nulls=['null1_gaussian', 'null2_shuffle', 'null4_quantnoise'] v2=['ablate', 'relocate', 'restore']",
+   "manifest_sha256": "b1621a12fd83372542efe7b53389abe466a5b19ed09c189f659bb483e0ef3f57",
+   "specs": {
+    "null1_gaussian": "a2d19e1ad8d408d355561463b54d594d58b96473435f0bd7325b09026ba43991",
+    "null2_shuffle": "69fac10806551b2edf4d1525df0adfd01c9b6aa2215bbafe4832e32b6b755e43",
+    "null4_quantnoise": "1c9a40d676113609cb35cc556802f1be204fb4546ea300b62ce0218b3f53aed3"
+   }
+  },
+  "arm-015": {
+   "stdout": "NULLS_OK /var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-015/nulls_manifest.json nulls=['null1_gaussian', 'null2_shuffle', 'null4_quantnoise'] v2=['ablate', 'relocate', 'restore']",
+   "manifest_sha256": "d2dded876213a73910775815d76e2c4e21932bff7e7d129304bd1ab99c68a8a1",
+   "specs": {
+    "null1_gaussian": "fe1d21fba1ffb542c54d4c301fb33e775e99ba4dcd384b733d0b0f060795a8ba",
+    "null2_shuffle": "6d3914fb56a79593ed8734bd50d4a1c7639e66745f4522bfe048a925c0a165a9",
+    "null4_quantnoise": "b4c0137c362252abe3f5e891d8ea12d35eeb11276d2bdf58b22bd20a2f715050"
+   }
+  }
+ },
+ "arc_manifests": {
+  "arm-002": {
+   "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-002/arc_manifest.json",
+   "sha256": "f912672a38f935b50e0ef51d38db6fd665e7db25ba3789dc79f585106ac5aa7a"
+  },
+  "arm-009": {
+   "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-009/arc_manifest.json",
+   "sha256": "1370e792c0b8451173eeadd30b90a8abf19583f1d819b642c7c3e30e1d5e3d4b"
+  },
+  "arm-015": {
+   "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-015/arc_manifest.json",
+   "sha256": "7e9720cb2dfe6b0b2da6a41cc744c72f4431cf00d35cad239eba6f09359a27dd"
+  }
+ },
+ "batches": {
+  "P1A": {
+   "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/batches/P1A.json",
+   "sha256": "91601eacbe2c79acd6464e7fd4322d360225ca3bb8c074c2be1e5c0c24039d83"
+  },
+  "P1B": {
+   "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/batches/P1B.json",
+   "sha256": "53a483a0e0c4248d6e8f770ca2348e9891fa70de4b42d746e4a3f793fd54a5dd"
+  },
+  "P3A": {
+   "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/batches/P3A.json",
+   "sha256": "e70ba56d8aa52b39b7351771a531b9e6505b75ee417d89124570ad58f3ca5edb"
+  },
+  "P3B": {
+   "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/batches/P3B.json",
+   "sha256": "7f8808632362647091a2038e97f7d4f18f90ea35a6ec90cef5f7f27f5bffef18"
+  },
+  "P5A": {
+   "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/batches/P5A.json",
+   "sha256": "8015dac32f38e2e9a9be0f968c4113ba55c394b5ff443ebdfc77e0bddab88062"
+  },
+  "P5B": {
+   "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/batches/P5B.json",
+   "sha256": "645163d76c12a89fe0a9e259ca441af6c215e63f5cfa1cecc669c702bd13de6b"
+  }
+ },
+ "device_plan": {
+  "lock_dir": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-device.lock",
+  "law": "serial -j1; lock v3 (10s acquisition retries, 360 cap, wait_ms receipted, rmdir + 3s courtesy); per-batch device <= 20 min; ALL wall_ms rows wall_ms_claim=false (machine under heavy external load); power tagged per batch; POWER RULE: discharging => stop between mirrors, persist, POWER_BATTERY_STOP; mirrors swept every batch",
+  "runner": "v12_batch.py REUSED UNMODIFIED (digest 3af7211508abb4e1c661bd751de1ebda3b092aa1c5cc9d3d31cd55b4dcdc0849)"
+ }
+}

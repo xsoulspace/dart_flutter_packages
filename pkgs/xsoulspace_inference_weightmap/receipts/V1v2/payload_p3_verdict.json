@@ -1,0 +1,54 @@
+{
+ "kind": "v1v2-verdict",
+ "payload": {
+  "artifact": "V-1 v2 per-edit verdict (floor FROZEN in PREREG-C: 0 of 4 nulls certified per edit; constructor v2 per addendum 2026-11-06b)",
+  "at": "2026-11-06T15:58:39+00:00",
+  "target_edit": "a3-plant-3 (arm-009); family-wise subset member P3 of {plant-1, plant-3, plant-5}; remaining certified edits carry DEFERRED_FAMILY_WISE rows in the family-wise ledger row",
+  "nulls_run": 4,
+  "nulls_certified": 2,
+  "certified_ids": [
+   "v1v2-p3-null1",
+   "v1v2-p3-null2"
+  ],
+  "floor": "0 of 4",
+  "floor_met": false,
+  "verdict": "NULL_LEAK",
+  "gate_exhausted": null,
+  "halt": {
+   "code": "NULL_LEAK",
+   "rule": "PREREG-C kill clause (FROZEN): any certified null = NAMED NULL_LEAK -> pipeline HALT; the halt and its denominator are the verdict; V-2 gate (plant-1 clean) not satisfied where applicable; remaining planned batches do not run and are named HALTED_AFTER_NULL_LEAK, not silence",
+   "certified_nulls": [
+    "v1v2-p3-null1",
+    "v1v2-p3-null2"
+   ]
+  },
+  "confounded_control": null,
+  "m_continuity": {
+   "session_A_vs_archived": {
+    "cells_total": 34,
+    "cells_matching": 34,
+    "cells_differing": 0,
+    "differing_cell_ids": []
+   },
+   "session_B_vs_archived": {
+    "cells_total": 34,
+    "cells_matching": 34,
+    "cells_differing": 0,
+    "differing_cell_ids": []
+   },
+   "session_A_vs_B": {
+    "cells_total": 34,
+    "cells_matching": 34,
+    "cells_differing": 0,
+    "differing_cell_ids": []
+   }
+  },
+  "m_drift_flag": null,
+  "session_m_digests": {
+   "A": "467c14d333a2df55d0d1a256e7a5638c293557ba443bbdcc9a62a78cddcaf7ba",
+   "B": "5567d80f28f5e88b62097d0d242436cf0445f15b816480c5a115dea8b4704a78"
+  },
+  "cells_sha256": "8406130623b6e85922eac6cbd92b73dd2282e6fc19538bb3c199f647f518d760",
+  "certification_rule": "certified(arm) := loop_rate(R) < loop_rate(M) AND task_success(R) >= task_success(M), where M = planted/null mirror battery and R = removal-edit battery (R = M with -scale*recovered_direction merged in-memory, same columns). Strict inequality / non-strict floor per PREREG-A A3 wording ('loop-rate down', 'task success not down'). Per-cell flips recorded in arm receipts for knife-edge diagnosis."
+ }
+}

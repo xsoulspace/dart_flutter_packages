@@ -1,0 +1,29 @@
+{
+ "kind": "v1v2-ops-note",
+ "payload": {
+  "artifact": "ops note: attempt-1 kill attribution + fleet rules + compliance",
+  "at": "2026-11-06T15:12:13+00:00",
+  "code": "KILL_ATTRIBUTION_MEMORY_PRESSURE_SUSPECT",
+  "detail": "coordinator finding 2026-11-06 ~17:10 local: swap 11.2/12 GB used with 277k pageouts at the kill window; P1A attempt-1 exit 137 attributed SUSPECT memory-pressure jetsam (largest-RSS mlx runners are jetsam targets), NOT a coordinator pkill (none issued since the power-emergency sweep; no coordinator pattern matched this runner's cmdline). Supersedes the unattributed-source wording of seq 2 (which stands as recorded).",
+  "fleet_rules_effective": {
+   "1_LOAD_AFTER_LOCK": "never load model weights before holding wm-device.lock; load immediately after acquisition; drop references + gc after release so waiting runners hold no model RSS",
+   "2_DETACHED_LAUNCH": "batch runners launched detached (setsid/nohup) so group signals cannot reach them",
+   "3_NO_ACTOR_PKILLS": "process kills are coordinator-only with a ledger row; an actor stopping its own child uses the recorded PID exactly, never a pattern"
+  },
+  "compliance": {
+   "LOAD_AFTER_LOCK": "v12_batch.py (REUSED UNMODIFIED) is structurally compliant: the waiting runner holds no model RSS; model loads happen only inside lock-held step subprocesses (a3_battery/capture/apply_delta/make_mirror), each exiting (RSS dropped) before the next step",
+   "DETACHED_LAUNCH": "from P1B onward, batch runners are spawned with start_new_session=True (new session+process group) under a monitoring wrapper; P1A attempts ran as harness-managed background tasks (kill was jetsam, not a group signal)",
+   "NO_PKILLS": "this actor has pkilled nothing at any point; only rmdir of its own verified-orphan lock (seq 2)"
+  },
+  "P1A_attempt2": {
+   "verdict": "BATCH_COMPLETE",
+   "lock_wait_ms": 0,
+   "gates": "3/3 PASS (mirror_shard 22e52d07..., dir15 4cb33029..., dir19 15de5e61...)",
+   "stages": "9/9 exit 0, wall_ms_claim=false all rows",
+   "device_time_s": 325,
+   "power": "AC charging 86%->89%",
+   "mirror_swept": true,
+   "receipt": "$TMPDIR/wm-v1v2/batches/receipts/P1A-receipt.json"
+  }
+ }
+}

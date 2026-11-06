@@ -1,0 +1,48 @@
+{
+ "kind": "v2-verdict",
+ "payload": {
+  "artifact": "V-2 effect/mechanism split verdict (PREREG-C)",
+  "at": "2026-11-06T15:44:04+00:00",
+  "target_edit": "A3 plant-1 (arm-002) certified removal edit",
+  "pre_registered_rules": {
+   "E_ref": -0.3333333333333333,
+   "tol": 0.16666666666666666,
+   "dies(x)": "|loop(x) - loop(M)| <= tol",
+   "returns": "loop(restore) < loop(M) AND |loop(restore)-loop(M) - E_ref| <= tol",
+   "EFFECT": "delta_G1 := net g1-perm flips(restore)/12; EFFECT_TRUE := delta_G1 >= |ref_G1|/2",
+   "ref_G1": 0.5,
+   "classes": [
+    "PASS",
+    "EFFECT_TRUE_MECHANISM_FALSE",
+    "EFFECT_FALSE"
+   ]
+  },
+  "loop_rate_M": 0.6666666666666666,
+  "ablate_dies": true,
+  "restore_returns": true,
+  "relocate_dies": true,
+  "MECHANISM": "PASS",
+  "delta_G1_held_out": 0.5,
+  "EFFECT": "EFFECT_TRUE",
+  "class": "PASS",
+  "secondary_columns": {
+   "restore_loop_delta": -0.3333333333333333,
+   "restore_task_success_delta_G0G1": 0.40909090909090906,
+   "relocate_loop_delta": -0.08333333333333326,
+   "ablate_loop_delta": 0.0
+  },
+  "continuity": {
+   "session_M_vs_archived_M": {
+    "cells_total": 34,
+    "cells_matching": 34,
+    "cells_differing": 0,
+    "differing_cell_ids": []
+   },
+   "m_drift_flag": null,
+   "ablate_identity_flag": null,
+   "restore_drift_flag": null
+  },
+  "held_out_note": "EFFECT is judged on the 12 G1 perm cells (disjoint from the 128+128 loop/neutral localization banks and from the G2 cells carrying the MECHANISM loop-rate criterion). Caveat recorded, not hidden: in A3 the G1 cells also contributed to the task_success half of certification; their held-out status here is vs localization and vs the V-2 mechanism metric.",
+  "cells_sha256": "8406130623b6e85922eac6cbd92b73dd2282e6fc19538bb3c199f647f518d760"
+ }
+}

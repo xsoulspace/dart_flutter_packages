@@ -1,0 +1,50 @@
+{
+ "tool": "make_mirror.py",
+ "created_utc": "2026-11-06T15:43:45+00:00",
+ "base_dir": "/Users/antonio/.cache/huggingface/hub/models--mlx-community--Qwen3-0.6B-bf16/snapshots/42096995f6402fde107068cf530136fe64b604f8",
+ "mirror_dir": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/mirrors/v1v2-p3",
+ "base_read_only": true,
+ "base_unchanged": true,
+ "base_file_digests": {
+  "added_tokens.json": "c0284b582e14987fbd3d5a2cb2bd139084371ed9acbae488829a1c900833c680",
+  "config.json": "332d56de2e5cde28245ac8b1776639bf9f7ed55fc911dfd2399ae8872acee2a9",
+  "merges.txt": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+  "model.safetensors": "bfe05e58f5acdecd38e5f3e64c82071682683a73db0e57fd437523885a49f2ff",
+  "model.safetensors.index.json": "34238e9a50ea68c6c54c9d23a50f3839867ea8b5d63462121593571ebd37d64f",
+  "special_tokens_map.json": "76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd",
+  "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+  "tokenizer_config.json": "253153d0738ceb4c668d2eff957714dd2bea0b56de772a9fdccd96cbf517e6a0",
+  "vocab.json": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+ },
+ "mirror_shard_sha256": "7023b5b2d878c2e807b7019983ef08f5a5badec7c71cc58f3f356077d7ced9c9",
+ "tensors_total": 310,
+ "unedited_identical": 308,
+ "edited": [
+  {
+   "tensor": "model.layers.15.mlp.down_proj.weight",
+   "columns_planted": 64,
+   "columns_differing": 64,
+   "elements_differing": 65246,
+   "elements_absorbed_by_bf16": 290,
+   "scale": 4.8,
+   "direction_sha256": "626d6f0c2749011120dd4d8ea7cba1b5777741929ebf6c813d84d25d30c7184f",
+   "base_tensor_f32_sha256": "85072ab2c0b93547d5a9160af0cdfb329dfc21b55720bb03f3a90ed6f477fd82",
+   "mirror_tensor_f32_sha256": "025d2d2c7f0e1bab7c1e2dfaa11901c5b0476c54fa5bfc3d4e6a7ed63313496f",
+   "sidecar_receipt_spec_digest": "b17194fe9154a60371c98562322a4964a2e55ffd6f9978d03a8f23b13d03d989"
+  },
+  {
+   "tensor": "model.layers.19.mlp.down_proj.weight",
+   "columns_planted": 64,
+   "columns_differing": 64,
+   "elements_differing": 65344,
+   "elements_absorbed_by_bf16": 192,
+   "scale": 4.8,
+   "direction_sha256": "6aacf1ac23d36fa53289261818371493492f25568930cfe95db8fa1850dbc0a2",
+   "base_tensor_f32_sha256": "78bae6a01a318085b27743ff020eb93a729a82fe68d13560744c37fd73cb0a1f",
+   "mirror_tensor_f32_sha256": "ceab1b156c5a83db534de5553a6212f5dee551a4ec8a64b1a564616395d42d37",
+   "sidecar_receipt_spec_digest": "99904d813f364f66e03c9335b527c4e489b45a48d86ea8895c65cf7941ade648"
+  }
+ ],
+ "copy_seconds": 0.4,
+ "verdict": "MIRROR_OK"
+}

@@ -1,0 +1,468 @@
+{
+ "kind": "v1v2-run-plan",
+ "payload": {
+  "artifact": "V1-v2 arc run plan (PREREG-C V-1 null-constructor v2 + family-wise subset {plant-1,plant-3,plant-5} + CONFOUNDED_POSITIVE_CONTROL + V-2 plant-1) - PRE-REGISTERED BEFORE ANY ARC MEASUREMENT",
+  "at": "2026-11-06T14:01:54+00:00",
+  "prereg": {
+   "file": "PREREG-C.md",
+   "addendum": "2026-11-06b (owner-go 2026-11-06)",
+   "floors_frozen": true,
+   "v1_floor": "0 of 4 nulls certified per edit; any certified null = NAMED NULL_LEAK -> pipeline HALT (record, stop; halt+denominator = verdict)",
+   "null3_v2": "format-style contrast (uppercase-vs-lowercase renders of same neutral prompts) diff-of-means on E's mirror; construction-time orthogonality gate |cos| <= 0.2 per layer vs E's recovered direction; receipted BEFORE certification; one re-draw with seed offset, then GATE_EXHAUSTED row",
+   "confounded": "old null-3 shape reclassified CONFOUNDED_POSITIVE_CONTROL; runs ONCE on plant-1; expected maybe-certify; SEPARATE denominator; NEVER in null floor",
+   "family_subset": [
+    "a3-plant-1",
+    "a3-plant-3",
+    "a3-plant-5"
+   ],
+   "deferred": [
+    {
+     "edit": "a3-plant-4",
+     "arm": "arm-005",
+     "status": "DEFERRED_FAMILY_WISE"
+    },
+    {
+     "edit": "a3-plant-6",
+     "arm": "arm-011",
+     "status": "DEFERRED_FAMILY_WISE"
+    },
+    {
+     "edit": "a3-plant-7",
+     "arm": "arm-012",
+     "status": "DEFERRED_FAMILY_WISE"
+    }
+   ],
+   "v2": "plant-1 ONLY this arc, gate = V-1 clean on plant-1; other edits' V-2 = named deferral"
+  },
+  "arc": {
+   "edits": [
+    {
+     "edit": "a3-plant-1",
+     "arm": "arm-002",
+     "tag": "P1"
+    },
+    {
+     "edit": "a3-plant-3",
+     "arm": "arm-009",
+     "tag": "P3"
+    },
+    {
+     "edit": "a3-plant-5",
+     "arm": "arm-015",
+     "tag": "P5"
+    }
+   ],
+   "order": "P1A -> P1B -> score+rows -> B3 (V-2, only if plant-1 CLEAN) -> P3A -> P3B -> score+rows -> P5A -> P5B -> score+rows -> family row; NULL_LEAK on any edit => subsequent planned batches DO NOT RUN, named HALTED_AFTER_NULL_LEAK",
+   "v2_reuse": {
+    "batch": "receipts/V12/B3.json REUSED VERBATIM (copy digest-verified)",
+    "specs": {
+     "ablate": "14fa817bbb998b3a4c0d4efa45432cd863a608156e03694f9a4ff1f499668b0c",
+     "restore": "65d1f5e0ed03c2cb2014a6652ef62e06810d1c6ed0a86bed4b7e242261cab35f",
+     "relocate": "5c92194390d23ca727d44be2b94c47a813884b9832bd766f6af134fe43ed69d2"
+    },
+    "rules": "FROZEN in receipts/V1-nulls.jsonl seq 0 (v12-run-plan v2_rules): E_ref=-1/3, tol=|E_ref|/2=1/6, dies(x):|loop_G2(x)-loop_G2(M)|<=tol, returns: loop(restore)<loop(M) AND |delta-E_ref|<=tol, EFFECT on held-out G1 perm cells delta_G1>=|ref_G1|/2=0.25, MECHANISM=PASS iff ablate dies AND restore returns AND relocate dies, classes PASS/EFFECT_TRUE_MECHANISM_FALSE/EFFECT_FALSE never merged",
+    "verdict_tool": "v12_verdict.py --mode v2 REUSED UNMODIFIED"
+   }
+  },
+  "base_model": {
+   "law": "read-only; make_mirror.py verifies base digests before/after (BASE_MUTATED fatal)",
+   "model_safetensors_sha256": "bfe05e58f5acdecd38e5f3e64c82071682683a73db0e57fd437523885a49f2ff",
+   "snapshot": "/Users/antonio/.cache/huggingface/hub/models--mlx-community--Qwen3-0.6B-bf16/snapshots/42096995f6402fde107068cf530136fe64b604f8"
+  },
+  "frozen_inputs": {
+   "cells_frozen_A3.json": "8406130623b6e85922eac6cbd92b73dd2282e6fc19538bb3c199f647f518d760",
+   "scorers.dart": "dfe42d43604e132ef234edc50d09d1b1a6bfca2b318e325b9f3210178baf181f",
+   "prompts_loop": "a827b2535a4bef68b4493034756955576ccd4c3e201674fd11d688873b98038e",
+   "prompts_neutral": "a92c0f65243ea07812965666800cb0b01af26055fd51db203365884e6d4d9caa",
+   "sampler": "greedy temp 0.0, chat template + ' /no_think', caps G0/G1=64 G2=256 (frozen surface in cells file)"
+  },
+  "frozen_tools_current_tree_sha256": {
+   "tool/runs/a3_battery.py": "7c444278dd918c40fa7eb8c62083e1713cc15b04d0ea1d6fce20b3203d992bf5",
+   "tool/runs/a3_lock.py": "1ff1b008ffed57b68b332ab74a298e924fd99404502bfeb17529baaf2aab860b",
+   "tool/runs/a3_propose.py": "c9b84cfb86ce49f93e2be7358d598040826060e61c9f2c50e5cf3ab3ea079409",
+   "tool/runs/a3_score.dart": "f4c250e6f1b5e16c98bd5cfdaf7c03794fd6a0361c924202e5de29146f2a02e6",
+   "tool/eval/apply_delta.py": "a182479733385cbcd637e03c240f177e0644580780884323948c1aa45bb4046e",
+   "tool/eval/capture_activations.py": "6327e048e6d884e1489d6feae6dca998ed0f11089894532334e344ddae78b22e",
+   "tool/runs/cells_frozen_A3.json": "8406130623b6e85922eac6cbd92b73dd2282e6fc19538bb3c199f647f518d760",
+   "tool/runs/make_mirror.py": "271c1f049ebf35cdca0bde45551b8461924ad118f5dea6495f1a4e50d71acd95",
+   "tool/runs/prompts_localization_loop_A3.txt": "a827b2535a4bef68b4493034756955576ccd4c3e201674fd11d688873b98038e",
+   "tool/runs/prompts_localization_neutral_A3.txt": "a92c0f65243ea07812965666800cb0b01af26055fd51db203365884e6d4d9caa",
+   "lib/src/scorers.dart": "dfe42d43604e132ef234edc50d09d1b1a6bfca2b318e325b9f3210178baf181f"
+  },
+  "named_issues": [
+   {
+    "code": "V12_RUNPLAN_DIGEST_TABLE_STALE",
+    "detail": "v12 run-plan (receipts/V1-nulls.jsonl seq 0) recorded A3-era digests for a3_battery.py (ee409d76...), a3_lock.py (0289fa49...), make_mirror.py (1f71892e...) - bytes never committed to git; the tree at v12 run time (02:06-02:51 UTC) and now = commit 3dec77ac (01:38 UTC, predates v12) = a3_battery 7c444278..., a3_lock 1ff1b008..., make_mirror 271c1f04...; v12's empirical A3-reproduction gates (MIRROR_NONREPRODUCIBLE / RECOVERY_NONREPRODUCIBLE vs archived arm-002 values) PASSED on the tree bytes; this arc runs the same tree bytes and re-runs those gates per batch (extended to arm-009/arm-015 archives); a3_propose/a3_score/apply_delta/capture_activations/cells/banks/scorers digests MATCH the v12 table exactly"
+   },
+   {
+    "code": "V12_NULLS_MANIFEST_DIGEST_STALE",
+    "detail": "v12 run-plan cites nulls_manifest_sha256 45d45d40...; the archived manifest is 91163898... (regenerated when null3 was added after the run-plan row); per-spec digests match the v1 ledger rows 4/4 (null1 0b87f0f1, null2 20be6f5b, null3 b939db2f, null4 2a0cbec6) + V-2 specs 3/3 (ablate/restore/relocate) - reuse authorized on the per-spec digests, not the manifest digest"
+   },
+   {
+    "code": "LOCK_LIVE_SIBLING_HOLDER",
+    "detail": "device lock ${TMPDIR}/wm-device.lock observed 15:16 local mtime 14:56 with NO holder process; at 15:53 LIVE holder: sibling P-2 arm running wm_qwen35_generate.py pass-1 chunk 07 under the lock; NO lock cleared at any point; this arc's batches WAIT under protocol v3 (10s acquisition retries, 360 cap => DEVICE_LOCK_TIMEOUT named, wait_ms receipted per batch); serial -j1 preserved by the lock"
+   }
+  ],
+  "constructors_v2": {
+   "null1_gaussian": "per layer iid N(0,1) x1024 from Random(20261106*10+1+int(layer)), L2-normalized (norm-matched ||d_hat||=1), E's 64 columns, scale -4.8",
+   "null2_shuffle": "per layer perm=Random(20261106*10+2+int(layer)).sample(range(1024),1024); v[i]=d_hat_E[perm[i]] (same spectrum, wrong geometry)",
+   "null3_unrelated_v2": {
+    "contrast": "format-style: UPPERCASE-vs-lowercase renders of the SAME neutral prompts (frozen bank a92c0f65..., 128 lines)",
+    "draws": "draw k subset = sorted(Random(SEED3 + 7919*k).sample(range(128), 64)), SEED3=202611063 frozen pre-result; k=0 primary, k=1 the ONE re-draw; both draws' banks pre-emitted + pre-captured so a re-draw costs no extra device time",
+    "convention": "direction = unit(mean(UPPER) - mean(lowercase)) per layer via FROZEN a3_propose.py (--cap-loop=upper capture, --cap-neutral=lower capture), captures on E's REBUILT mirror, layers {15,19}",
+    "gate": "|cos(direction_L, d_hat_E,L)| <= 0.2 for EVERY layer L in {15,19}; construction-time; cos receipted in the v1v2-construction ledger row BEFORE any certification row; both draws failing => GATE_EXHAUSTED row (null3v2 battery NOT run; that edit's floor denominator = run nulls; the gate failure itself is a row, never silence)",
+    "bank_files": {
+     "d0": {
+      "upper": "b45f64efd1eb99707c7cab67fac0ee80645cecb4da60a3e68783c78470510581",
+      "lower": "e8cc651241d4469d399b89a79e79e82b350f595fb5565315d97957c53e5388eb"
+     },
+     "d1": {
+      "upper": "fd564a349a19ef957b01cc77b52679ecc023da9013b88e7b9ea11de309421534",
+      "lower": "26de6e003d08e568044cd75001898a1a7d6badb0905f737dfc4b15702255949f"
+     }
+    },
+    "bank_record_sha256": "46d5563beee71a2816435c347659d1271bd7e9e116c0db0f5f550413d3996425",
+    "subset_indices": {
+     "d0": [
+      2,
+      3,
+      5,
+      8,
+      11,
+      13,
+      14,
+      16,
+      17,
+      19,
+      24,
+      28,
+      33,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      44,
+      45,
+      47,
+      48,
+      49,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      63,
+      64,
+      66,
+      67,
+      69,
+      70,
+      73,
+      74,
+      79,
+      80,
+      83,
+      85,
+      87,
+      88,
+      89,
+      90,
+      91,
+      93,
+      95,
+      96,
+      99,
+      105,
+      108,
+      109,
+      110,
+      112,
+      115,
+      117,
+      119,
+      125,
+      126,
+      127
+     ],
+     "d1": [
+      0,
+      1,
+      2,
+      4,
+      5,
+      7,
+      13,
+      14,
+      15,
+      17,
+      23,
+      25,
+      27,
+      28,
+      36,
+      37,
+      38,
+      39,
+      40,
+      44,
+      45,
+      47,
+      52,
+      53,
+      54,
+      56,
+      57,
+      58,
+      60,
+      61,
+      65,
+      67,
+      68,
+      69,
+      71,
+      72,
+      74,
+      75,
+      76,
+      79,
+      81,
+      83,
+      86,
+      87,
+      89,
+      90,
+      92,
+      95,
+      97,
+      101,
+      102,
+      103,
+      107,
+      108,
+      109,
+      110,
+      112,
+      115,
+      116,
+      119,
+      121,
+      123,
+      126,
+      127
+     ]
+    },
+    "builder": "v1v2_null3v2.py (arc-owned, digest below) invoking FROZEN a3_propose.py UNMODIFIED as a subprocess"
+   },
+   "null4_quantnoise": "per layer p_i = sign_i * halfULP_bf16(|4.8*d_hat_E,i|), signs=Random(20261106*10+4+int(layer)).choice((-1,1)) ascending i; L2-normalized to 1; zero-norm => NAMED QUANT_NULL_DEGENERATE",
+   "removal_style_delta": "all nulls/confounded/V-2 applied via FROZEN a3_battery.py --repair (in-memory merge W[:,cols]+=scale*direction fp32->bf16, model on disk untouched), E's tensor names + E's 64 columns + E's removal scale -4.8 (read from E's archived A3 repair_spec.json; verified -4.8 for arm-002/009/015 at prep)",
+   "provenance": {
+    "REUSED_V12": {
+     "edit": "a3-plant-1",
+     "specs": {
+      "null1_gaussian": "0b87f0f167be76d2448549760d6702de18a98b37f770bcd014aeb277298b58f2",
+      "null2_shuffle": "20be6f5bfbf9e83c2de117a9127276f3345e8c9d60b12b0bbb9be8541c92d369",
+      "null4_quantnoise": "2a0cbec62c7e0fcae4ffa98523811dc68e115ca0353e42c047fe353c30c4f510",
+      "confounded_null3_unrelated": "b939db2fbad79082040de7993c3f113860a820c7f4f3a89677fcb1bb23ee752f",
+      "recovered_slugify": "b8ac36e20dfad41fb1959e64d69b3f969df5d6ea5bf7cecbb1861d7646793ac1",
+      "ablate": "14fa817bbb998b3a4c0d4efa45432cd863a608156e03694f9a4ff1f499668b0c",
+      "restore": "65d1f5e0ed03c2cb2014a6652ef62e06810d1c6ed0a86bed4b7e242261cab35f",
+      "relocate": "5c92194390d23ca727d44be2b94c47a813884b9832bd766f6af134fe43ed69d2"
+     },
+     "note": "digests verified against v1 ledger rows / v12 run-plan v2_rules BEFORE reuse; copies re-verified"
+    },
+    "BUILT_FRESH": {
+     "edits": [
+      "a3-plant-3",
+      "a3-plant-5"
+     ],
+     "builder": "v12_nulls.py REUSED UNMODIFIED (40f50f787b2660a051a966208b4336d0117bc520847ff463210c2dbda1ddb3e9)",
+     "seed": 20261106,
+     "specs": {
+      "arm-009": {
+       "null1_gaussian": "a2d19e1ad8d408d355561463b54d594d58b96473435f0bd7325b09026ba43991",
+       "null2_shuffle": "69fac10806551b2edf4d1525df0adfd01c9b6aa2215bbafe4832e32b6b755e43",
+       "null4_quantnoise": "1c9a40d676113609cb35cc556802f1be204fb4546ea300b62ce0218b3f53aed3"
+      },
+      "arm-015": {
+       "null1_gaussian": "fe1d21fba1ffb542c54d4c301fb33e775e99ba4dcd384b733d0b0f060795a8ba",
+       "null2_shuffle": "6d3914fb56a79593ed8734bd50d4a1c7639e66745f4522bfe048a925c0a165a9",
+       "null4_quantnoise": "b4c0137c362252abe3f5e891d8ea12d35eeb11276d2bdf58b22bd20a2f715050"
+      }
+     },
+     "note": "null3v2 specs for ALL THREE edits built at batch time by the gated builder (device captures required)"
+    }
+   }
+  },
+  "certification": "FROZEN a3_score.dart over cells_frozen_A3.json on assembled work-dirs (v12_verdict.py --mode assemble REUSED UNMODIFIED); certified(arm) := loop_rate_G2(R) < loop_rate_G2(M) AND task_success(R) >= task_success(M); M = same-session mirror battery (A3 convention: loop down AND task not down vs E's mirror)",
+  "continuity_gates_per_batch": {
+   "P1A": [
+    {
+     "after": "make_mirror",
+     "key": "mirror_shard_sha256",
+     "expect": "22e52d07164ca45f379ccb7ddc42e52a39ec719f73e3d043a3551baa931f02e7",
+     "code": "MIRROR_NONREPRODUCIBLE"
+    },
+    {
+     "after": "propose_fresh",
+     "key": "layers.15.direction_sha256",
+     "expect": "4cb330299d496fd836905247533f6ae8d4e86577eef861f18bb18d8c45615c6d",
+     "code": "RECOVERY_NONREPRODUCIBLE"
+    },
+    {
+     "after": "propose_fresh",
+     "key": "layers.19.direction_sha256",
+     "expect": "15de5e61a3afb31bd7465803f9e1af8060e3d1c94f475d53693c4143e9b67555",
+     "code": "RECOVERY_NONREPRODUCIBLE"
+    }
+   ],
+   "P1B": [
+    {
+     "after": "make_mirror",
+     "key": "mirror_shard_sha256",
+     "expect": "22e52d07164ca45f379ccb7ddc42e52a39ec719f73e3d043a3551baa931f02e7",
+     "code": "MIRROR_NONREPRODUCIBLE"
+    }
+   ],
+   "P3A": [
+    {
+     "after": "make_mirror",
+     "key": "mirror_shard_sha256",
+     "expect": "7023b5b2d878c2e807b7019983ef08f5a5badec7c71cc58f3f356077d7ced9c9",
+     "code": "MIRROR_NONREPRODUCIBLE"
+    },
+    {
+     "after": "propose_fresh",
+     "key": "layers.15.direction_sha256",
+     "expect": "b5d03ac079e0253e1072ecf9f389fb25a22c91478e2fd2c321b24af867da496f",
+     "code": "RECOVERY_NONREPRODUCIBLE"
+    },
+    {
+     "after": "propose_fresh",
+     "key": "layers.19.direction_sha256",
+     "expect": "9eef503432f52ffe039cf641698ac5430e0a67cf56de5a7140b5afc9b75bc0b2",
+     "code": "RECOVERY_NONREPRODUCIBLE"
+    }
+   ],
+   "P3B": [
+    {
+     "after": "make_mirror",
+     "key": "mirror_shard_sha256",
+     "expect": "7023b5b2d878c2e807b7019983ef08f5a5badec7c71cc58f3f356077d7ced9c9",
+     "code": "MIRROR_NONREPRODUCIBLE"
+    }
+   ],
+   "P5A": [
+    {
+     "after": "make_mirror",
+     "key": "mirror_shard_sha256",
+     "expect": "5e3d259f989a8103adf654e4da4861992dd106873f4a8cef5511d53a10dad6bc",
+     "code": "MIRROR_NONREPRODUCIBLE"
+    },
+    {
+     "after": "propose_fresh",
+     "key": "layers.15.direction_sha256",
+     "expect": "5c91f459f285cfce53fbb2855b5cfab90dd5afcc897096561e29bbc2f21a0a82",
+     "code": "RECOVERY_NONREPRODUCIBLE"
+    },
+    {
+     "after": "propose_fresh",
+     "key": "layers.19.direction_sha256",
+     "expect": "240f7b49633a4c269e59803c7a9273fc4e6f88bdd87a1f221de66750c52ffe33",
+     "code": "RECOVERY_NONREPRODUCIBLE"
+    }
+   ],
+   "P5B": [
+    {
+     "after": "make_mirror",
+     "key": "mirror_shard_sha256",
+     "expect": "5e3d259f989a8103adf654e4da4861992dd106873f4a8cef5511d53a10dad6bc",
+     "code": "MIRROR_NONREPRODUCIBLE"
+    }
+   ]
+  },
+  "m_continuity_law": "battery_M re-run per batch; per-cell output_sha256 compared A vs B vs the archived arm battery_M (join-table digest-verified); mismatch => NAMED M_DRIFT (fresh measurement stands)",
+  "device_plan": {
+   "runner": "v12_batch.py REUSED UNMODIFIED (3af7211508abb4e1c661bd751de1ebda3b092aa1c5cc9d3d31cd55b4dcdc0849)",
+   "lock": "mkdir ${TMPDIR}/wm-device.lock; protocol v3: 10s acquisition retries bounded 360 (1h) => DEVICE_LOCK_TIMEOUT named; wait_ms + retry_interval_used receipted; rmdir + 3s courtesy after each batch; sibling P-2 arm shares the device (LOCK_LIVE_SIBLING_HOLDER)",
+   "law": "serial -j1; per-batch device <=20 min (stage budgets from v12 B1/B2 receipts: mirror ~5s, captures 7-14s, batteries 71-103s => P*A ~6 min, P*B ~8-9 min, B3 ~7 min); ALL wall_ms rows wall_ms_claim=false (machine under heavy external load); power+loadavg tagged per batch",
+   "power": "POWER RULE: battery discharging => stop between mirrors, persist, POWER_BATTERY_STOP; no caffeinate; at plan time: AC power, charging",
+   "sweep": "mirror rmtree at end of every batch (probe scratch law)"
+  },
+  "archive_integrity": {
+   "a3-plant-1": {
+    "arm": "arm-002",
+    "all_match": true
+   },
+   "a3-plant-3": {
+    "arm": "arm-009",
+    "all_match": true
+   },
+   "a3-plant-5": {
+    "arm": "arm-015",
+    "all_match": true
+   }
+  },
+  "arc_helpers_sha256": {
+   "v1v2_prep.py": "75b1981f4e51c2e1e631d72b98efd2862238e5990d9d337c8c8b815022682f4a",
+   "v1v2_null3v2.py": "d38ad59d44f4c6100602329202ee2af1841aef765339e4e19516e275e3653b1d",
+   "v1v2_verdict.py": "6563bff9076ec273cd07c3d81131ccf2c8b15d34332989c5d2c22fb6bf9b6402"
+  },
+  "v12_helpers_unmodified_sha256": {
+   "tool/runs/v12_batch.py": "3af7211508abb4e1c661bd751de1ebda3b092aa1c5cc9d3d31cd55b4dcdc0849",
+   "tool/runs/v12_nulls.py": "40f50f787b2660a051a966208b4336d0117bc520847ff463210c2dbda1ddb3e9",
+   "tool/runs/v12_verdict.py": "24672ee64f346b3c864f15e6ff16bfe790d79bf9a18c291d3fc1a271de0cfc81"
+  },
+  "batches": {
+   "P1A": {
+    "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/batches/P1A.json",
+    "sha256": "91601eacbe2c79acd6464e7fd4322d360225ca3bb8c074c2be1e5c0c24039d83"
+   },
+   "P1B": {
+    "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/batches/P1B.json",
+    "sha256": "53a483a0e0c4248d6e8f770ca2348e9891fa70de4b42d746e4a3f793fd54a5dd"
+   },
+   "P3A": {
+    "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/batches/P3A.json",
+    "sha256": "e70ba56d8aa52b39b7351771a531b9e6505b75ee417d89124570ad58f3ca5edb"
+   },
+   "P3B": {
+    "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/batches/P3B.json",
+    "sha256": "7f8808632362647091a2038e97f7d4f18f90ea35a6ec90cef5f7f27f5bffef18"
+   },
+   "P5A": {
+    "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/batches/P5A.json",
+    "sha256": "8015dac32f38e2e9a9be0f968c4113ba55c394b5ff443ebdfc77e0bddab88062"
+   },
+   "P5B": {
+    "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/batches/P5B.json",
+    "sha256": "645163d76c12a89fe0a9e259ca441af6c215e63f5cfa1cecc669c702bd13de6b"
+   }
+  },
+  "pre_run_mechanics_smokes": {
+   "note": "mechanics-only, NO new measurements; artifacts deleted",
+   "ledger": "a3_ledger.dart append+verify on scratch ledger (LEDGER_OK CHAIN_INTACT)",
+   "scorer_continuity": "a3_score.dart on archived arm-002 batteries reproduces join-table EXACTLY (loop 0.6667/0.3333, task 0.0455/0.4545, certified true, base loop 0.4167, cells sha 84061306...)",
+   "builder_gate_exhausted": "v1v2_null3v2.py on v1-era captures (slugify-vs-neutral) reproduces v1-null-3 geometry cos L15=0.680927 L19=0.717531 => both draws fail => GATE_EXHAUSTED named, receipt written, NO spec",
+   "builder_gate_pass": "synthetic orthogonal captures => GATE_PASS draw d0, spec = arm columns + scale -4.8 + dim-1024 directions"
+  },
+  "scratch_law": "$TMPDIR/wm-v1v2 (banks/specs/batches/gen/mirrors/scorework); durable TEXTUAL evidence: receipts/V1-v2-nulls.jsonl + receipts/V2-mechanism.jsonl (hash-chained via FROZEN lib ledger, a3_ledger.dart), receipts/V1v2/ copies (batch/gate/repair receipts, scored outputs, arc manifests), receipts/V12-v2-summary.md, VERDICTS.md rows",
+  "outputs": [
+   "receipts/V1-v2-nulls.jsonl (run-plan -> per-edit construction -> per-null rows -> confounded row -> per-edit verdicts -> family-wise row)",
+   "receipts/V2-mechanism.jsonl (halt row seq 0 KEPT; unblock note + interventions + verdict appended)",
+   "receipts/V12-v2-summary.md",
+   "VERDICTS.md: per-edit V-1 rows + confounded row + V-2 row + family-wise status row (printf >> after fresh tail)"
+  ],
+  "denominators": {
+   "v1_history": "receipts/V1-nulls.jsonl: plant-1 v1 arc = NULL_LEAK (null-3 certified, nulls 1/2/4 clean); this arc re-runs V-1 under constructor v2 on 3 edits (12 nulls) + 1 confounded arm + V-2 3 interventions; family-wise obligation: 3 of 6 A3-certified edits run, 3 DEFERRED_FAMILY_WISE named",
+   "prep_receipt": {
+    "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T//wm-v1v2/gen/prep_receipt.json",
+    "sha256": "6b2c01f4c5e23c9e5fe48797b39cb4adbd834900d34a2b20193aa0d3315bcccf"
+   }
+  }
+ }
+}

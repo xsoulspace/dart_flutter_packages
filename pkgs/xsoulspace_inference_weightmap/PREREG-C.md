@@ -57,3 +57,20 @@ case-SENSITIVE instructions (uppercase-title cells). Pre-registered instead:
   tool-call) carry cell-specific frozen checkers whose specs already fix case,
   so case artifacts cannot certify through them; the blind spot is generic-
   wrapper-only. This argument is a claim, tested at model tier, not a waiver.
+
+## Addendum 2026-11-06b (null-constructor v2 + family-wise subset; owner-go 2026-11-06)
+V-1 rerun under a corrected unrelated-concept constructor:
+- null-3 v2 = diff-of-means of a contrast from a DIFFERENT behavioral domain
+  (format-style contrast: uppercase-vs-lowercase prompt renders, same content),
+  with a CONSTRUCTION-TIME ORTHOGONALITY GATE: |cos(null, recovered direction)|
+  <= 0.2 per layer, computed and receipted BEFORE any certification; a draw
+  failing the gate is re-drawn once with a new seed offset, then recorded
+  GATE_EXHAUSTED (the gate failure itself is a row).
+- The old null-3 shape is reclassified as its own arm type:
+  CONFOUNDED_POSITIVE_CONTROL — expected to sometimes certify; counted
+  separately; never in the null floor denominator.
+- Family-wise obligation subset (pre-run, stride-2 over certified edits):
+  {plant-1, plant-3, plant-5}; floor 0/4 per edit as before; the remaining
+  three certified edits carry a named DEFERRED_FAMILY_WISE row, not silence.
+- V-2 runs on plant-1 only this arc (ablate/restore/relocate per original
+  text); other edits' V-2 = named deferral.

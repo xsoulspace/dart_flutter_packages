@@ -1,0 +1,274 @@
+{
+ "batch": "P1B",
+ "batch_file_sha256": "53a483a0e0c4248d6e8f770ca2348e9891fa70de4b42d746e4a3f793fd54a5dd",
+ "started_utc": "2026-11-06T15:12:38+00:00",
+ "stages": [
+  {
+   "step": "make_mirror",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/make_mirror.py",
+    "--base",
+    "/Users/antonio/.cache/huggingface/hub/models--mlx-community--Qwen3-0.6B-bf16/snapshots/42096995f6402fde107068cf530136fe64b604f8",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/mirrors/v1v2-p1",
+    "--sidecar",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/sidecars/arm-002/L15",
+    "--sidecar",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/sidecars/arm-002/L19",
+    "--receipt",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/mirror_receipt_B.json"
+   ],
+   "exit": 0,
+   "wall_ms": 5090,
+   "wall_ms_claim": false
+  },
+  {
+   "step": "capture_fmt_upper_d0",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/eval/capture_activations.py",
+    "--model",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/mirrors/v1v2-p1",
+    "--prompts",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/banks/fmt_upper_d0.txt",
+    "--layers",
+    "15,19",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/cap_fmt_upper_d0.json"
+   ],
+   "exit": 0,
+   "wall_ms": 7142,
+   "wall_ms_claim": false
+  },
+  {
+   "step": "capture_fmt_lower_d0",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/eval/capture_activations.py",
+    "--model",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/mirrors/v1v2-p1",
+    "--prompts",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/banks/fmt_lower_d0.txt",
+    "--layers",
+    "15,19",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/cap_fmt_lower_d0.json"
+   ],
+   "exit": 0,
+   "wall_ms": 7246,
+   "wall_ms_claim": false
+  },
+  {
+   "step": "capture_fmt_upper_d1",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/eval/capture_activations.py",
+    "--model",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/mirrors/v1v2-p1",
+    "--prompts",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/banks/fmt_upper_d1.txt",
+    "--layers",
+    "15,19",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/cap_fmt_upper_d1.json"
+   ],
+   "exit": 0,
+   "wall_ms": 7998,
+   "wall_ms_claim": false
+  },
+  {
+   "step": "capture_fmt_lower_d1",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/eval/capture_activations.py",
+    "--model",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/mirrors/v1v2-p1",
+    "--prompts",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/banks/fmt_lower_d1.txt",
+    "--layers",
+    "15,19",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/cap_fmt_lower_d1.json"
+   ],
+   "exit": 0,
+   "wall_ms": 7770,
+   "wall_ms_claim": false
+  },
+  {
+   "step": "battery_M_B",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/a3_battery.py",
+    "--model",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/mirrors/v1v2-p1",
+    "--cells",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/cells_frozen_A3.json",
+    "--groups",
+    "G0,G1,G2",
+    "--out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/battery_M_B.jsonl"
+   ],
+   "exit": 0,
+   "wall_ms": 67936,
+   "wall_ms_claim": false
+  },
+  {
+   "step": "battery_confounded",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/a3_battery.py",
+    "--model",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/mirrors/v1v2-p1",
+    "--cells",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/cells_frozen_A3.json",
+    "--groups",
+    "G0,G1,G2",
+    "--repair",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-002/null3_unrelated_spec.json",
+    "--repair-out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/battery_confounded.jsonl",
+    "--repair-receipt",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/repair_receipt_confounded.json"
+   ],
+   "exit": 0,
+   "wall_ms": 69056,
+   "wall_ms_claim": false
+  },
+  {
+   "step": "battery_null4",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/a3_battery.py",
+    "--model",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/mirrors/v1v2-p1",
+    "--cells",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/cells_frozen_A3.json",
+    "--groups",
+    "G0,G1,G2",
+    "--repair",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-002/null4_quantnoise_spec.json",
+    "--repair-out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/battery_null4.jsonl",
+    "--repair-receipt",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/repair_receipt_null4.json"
+   ],
+   "exit": 0,
+   "wall_ms": 108916,
+   "wall_ms_claim": false
+  },
+  {
+   "step": "build_null3v2",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/v1v2_null3v2.py",
+    "--cap-upper-d0",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/cap_fmt_upper_d0.json",
+    "--cap-lower-d0",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/cap_fmt_lower_d0.json",
+    "--cap-upper-d1",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/cap_fmt_upper_d1.json",
+    "--cap-lower-d1",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/cap_fmt_lower_d1.json",
+    "--d-hat",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-002/recovered.json",
+    "--repair-spec",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-002/repair_spec.json",
+    "--bank-record",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/fmt_banks.json",
+    "--propose-tool",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/a3_propose.py",
+    "--out-spec",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-002/null3v2_spec.json",
+    "--gate-receipt",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/null3v2_gate.json"
+   ],
+   "exit": 0,
+   "wall_ms": 90,
+   "wall_ms_claim": false
+  },
+  {
+   "step": "battery_null3v2",
+   "argv": [
+    "/Users/antonio/.local/share/wm-mlx/bin/python",
+    "-I",
+    "-B",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/a3_battery.py",
+    "--model",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/mirrors/v1v2-p1",
+    "--cells",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_weightmap/tool/runs/cells_frozen_A3.json",
+    "--groups",
+    "G0,G1,G2",
+    "--repair",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-002/null3v2_spec.json",
+    "--repair-out",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/battery_null3v2.jsonl",
+    "--repair-receipt",
+    "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/repair_receipt_null3v2.json"
+   ],
+   "exit": 0,
+   "wall_ms": 106236,
+   "wall_ms_claim": false
+  }
+ ],
+ "gates": [
+  {
+   "after": "make_mirror",
+   "file": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P1/mirror_receipt_B.json",
+   "key": "mirror_shard_sha256",
+   "expect": "22e52d07164ca45f379ccb7ddc42e52a39ec719f73e3d043a3551baa931f02e7",
+   "code": "MIRROR_NONREPRODUCIBLE",
+   "ok": true,
+   "got": "22e52d07164ca45f379ccb7ddc42e52a39ec719f73e3d043a3551baa931f02e7"
+  }
+ ],
+ "blocked": null,
+ "lock_wait_ms": 980000,
+ "verdict": "BATCH_COMPLETE",
+ "retry_interval_used": 10,
+ "power_start": {
+  "source": "pmset -g batt",
+  "lines": [
+   "Now drawing from 'AC Power'",
+   " -InternalBattery-0 (id=36569187)\t96%; charging; 0:18 remaining present: true"
+  ]
+ },
+ "loadavg_start": [
+  4.25146484375,
+  3.42041015625,
+  2.88037109375
+ ],
+ "finished_utc": "2026-11-06T15:35:26+00:00",
+ "power_end": {
+  "source": "pmset -g batt",
+  "lines": [
+   "Now drawing from 'AC Power'",
+   " -InternalBattery-0 (id=36569187)\t97%; charging; 0:19 remaining present: true"
+  ]
+ },
+ "loadavg_end": [
+  1.966796875,
+  2.86669921875,
+  2.86083984375
+ ],
+ "mirror_swept": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/mirrors/v1v2-p1"
+}

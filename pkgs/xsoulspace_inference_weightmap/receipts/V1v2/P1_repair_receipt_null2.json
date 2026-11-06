@@ -1,0 +1,23 @@
+{
+ "tool": "a3_battery.py --repair",
+ "model_dir": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/mirrors/v1v2-p1",
+ "model_on_disk_untouched": true,
+ "merge_law": "W[:, cols] += scale*direction (fp32, cast back to stored dtype)",
+ "repaired": [
+  {
+   "tensor": "model.layers.15.mlp.down_proj.weight",
+   "scale": -4.8,
+   "columns": 64,
+   "direction_sha256": "8062fc2929bd7e95e28af442c5b0b2a270ebe50c7b8a7a04c2d80cf93b1b3244",
+   "post_repair_tensor_f32_sha256": "aa99603164cd023ac6660d5a94bfc15712567ca31019b543f2572d1e42f03e4a"
+  },
+  {
+   "tensor": "model.layers.19.mlp.down_proj.weight",
+   "scale": -4.8,
+   "columns": 64,
+   "direction_sha256": "bd8764791c840e1adc9cfa6b80bed6f68dbfe9d9d2f6a329386e7e1b2f8c3137",
+   "post_repair_tensor_f32_sha256": "29901235c7327615bd8e63966aa1538745076404bb2b3a4df58a372c04645458"
+  }
+ ],
+ "at": "2026-11-06T15:08:37+00:00"
+}

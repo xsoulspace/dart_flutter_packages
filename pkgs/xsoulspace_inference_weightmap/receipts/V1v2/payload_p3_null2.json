@@ -1,0 +1,71 @@
+{
+ "kind": "v1v2-null",
+ "payload": {
+  "artifact": "V-1 v2 matched null (PREREG-C addendum 2026-11-06b; constructor v2)",
+  "at": "2026-11-06T15:58:39+00:00",
+  "target_edit": {
+   "edit": "a3-plant-3",
+   "arm": "arm-009",
+   "join_metrics": {
+    "loop_delta_R_minus_M": -0.5,
+    "loop_rate_M": 1.0,
+    "loop_rate_R": 0.5,
+    "task_success_M": 0.045454545454545456,
+    "task_success_R": 0.4090909090909091
+   }
+  },
+  "null_id": "v1v2-p3-null2",
+  "null_kind": "null2_shuffle",
+  "construction": "v[i]=d_hat[perm[i]], perm=Random(seed*10+2+layer).sample(range(1024),1024); norm preserved exactly [BUILT_FRESH (v12_nulls.py unmodified, seed 20261106)]",
+  "spec_sha256": "69fac10806551b2edf4d1525df0adfd01c9b6aa2215bbafe4832e32b6b755e43",
+  "scale": -4.8,
+  "per_layer": {
+   "15": {
+    "direction_sha256": "b9d0e36f324ad81830ff54402889131abfd3bed458a22207e33232d9aa178d2b",
+    "norm": 1.0000000000000002,
+    "cos_with_d_hat": 0.034284692943692394
+   },
+   "19": {
+    "direction_sha256": "6279cd167f533ed12888ceafb8b9a8974704d91d83ec3858cae25fdced1920d5",
+    "norm": 1.0000000000000002,
+    "cos_with_d_hat": 0.03082638702297088
+   }
+  },
+  "certification_rule": "certified(arm) := loop_rate(R) < loop_rate(M) AND task_success(R) >= task_success(M), where M = planted/null mirror battery and R = removal-edit battery (R = M with -scale*recovered_direction merged in-memory, same columns). Strict inequality / non-strict floor per PREREG-A A3 wording ('loop-rate down', 'task success not down'). Per-cell flips recorded in arm receipts for knife-edge diagnosis.",
+  "loop_rate_M": 1.0,
+  "loop_rate_R": 0.9166666666666666,
+  "loop_delta_R_minus_M": -0.08333333333333337,
+  "task_success_M": 0.045454545454545456,
+  "task_success_R": 0.045454545454545456,
+  "task_success_delta_R_minus_M": 0.0,
+  "task_pass_M": 1,
+  "task_pass_R": 1,
+  "certified": true,
+  "flips": [],
+  "digests": {
+   "battery_M": "5567d80f28f5e88b62097d0d242436cf0445f15b816480c5a115dea8b4704a78",
+   "battery_R": "ce69ee69ac07438dbf79381f31def6b358149c498084abb815f52db38485f682",
+   "recovered_json": "MISSING",
+   "mirror_receipt": "MISSING",
+   "repair_receipt": "MISSING",
+   "arm_receipt": "MISSING",
+   "battery_M_session_B": "5567d80f28f5e88b62097d0d242436cf0445f15b816480c5a115dea8b4704a78"
+  },
+  "repair_plumbing": {
+   "model_on_disk_untouched": true,
+   "receipt_sha256": "992da7a839129d257e17f8a5a1fac22336eb7f8ae1d6eed1a17c96fdb82e0519",
+   "tensors": [
+    "model.layers.15.mlp.down_proj.weight",
+    "model.layers.19.mlp.down_proj.weight"
+   ],
+   "columns_equal_arm": true,
+   "scales": [
+    -4.8
+   ],
+   "direction_sha256_match_spec": true,
+   "columns_64": true,
+   "all_ok": true
+  },
+  "plumbing_flag": null
+ }
+}

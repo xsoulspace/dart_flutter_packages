@@ -1,0 +1,205 @@
+{
+ "stage": "certifier (blind)",
+ "generated_utc": "2026-11-06T15:37:31.817537Z",
+ "cells_sha256": "8406130623b6e85922eac6cbd92b73dd2282e6fc19538bb3c199f647f518d760",
+ "certification_rule": "certified(arm) := loop_rate(R) < loop_rate(M) AND task_success(R) >= task_success(M), where M = planted/null mirror battery and R = removal-edit battery (R = M with -scale*recovered_direction merged in-memory, same columns). Strict inequality / non-strict floor per PREREG-A A3 wording ('loop-rate down', 'task success not down'). Per-cell flips recorded in arm receipts for knife-edge diagnosis.",
+ "base": {
+  "loop_rate_G2": 0.4166666666666667,
+  "task_success": 0.45454545454545453,
+  "task_pass": 10,
+  "task_total": 22,
+  "pilot_loop_rate": 0.1875,
+  "jsonl_sha256": "db87f5a3d3f893ad6fab51b8ee9983fe43143d96638bac334980937e95fe5696"
+ },
+ "arms": {
+  "v1v2-p1-confounded": {
+   "status": "SCORED",
+   "loop_rate_M": 0.6666666666666666,
+   "loop_rate_R": 0.5833333333333334,
+   "loop_delta_R_minus_M": -0.08333333333333326,
+   "loop_delta_M_minus_base": 0.24999999999999994,
+   "task_success_M": 0.045454545454545456,
+   "task_success_R": 0.36363636363636365,
+   "task_success_delta_R_minus_M": 0.3181818181818182,
+   "task_pass_M": 1,
+   "task_pass_R": 8,
+   "certified": true,
+   "flips": [
+    {
+     "cell_id": "g0-ws",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-01",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-02",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-03",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-04",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-05",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-06",
+     "M": false,
+     "R": true
+    }
+   ],
+   "digests": {
+    "battery_M": "38bf31bebc450929ba7c30b37a901fb529a9fb8d69889d659ed2690185706122",
+    "battery_R": "33f42d6192d874038be0ae46540422d365736eb9c9a54daadad55ea4207382bc",
+    "recovered_json": "MISSING",
+    "mirror_receipt": "MISSING",
+    "repair_receipt": "MISSING",
+    "arm_receipt": "MISSING"
+   }
+  },
+  "v1v2-p1-null1": {
+   "status": "SCORED",
+   "loop_rate_M": 0.6666666666666666,
+   "loop_rate_R": 1.0,
+   "loop_delta_R_minus_M": 0.33333333333333337,
+   "loop_delta_M_minus_base": 0.24999999999999994,
+   "task_success_M": 0.045454545454545456,
+   "task_success_R": 0.09090909090909091,
+   "task_success_delta_R_minus_M": 0.045454545454545456,
+   "task_pass_M": 1,
+   "task_pass_R": 2,
+   "certified": false,
+   "flips": [
+    {
+     "cell_id": "g0-clamp",
+     "M": false,
+     "R": true
+    }
+   ],
+   "digests": {
+    "battery_M": "38bf31bebc450929ba7c30b37a901fb529a9fb8d69889d659ed2690185706122",
+    "battery_R": "7b0873552623fe62877e1a2d0b03e0e9d57c5145d101b8f4bfc8a37d36b67dd6",
+    "recovered_json": "MISSING",
+    "mirror_receipt": "MISSING",
+    "repair_receipt": "MISSING",
+    "arm_receipt": "MISSING"
+   }
+  },
+  "v1v2-p1-null2": {
+   "status": "SCORED",
+   "loop_rate_M": 0.6666666666666666,
+   "loop_rate_R": 1.0,
+   "loop_delta_R_minus_M": 0.33333333333333337,
+   "loop_delta_M_minus_base": 0.24999999999999994,
+   "task_success_M": 0.045454545454545456,
+   "task_success_R": 0.18181818181818182,
+   "task_success_delta_R_minus_M": 0.13636363636363635,
+   "task_pass_M": 1,
+   "task_pass_R": 4,
+   "certified": false,
+   "flips": [
+    {
+     "cell_id": "g0-rle",
+     "M": true,
+     "R": false
+    },
+    {
+     "cell_id": "g0-clamp",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-01",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-02",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-06",
+     "M": false,
+     "R": true
+    }
+   ],
+   "digests": {
+    "battery_M": "38bf31bebc450929ba7c30b37a901fb529a9fb8d69889d659ed2690185706122",
+    "battery_R": "ff29285307993cb8a408cc03347c85832f7c0ca1cff8eab79d0064fee1f517d9",
+    "recovered_json": "MISSING",
+    "mirror_receipt": "MISSING",
+    "repair_receipt": "MISSING",
+    "arm_receipt": "MISSING"
+   }
+  },
+  "v1v2-p1-null3v2": {
+   "status": "SCORED",
+   "loop_rate_M": 0.6666666666666666,
+   "loop_rate_R": 0.9166666666666666,
+   "loop_delta_R_minus_M": 0.25,
+   "loop_delta_M_minus_base": 0.24999999999999994,
+   "task_success_M": 0.045454545454545456,
+   "task_success_R": 0.045454545454545456,
+   "task_success_delta_R_minus_M": 0.0,
+   "task_pass_M": 1,
+   "task_pass_R": 1,
+   "certified": false,
+   "flips": [],
+   "digests": {
+    "battery_M": "38bf31bebc450929ba7c30b37a901fb529a9fb8d69889d659ed2690185706122",
+    "battery_R": "9342a4e6ad2b3356666cb7161aba45ddd4419b703f6a9c0732c8735903d09161",
+    "recovered_json": "MISSING",
+    "mirror_receipt": "MISSING",
+    "repair_receipt": "MISSING",
+    "arm_receipt": "MISSING"
+   }
+  },
+  "v1v2-p1-null4": {
+   "status": "SCORED",
+   "loop_rate_M": 0.6666666666666666,
+   "loop_rate_R": 1.0,
+   "loop_delta_R_minus_M": 0.33333333333333337,
+   "loop_delta_M_minus_base": 0.24999999999999994,
+   "task_success_M": 0.045454545454545456,
+   "task_success_R": 0.13636363636363635,
+   "task_success_delta_R_minus_M": 0.0909090909090909,
+   "task_pass_M": 1,
+   "task_pass_R": 3,
+   "certified": false,
+   "flips": [
+    {
+     "cell_id": "g0-clamp",
+     "M": false,
+     "R": true
+    },
+    {
+     "cell_id": "g1-perm-05",
+     "M": false,
+     "R": true
+    }
+   ],
+   "digests": {
+    "battery_M": "38bf31bebc450929ba7c30b37a901fb529a9fb8d69889d659ed2690185706122",
+    "battery_R": "d2167afaa57f9a0f1b43755629d87e082e4fd5917177a4f1c19febe518e26cf3",
+    "recovered_json": "MISSING",
+    "mirror_receipt": "MISSING",
+    "repair_receipt": "MISSING",
+    "arm_receipt": "MISSING"
+   }
+  }
+ }
+}

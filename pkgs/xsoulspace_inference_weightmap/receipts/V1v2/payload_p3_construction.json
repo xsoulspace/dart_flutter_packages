@@ -1,0 +1,312 @@
+{
+ "kind": "v1v2-construction",
+ "payload": {
+  "artifact": "V-1 v2 per-edit construction receipt (specs + null3v2 orthogonality gate cos values; PRE-CERTIFICATION, PREREG-C addendum 2026-11-06b)",
+  "at": "2026-11-06T15:56:46+00:00",
+  "target_edit": {
+   "edit": "a3-plant-3",
+   "arm": "arm-009",
+   "tag": "P3"
+  },
+  "arc_manifest_sha256": "1370e792c0b8451173eeadd30b90a8abf19583f1d819b642c7c3e30e1d5e3d4b",
+  "gate_receipt_sha256": "326777c8aaff64f678ceef99e6db4c8eef1d264f7a62791a26e6fae24385a0ad",
+  "removal_scale": -4.8,
+  "columns_source": {
+   "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-009/repair_spec.json",
+   "sha256": "690c1000fed8cd911922526573f69f06c4a3e8d66fc1c90035e7060a170e6dac"
+  },
+  "d_hat_source": {
+   "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-009/recovered.json",
+   "sha256": "90c3bd68206a1c243140cf752994eb610a3b61c786cfd079ef311c91b4032e5b"
+  },
+  "nulls": {
+   "null1_gaussian": {
+    "spec_path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-009/null1_gaussian_spec.json",
+    "spec_sha256": "a2d19e1ad8d408d355561463b54d594d58b96473435f0bd7325b09026ba43991",
+    "provenance": "BUILT_FRESH (v12_nulls.py unmodified, seed 20261106)",
+    "scale": -4.8,
+    "construction": "iid N(0,1) x1024, Random(seed*10+1+layer), L2-normalized",
+    "per_layer": {
+     "15": {
+      "direction_sha256": "6fabc159c10ffcf0a382a264fb2baf4a5f4701abcdf3ac0a071b86ef61537d38",
+      "norm": 0.9999999999999988,
+      "cos_with_d_hat": -0.040045858753797986
+     },
+     "19": {
+      "direction_sha256": "72198707edbe8d07d371dd6288e37fa469b7448bef49fcb863523e3eb7ff6ee0",
+      "norm": 0.9999999999999993,
+      "cos_with_d_hat": 0.04111445214377497
+     }
+    }
+   },
+   "null2_shuffle": {
+    "spec_path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-009/null2_shuffle_spec.json",
+    "spec_sha256": "69fac10806551b2edf4d1525df0adfd01c9b6aa2215bbafe4832e32b6b755e43",
+    "provenance": "BUILT_FRESH (v12_nulls.py unmodified, seed 20261106)",
+    "scale": -4.8,
+    "construction": "v[i]=d_hat[perm[i]], perm=Random(seed*10+2+layer).sample(range(1024),1024); norm preserved exactly",
+    "per_layer": {
+     "15": {
+      "direction_sha256": "b9d0e36f324ad81830ff54402889131abfd3bed458a22207e33232d9aa178d2b",
+      "norm": 1.0000000000000002,
+      "cos_with_d_hat": 0.034284692943692394
+     },
+     "19": {
+      "direction_sha256": "6279cd167f533ed12888ceafb8b9a8974704d91d83ec3858cae25fdced1920d5",
+      "norm": 1.0000000000000002,
+      "cos_with_d_hat": 0.03082638702297088
+     }
+    }
+   },
+   "null4_quantnoise": {
+    "spec_path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-009/null4_quantnoise_spec.json",
+    "spec_sha256": "1c9a40d676113609cb35cc556802f1be204fb4546ea300b62ce0218b3f53aed3",
+    "provenance": "BUILT_FRESH (v12_nulls.py unmodified, seed 20261106)",
+    "scale": -4.8,
+    "construction": "p_i = sign_i * halfULP_bf16(|4.8*d_hat_i|), signs=Random(seed*10+4+layer).choice((-1,1)) ascending i; L2-normalized to 1",
+    "per_layer": {
+     "15": {
+      "direction_sha256": "7e5914b789a0d9c79d3f0525cd8a918516c96ed8b5ca994a46408a0b63fb461b",
+      "norm": 0.999999999999997,
+      "cos_with_d_hat": -0.1869697607224292
+     },
+     "19": {
+      "direction_sha256": "484d200cd4feba0d653d05839b914d8cca5d3979fa5af2afcdcd1dacdfe3c9e2",
+      "norm": 0.9999999999999992,
+      "cos_with_d_hat": -0.24545800144223473
+     }
+    }
+   },
+   "null3_unrelated_v2": {
+    "spec_path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-009/null3v2_spec.json",
+    "status": "BUILT_AT_BATCH_TIME",
+    "builder": "v1v2_null3v2.py (arc-owned) over FROZEN a3_propose.py diff-of-means",
+    "gate": {
+     "rule": "|cos(null, d_hat)| <= 0.2 per layer {15,19}, construction-time, receipted BEFORE any certification; one re-draw (seed offset 7919), then GATE_EXHAUSTED row",
+     "threshold": 0.2,
+     "banks": {
+      "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/fmt_banks.json",
+      "sha256": "46d5563beee71a2816435c347659d1271bd7e9e116c0db0f5f550413d3996425",
+      "draw_seeds": {
+       "d0": 202611063,
+       "d1": 202618982
+      },
+      "file_sha256": {
+       "d0": {
+        "upper": "b45f64efd1eb99707c7cab67fac0ee80645cecb4da60a3e68783c78470510581",
+        "lower": "e8cc651241d4469d399b89a79e79e82b350f595fb5565315d97957c53e5388eb"
+       },
+       "d1": {
+        "upper": "fd564a349a19ef957b01cc77b52679ecc023da9013b88e7b9ea11de309421534",
+        "lower": "26de6e003d08e568044cd75001898a1a7d6badb0905f737dfc4b15702255949f"
+       }
+      }
+     }
+    }
+   }
+  },
+  "null3v2_gate": {
+   "tool": "v1v2_null3v2.py",
+   "at": "2026-11-06T15:53:13+00:00",
+   "gate_rule": "|cos(null3v2_direction, d_hat_E)| <= 0.2 per layer {15,19}; construction-time; receipted BEFORE any certification; ONE re-draw with seed offset, then GATE_EXHAUSTED (PREREG-C addendum 2026-11-06b)",
+   "threshold": 0.2,
+   "convention": "direction = unit(mean(UPPER) - mean(lowercase)) via FROZEN a3_propose.py (--cap-loop=upper capture, --cap-neutral=lower capture); captures on E's rebuilt mirror; spec = E's tensor names, E's 64 columns, E's removal scale (-4.8)",
+   "d_hat_source": {
+    "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-009/recovered.json",
+    "sha256": "90c3bd68206a1c243140cf752994eb610a3b61c786cfd079ef311c91b4032e5b"
+   },
+   "repair_spec_source": {
+    "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-a3/blind/arm-009/repair_spec.json",
+    "sha256": "690c1000fed8cd911922526573f69f06c4a3e8d66fc1c90035e7060a170e6dac"
+   },
+   "bank_record": {
+    "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/fmt_banks.json",
+    "sha256": "46d5563beee71a2816435c347659d1271bd7e9e116c0db0f5f550413d3996425"
+   },
+   "propose_tool_sha256": "c9b84cfb86ce49f93e2be7358d598040826060e61c9f2c50e5cf3ab3ea079409",
+   "draws": [
+    {
+     "draw": "d0",
+     "captures": {
+      "upper": {
+       "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P3/cap_fmt_upper_d0.json",
+       "sha256": "b8bddb3c33eac562858e5b2adf04732fc04efbb1b04bc2eb5c6319b9b5229d4a"
+      },
+      "lower": {
+       "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P3/cap_fmt_lower_d0.json",
+       "sha256": "cc27c922f7faeacbb7e28d68a96ecd8346c37d2ac5962afd46d81252f30c77f9"
+      }
+     },
+     "recovered_fmt": {
+      "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/gen/P3/recovered_fmt_d0.json",
+      "sha256": "e59048b68997af79b661dedaf3b5cb54c79692ae9ebb522f4b2e498c1e8d29bb"
+     },
+     "per_layer": {
+      "15": {
+       "cos_with_d_hat": 0.14288044692850524,
+       "abs_cos": 0.14288044692850524,
+       "direction_sha256": "9317947c6624bbdb4e9a3dd536080cb680194a898814cee1e93b9e6af697aa04",
+       "recomputed_direction_sha256": "143a9f7912f53644fb22d63a43fdcc4c32b65e28081afbf60333628709af45ca",
+       "diff_l2_norm": 8.471533305649931,
+       "norm": 0.9999999999999999
+      },
+      "19": {
+       "cos_with_d_hat": 0.015002814060851884,
+       "abs_cos": 0.015002814060851884,
+       "direction_sha256": "e2ceeae842c33e8b29ad659837b427af384c8d647b65a071cb586a18d5cc110a",
+       "recomputed_direction_sha256": "434b247a55fe62ff75efcc85ba4ff8e66d2c424c9ff3ff8e481de188e0618813",
+       "diff_l2_norm": 18.53714516368854,
+       "norm": 0.9999999999999999
+      }
+     },
+     "gate_pass": true
+    }
+   ],
+   "status": "GATE_PASS",
+   "draw_used": "d0",
+   "spec": {
+    "path": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/wm-v1v2/specs/arm-009/null3v2_spec.json",
+    "sha256": "fb2a58119d1e975e37810a4114f0d6f4f197ddaec96d659a98039563471a44c7",
+    "scale": -4.8,
+    "columns_per_layer": {
+     "15": [
+      28,
+      40,
+      180,
+      188,
+      204,
+      236,
+      319,
+      352,
+      533,
+      569,
+      628,
+      637,
+      647,
+      674,
+      687,
+      719,
+      736,
+      849,
+      856,
+      943,
+      955,
+      956,
+      957,
+      976,
+      1086,
+      1158,
+      1174,
+      1214,
+      1227,
+      1254,
+      1310,
+      1316,
+      1368,
+      1396,
+      1467,
+      1490,
+      1580,
+      1753,
+      1875,
+      1927,
+      1958,
+      1968,
+      2060,
+      2071,
+      2084,
+      2120,
+      2157,
+      2226,
+      2315,
+      2324,
+      2339,
+      2354,
+      2360,
+      2477,
+      2515,
+      2538,
+      2558,
+      2586,
+      2601,
+      2649,
+      2690,
+      2730,
+      2966,
+      2982
+     ],
+     "19": [
+      28,
+      40,
+      180,
+      188,
+      204,
+      236,
+      319,
+      352,
+      533,
+      569,
+      628,
+      637,
+      647,
+      674,
+      687,
+      719,
+      736,
+      849,
+      856,
+      943,
+      955,
+      956,
+      957,
+      976,
+      1086,
+      1158,
+      1174,
+      1214,
+      1227,
+      1254,
+      1310,
+      1316,
+      1368,
+      1396,
+      1467,
+      1490,
+      1580,
+      1753,
+      1875,
+      1927,
+      1958,
+      1968,
+      2060,
+      2071,
+      2084,
+      2120,
+      2157,
+      2226,
+      2315,
+      2324,
+      2339,
+      2354,
+      2360,
+      2477,
+      2515,
+      2538,
+      2558,
+      2586,
+      2601,
+      2649,
+      2690,
+      2730,
+      2966,
+      2982
+     ]
+    },
+    "per_layer_direction_sha256": {
+     "15": "143a9f7912f53644fb22d63a43fdcc4c32b65e28081afbf60333628709af45ca",
+     "19": "434b247a55fe62ff75efcc85ba4ff8e66d2c424c9ff3ff8e481de188e0618813"
+    }
+   }
+  }
+ }
+}

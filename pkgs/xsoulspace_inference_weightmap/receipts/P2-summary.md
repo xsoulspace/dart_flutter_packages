@@ -12,13 +12,22 @@
 > @32k base ≈93.0, edited(p50c) 31–33 (33.05). p10c 12.3/25.7/49.0; p25c
 > 14.1/25.1/39.9; p50c 48.1/67.1/62.3.
 
-Status: **PARTIAL (arc-1, battery-bound) — denominators: glue 2/2; pools 2/2; base sides 3/3 cells; edited sides 0/4; practice passes 0/10 complete (pass 1 at 40/128 rows); P-2b delta NOT_REACHED (pool READY)** (this file is updated as units complete; the
-final version carries the status verdict class with denominators). Run receipt:
-`receipts/P2-run.jsonl` (chained rows). Scratch state (resume authority):
-`$TMPDIR/p2-artifacts/run/manifest.jsonl` + per-pass dirs. Absolute ms/tok_s are
-NON-CLAIMS (POWER.md); this arc additionally runs **on battery**
-(POWER_BATTERY_RUN, 27%→ at device start 12:17:32Z) with a live sibling A2 arm
-sharing device + electrons — contention lock-waits are receipted non-claims.
+Status (arc-2, updated 2026-11-06 ~17:00 local): **PARTIAL — denominators:
+glue 2/2 (+1 glue amendment p2_cell.sh LOCK_SLEEP_S); pools 2/2 with BOTH P-2b
+legs COMPLETE (gsm8k derived-input leg closed per addendum 2026-11-06b); base
+sides 3/3 cells (live digest re-verified arc-2); edited sides 0/4; practice
+passes 0/10 complete (pass 1 at 88/128 rows, chunks 00-10); mirrors 0/3;
+P-2b delta NOT_REACHED (pool READY, derivation precheck PASSED)** — arc-2 is
+in **FLEET_YIELD_V12 HOLD** (coordinator order 16:58 local: device yielded to
+V-1v2; zero lock acquisitions until coordinator go; resume pointer = receipts
+seq 17: pass 1 next chunk index 11). Arc-2 device wall used ≈1355 s of the 3 h
+ceiling (device-batch seconds; lock waits receipted separately as non-claims).
+Arc-1 status (battery-bound, 40/128 rows) is superseded but retained in the
+chained receipts. Run receipt: `receipts/P2-run.jsonl` (chained rows, seq
+0-17). Scratch state (resume authority): `$TMPDIR/p2-artifacts/run/
+manifest.jsonl` + per-pass dirs. Absolute ms/tok_s are NON-CLAIMS (POWER.md);
+arc-2 runs on **AC power (charging)** — no battery constraint; contention
+lock-waits receipted non-claims (sibling A2 32k arm until ~17:0x, then V-1v2).
 
 ## Glue (both NAMED gaps CLOSED; VERDICTS row 2026-11-06)
 
@@ -50,11 +59,21 @@ sharing device + electrons — contention lock-waits are receipted non-claims.
   the paper's disjointness claim is mechanically CONFIRMED for MATH (full
   500-row subtraction); the P-2 vs P-2b MATH delta therefore measures
   DISTRIBUTIONAL contamination only (builder's
-  DISTRIBUTIONAL_CONTAMINATION_NOT_MEASURED carried). GSM8K pair
-  **NAMED-excluded**: UPSTREAM_U2028_GSM8K_TRAIN_BUILDER_INCOMPATIBLE (paper
-  gsm8k_train line 2379 carries 2 literal U+2028 chars inside a JSON string;
-  the frozen builder's splitlines() NAMED-refuses; frozen tool NOT edited;
-  remedy = derived-input row or builder amendment, owner decision).
+  DISTRIBUTIONAL_CONTAMINATION_NOT_MEASURED carried).
+- **GSM8K leg CLOSED arc-2 via the DERIVED-INPUT row** (PREREG-D addendum
+  2026-11-06b, owner-go; builder stays FROZEN): raw gsm8k_train.jsonl sha
+  `06d0dd56…` == frozen constant → byte-level U+2028/U+2029→SPACE (2× U+2028
+  on physical line 2379, id gsm8k_train_2381, inside the `problem` string) →
+  derived sha `52ae36c6…` (`p2b-derived/derived_receipt.json` records raw +
+  derived digests + exact transformation; raw splitlines 7471 ≠ 7469 rows =
+  the NAMED builder refusal, derived splitlines 7469 == rows). Frozen builder
+  rc=0 on derived: `p2b_gsm8k_train.jsonl` 7469 rows (passthrough),
+  **gsm8k_test overlap removed = 0** vs the FULL 1319-row test set →
+  PAPER_DISJOINTNESS_CLAIM_VERIFIED_0_OVERLAP now covers BOTH legs (literal
+  level; distributional carried). MATH leg unchanged (`abe7982b` passthrough).
+  Arc-1 exclusion UPSTREAM_U2028_GSM8K_TRAIN_BUILDER_INCOMPATIBLE is CLOSED
+  (receipt seq 14); arc-1 builder receipt archived at
+  `$TMPDIR/p2-artifacts/run/p2b_build_receipt_arc1.json`.
 
 ## Cells (denominators achieved / planned; base sides reuse A2 gens —
 deterministic greedy, digest-verified base weights 04b1c301 == A1, exact
@@ -82,15 +101,37 @@ lock waits + power facts: `$TMPDIR/p2-artifacts/run/p2/pass_001/
 cont_manifest.jsonl`. Resume = rerun the recorded command (completed chunks
 skip; resume pointer in receipts/P2-run.jsonl seq 10).
 
+**ARC-2 (AC restored): 88/128 rows (11/16 chunks) then FLEET_YIELD_V12 HOLD.**
+Chunks 07-10 completed arc-2 (walls 375/309/334/≈337 s; lock waits 1760/440/
+310/…s receipted — contention vs the sibling A2 capcurve_edited_32768 arm
+running 32k-cap chunks under its own --max-min 100). Contrast at yield:
+**80 LOOP hits @1024 / 8 NEUTRAL** (early finishers 508/671/742/748/833/939/
+975/996 tok) → neutral rate 9.1%, within-batch contrast VIABLE. First arc-2
+resume process died by EXTERNAL SIGTERM 16:26 (source UNKNOWN_NAMED, seq 16;
+state unaffected — chunk-skip resume); relaunched detached (nohup+disown).
+At 16:58 the coordinator ordered the fleet yield: chunk10 finished +
+manifested first, script TERMed between chunks (no orphan generator, lock
+free), V-1v2 acquired. **Resume pointer: next chunk index 11 (rows [88,128) =
+chunks 11-15), same recorded command, HOLD until coordinator go.**
+
 ## NAMED issues this arc
 
-POWER_BATTERY_RUN (device wall battery-bound, not 3h-bound; sibling A2 arm
-shares device+electrons); UPSTREAM_U2028_GSM8K_TRAIN_BUILDER_INCOMPATIBLE;
-BUILDCHECK_BATTERY_STOP (make_mirror leg unverified this arc; frozen builder
-with WS-1/A3 receipt history); CUMULATIVE_MEAN_RENORMALIZED_UNIT;
+POWER_BATTERY_RUN (arc-1; arc-2 on AC, no battery constraint);
+UPSTREAM_U2028_GSM8K_TRAIN_BUILDER_INCOMPATIBLE — **CLOSED arc-2 via the
+derived-input row** (addendum 2026-11-06b; receipts seq 14-15);
+EXTERNAL_SIGTERM_UNKNOWN_SOURCE (arc-2 16:26 kill of the first resume process;
+state unaffected; relaunched detached; seq 16); FLEET_YIELD_V12 (coordinator
+hold from 16:58; seq 17); P2_CELL_LOCK_SLEEP_S_UNDEFINED (glue bug in
+`$TMPDIR/p2-tools/p2_cell.sh`: referenced-undefined under `set -u` = abort on
+any lock contention; fixed to the documented 30×60 s contract, sha
+`e63798eb…`, frozen tools untouched; seq 13-14);
+BUILDCHECK_BATTERY_STOP (make_mirror leg still unexercised; the pass-1 build
+step will exercise it under receipts); CUMULATIVE_MEAN_RENORMALIZED_UNIT;
 CROSS_CAST_TRANSFER_ASSUMPTION_S4.8; PRACTICE_RENDER_SAME_AS_A2;
-BASE_REUSE_A2_DETERMINISTIC (receipted); CAP_4096_VS_32768 + the A2-local
-comparability caveats (subset/sampler/template) ride every row;
+BASE_REUSE_A2_DETERMINISTIC (receipted; arc-2 live re-verification: base score
+files digest-match seq 7/8 exactly and the frozen scorer reproduces every
+statistic); CAP_4096_VS_32768 + the A2-local comparability caveats
+(subset/sampler/template) ride every row;
 TEMPLATE_WHITESPACE_COLLAPSE_NOTE: a future end-to-end p2_runner run collapses
 whitespace runs in suite `problem` text (build_prompt_file), so runner-driven
 prompt bytes may differ from the A2 prompt files by collapsed double spaces —

@@ -1,93 +1,63 @@
-# A2-LOCAL summary — PREREG-A arm A2 (addendum 2026-11-05)
+# A2-LOCAL summary — PREREG-A arm A2 (addendum 2026-11-05 + addendum 3 2026-11-06)
 
-Status: **IN PROGRESS** (this file is updated as cells complete; the final
-version carries the verdict class). Run receipt: `A2-local-run.jsonl`
-(harness params + published targets + per-cell rows). Scratch artifacts
-(generations, manifests, scores): `$TMPDIR/a2-artifacts/` — digested in the
-run receipt; absolute ms/tok_s are NON-CLAIMS (POWER.md), ratios are
-measurements.
+Status: **IN PROGRESS — HELD at fleet decision 2** (unified rewrite by resume
+actor 2, updated 2026-11-06 ~15:45Z). Remaining scope per **PREREG-A addendum
+3**: capcurve edited 32768 completion (n=8; rows 5-7 pending coordinator go)
+— everything else below is COMPLETE or COMPUTE_DEFERRED with resume pointers.
+Run receipt: `A2-local-run.jsonl` (append-only). Scratch artifacts:
+`$TMPDIR/a2-artifacts/` — digested in the run receipt; absolute ms/tok_s are
+NON-CLAIMS (POWER.md), ratios and token counts are measurements.
 
-## Protocol (frozen) and recovered comparability facts
+## Protocol (frozen) and comparability facts
 
 - Generation: `pkgs/xsoulspace_inference_mlx_native/tool/nursery/wm_qwen35_generate.py`,
   mlx-lm 0.32.2 venv, **greedy** (pre-registered primary), thinking-mode chat
-  template (`enable_thinking=True`) pre-rendered and one-lined
-  (TEMPLATE_NEWLINES_COLLAPSED — the frozen script's line-based prompts-file
-  protocol; identical for both configs).
+  template pre-rendered and one-lined (TEMPLATE_NEWLINES_COLLAPSED, identical
+  both configs).
 - Checkpoints: base `Qwen/Qwen3.5-0.8B`, edited
-  `RikiyaT/Qwen3.5-0.8B-weight-space-programming` (= exp8 **p50c** edit:
-  64 MLP down_proj output columns × layers 15/19 — shape confirmed by the A1
-  audit row in VERDICTS.md). Tokenizer files sha256-identical.
-- Their harness (recovered from `lm_understand-logs/exp8_math`; SECONDARY,
-  never substituted): vLLM think35 — temp 0.6, top_p 0.95, top_k 20,
-  presence_penalty 1.5, 32,768 cap, samples ×4 (MATH-500) ×2 (GSM8K, IFEval),
-  math-verify grading on the last `\boxed{}`, IFEval official checkers on the
-  post-`</tool_response>` answer.
+  `RikiyaT/Qwen3.5-0.8B-weight-space-programming` (= exp8 **p50c**: 64 MLP
+  down_proj columns × layers 15/19, A1-audited). Tokenizer files sha-identical.
+- Their harness (recovered, SECONDARY, never substituted): vLLM think35,
+  temp 0.6 / top_p 0.95 / top_k 20 / presence_penalty 1.5, 32,768 cap,
+  ×4 (MATH) ×2 (GSM8K, IFEval) samples, math-verify on last `\boxed{}`,
+  official IFEval checkers post-think.
 - Scoring: `tool/runs/a2_score.dart` over FROZEN `lib/src/scorers.dart`
-  (sha256 in run receipt; never edited); cross-check `test/a2_score_test.dart`
-  39/39 green (27 hand-scored rows). Scoring-input mapping mirrors exp8
-  (math/gsm8k: text after last think-close; ifeval: post-think answer, empty
-  when the marker is missing under thinking-on).
-- Datasets: MATH-500 (HF rows API, 500), GSM8K (HF rows API openai/gsm8k
-  main/test 1319 — NAMED GAP **GSM8K_RAW_GITHUB_404**: both raw-github URLs
-  404'd, repo Not Found via API; same upstream OpenAI data), IFEval (HF rows
-  API google/IFEval train, 541). Digest receipt: `FETCH-RECEIPT.sha256`
-  (sha256 in run receipt) written BEFORE any scoring.
-- Compute adaptation (addendum): COMPUTE_SUBSTRIDE_32K n=8 (first 8 of the
-  24 cap-curve prompts at cap 32768; recorded in the run receipt, not the
-  PREREG file). IFEval cap = **4096** (CHOICE — addendum left it unspecified;
-  see premise gap below). Budgeted clean stops between chunks; PARTIAL with
-  denominator achieved is a verdict (addendum).
-- Device lock (coordinator protocol 2026-11-05): mkdir-lock held per
-  (cell,config) run, rmdir on completion incl. TERM/INT traps; waits bounded
-  30×60 s and recorded; contention-tagged rows would carry non-claim wall_ms
-  (none so far: lock_wait_s=0 on every run).
-- Power: AC throughout so far; ioreg Amperage recorded per chunk (0–34 mA —
-  the POWER.md charge-current hole: "AC" on a possibly weak brick; absolute
-  perf numbers non-claims).
+  (14/14 digests re-verified at this resume; cross-check 39/39 green).
+- Datasets: MATH-500 (HF rows API), GSM8K (HF rows API — NAMED
+  **GSM8K_RAW_GITHUB_404**), IFEval (HF rows API, 541). FETCH-RECEIPT.sha256
+  written BEFORE any scoring.
+- Device lock v3 + fleet decisions: per-batch mkdir lock, 10s acquisition
+  retries (30-min bound), rmdir + 3s courtesy, waits receipted; memory rules
+  2026-11-06 (LOAD-AFTER-LOCK — no weights held while waiting: satisfied by
+  construction; detached launches + exact-PID bookkeeping; zero pkill/kill
+  issued by this actor this arc — kill_statement row). Fleet decision 2
+  (~15:32Z): A2 HELD at a clean chunk boundary while V-1v2 (halt-closing arm)
+  finishes; priority = halt-closer > comparability.
+- Power: predecessor rows AC; successor IFEval rows 44-90 Battery Power
+  discharging (BATTERY_POWER_ROWS_44_90; wall non-claims); this resume
+  AC-charging from 11%; no battery events this arc. Decode rate varies with
+  machine state (~31 tok/s predecessor AC vs ~17-21 tok/s charging-under-load
+  this session) — absolute rates NON-CLAIMS; scores/token counts
+  power-invariant (greedy determinism, cross-checked).
+- Resume law: manifests are authority; completed rows never re-run; stale
+  locks recovered only after verified-no-owner rmdir (×2, named); determinism
+  cross-checks recorded where a rescoring overlaps a scored prefix.
 
-## NAMED premise gaps (recorded before results)
+## NAMED premise gaps
 
-1. **ADDENDUM_IFEVAL_SHORT_OUTPUT_PREMISE_FALSIFIED** — the addendum's
-   "IFEval … short outputs; feasible" is contradicted by the published
-   mean_tokens at 32k cap (base 25,296 / edited 4,241; cut_share base 0.749).
-   At our 4096 cap the BASE IFEval cell is truncation-prone; comparability to
-   published 21.0 / 62.3 is DIRECTIONAL ONLY. (Greedy decoding does shorten
-   many rows vs their temp-0.6 sampling — measured, see cells below.)
-2. **EMPTY_ANSWER_LENIENT_ROWS = 23/91** — frozen `ifevalScore` passes an
-   EMPTY answer for spec sets that are exclusion/max-only (19 kw_exclude-only
-   rows + word_count-max-only + combos = 23 of 91); exp8 gates every
-   instruction on `bool(resp)`. `empty_answer_rows` is counted in every
-   IFEval summary so the artifact is never silently folded into the score.
-3. **GSM8K_RAW_GITHUB_404** — task-frozen raw URL and canonical repo path both
-   404 (repo Not Found 2026-11-05); HF datasets-server fallback used,
-   digest-receipted.
-4. **TEMPLATE_NEWLINES_COLLAPSED** — the frozen generator's line-based prompt
-   file forces newline→space collapse of the rendered chat template; applied
-   identically to both configs (paired comparison sound; absolute
-   comparability to their byte-exact rendering weakened).
-5. **Sampler delta** — ours greedy ×1 sample vs theirs temp 0.6 avg@n; CI
-   widths and point estimates are not directly comparable (recorded with
-   every verdict, addendum law).
-
-## IFEval mapping (91/541 mappable; 450 excluded with per-reason counts)
-
-| IFEval instruction | frozen spec | caveat |
-|---|---|---|
-| length_constraints:number_words (at least N) | word_count min=N | whitespace-split word count |
-| length_constraints:number_words (less than N) | word_count max=N-1 | whitespace-split word count |
-| keywords:existence | kw_include | case-insensitive substring |
-| keywords:frequency (at least 1) | kw_include | existence equivalence |
-| keywords:frequency (other) | UNMAPPABLE → excluded | |
-| keywords:forbidden_words | kw_exclude | case-insensitive substring |
-| detectable_format:json_format | json_only | frozen stricter (no fence strip) |
-| detectable_format:number_bullet_lists (N) | bullet_list min_items=N | frozen stricter (every non-empty line must be an item) |
-| detectable_format:title | upper_title | frozen drops the official <<TITLE>> wrapper rule |
-| all other ids (change_case, combination, startend, punctuation:no_comma, language, letter_frequency, highlighted_sections, multiple_sections, constrained_response, rephrase, placeholders, postscript, sentences/paragraphs/nth-paragraph) | UNMAPPABLE → row excluded | counts in run receipt |
-
-Full table + per-row decisions: `prompts/ifeval_mapping.json` (sha256 in run
-receipt). Mappable-subset composition: kw_exclude 28, number_words 20,
-json_format 17, bullet_lists 15, title 15, existence 12, frequency(1) 2.
+1. **ADDENDUM_IFEVAL_SHORT_OUTPUT_PREMISE_FALSIFIED** (published mean_tokens
+   base 25,296 / edited 4,241 @32k contradict "short outputs"; IFEval
+   comparability DIRECTIONAL ONLY).
+2. **EMPTY_ANSWER_LENIENT_ROWS = 23/91** (frozen scorer passes empty answers
+   on exclusion/max-only specs; strict-gated counts reported alongside).
+3. **GSM8K_RAW_GITHUB_404** (HF fallback, digest-receipted).
+4. **TEMPLATE_NEWLINES_COLLAPSED** (identical both configs).
+5. **SAMPLER_DELTA** (greedy ×1 vs temp 0.6 avg@n).
+6. **COMPUTE_SUBSTRIDE_32K n=8** (first 8 of 24 stride-21 prompts at 32k).
+7. **BATTERY_POWER_ROWS_44_90** + per-chunk power facts (wall non-claims).
+8. **CAP_4096_VS_32768_TRUNCATION_SUPPRESSION** (math24/ifeval accuracies
+   floor-biased: both configs saturate 4096 while published means are
+   22-31k tokens at 32k cap).
 
 ## Published targets (Wilson 95% on their denominators)
 
@@ -98,81 +68,90 @@ json_format 17, bullet_lists 15, title 15, existence 12, frequency(1) 2.
 | IFEval acc @32k, avg@2 | 20.98% [18.66, 23.51] n=1082 | 62.29% [59.37, 65.13] n=1082 |
 | MATH-500 token-limit cut @32k | 93.0% [91.80, 94.04] | 33.05% [31.02, 35.14] |
 
-Task citation "31–33%" = p50c cut_share 0.3305. Our comparable point is the
-32768-cap curve cell (n=8 sub-stride); 4096/8192 caps have NO published
-counterpart (curve context only).
-
 ## Cells
 
-(RESULTS_SLOTS — filled as cells complete; every row: cell, config, n
-achieved/denominator, score, Wilson 95%, cap-hit stats, wall, power, locks.)
+### Cell 1 — IFEval verifiable subset (cap 4096, greedy) — COMPLETE 91/91, NON_REPLICATE
 
-### Cell 1 — IFEval verifiable subset (cap 4096, greedy)
+Paired n = **91/91** mappable rows (full pre-registered subset; subset =
+91/541, 450 excluded with per-reason counts). Rows 0-43 predecessor (AC),
+rows 44-90 successor (battery — wall non-claims).
 
-Paired n = **44 of 91** mappable rows (base budget_stop at 44/91; edited run
-matched to 44 → full pair; subset itself = 91/541, 450 excluded with
-per-reason counts). Device: per-batch locking; A3 interleave absorbed
-(base lock_wait 420 s; edited 2,340 s incl. one named LOCK_TIMEOUT 1,800 s);
-power AC throughout, Amperage −257…+71 mA (charge-current hole recorded).
-
-| config | k/n | score | Wilson 95% | empty answers | lenient empty passes | strict gated | cap hits @4096 | mean tok |
+| config | k/n | score | Wilson 95% | empty | lenient empty passes | strict gated | cap hits @4096 | mean tok |
 |---|---|---|---|---|---|---|---|---|
-| base   | 24/44 | 54.5% | [40.1, 68.3] | 11 | 6 | 40.9% | 18 (40.9%) | 1907 |
-| edited | 21/44 | 47.7% | [33.8, 62.1] | 8 | 5 | 36.4% | 11 (25.0%) | 1428 |
-| published base (32k, temp0.6 avg@2, official checkers, full 541) | — | 21.0% | [18.7, 23.5] | — | — | — | cut 74.9% | 25296 |
+| base   | 39/91 | 42.9% | [33.2, 53.1] | 29 | 11 | 30.8% | 46 (50.5%) | 2277 |
+| edited | 38/91 | 41.8% | [32.2, 52.0] | 20 | 8 | 33.0% | 27 (29.7%) | 1576 |
+| published base (32k, temp0.6 avg@2, official, full 541) | — | 21.0% | [18.7, 23.5] | — | — | — | cut 74.9% | 25296 |
 | published edited (same) | — | 62.3% | [59.4, 65.1] | — | — | — | cut 2.2% | 4241 |
 
-**Cell verdict: NON_REPLICATE (named causes)** — direction is reversed
-locally (base ≥ edited) and no CI contains the other point. Named causes
-(all pre-registered as comparability caveats before scoring):
-IFEVAL_SUBSET_COMPOSITION (91-row mappable subset, kw_exclude-heavy, frozen
-strict checkers vs official full-set checkers); GREEDY_VS_SAMPLED_
-TRUNCATION_REGIME (greedy base completes answers — median 655 tok, 41%
-truncation @4k — while published base 21.0 is truncation-dominated at 74.9%
-cut @32k); CAP_4096_VS_32768 (edited published cut 2.2% vs local 25%);
-EMPTY_ANSWER_LENIENT_ROWS (frozen scorer passes empty answers on
-exclusion/max-only specs: base 6, edited 5; strict counts shown);
-SAMPLER_DELTA (greedy ×1 vs temp 0.6 avg@2); TEMPLATE_NEWLINES_COLLAPSED.
-NOT harness-suspect: scorer cross-check 39/39, package 266/266 green,
-hit-flag agreement 88/88, outputs coherent. Local same-regime delta
-(base−edited): −6.8 pp raw / −4.5 pp strict, CIs overlap → no significant
-local effect on this subset. IFEval is NOT part of calibration C0; the
-overall-arm verdict waits on the decisive cap-curve and MATH cells.
-PARTIAL denominator: 44/91 (of a 91/541 subset).
+Determinism cross-check: first-44 rescoring reproduces the recorded n44 cells
+EXACTLY (both configs). Hit-flag agreement 91/91 both configs.
 
-### Cell 2 — token-limit cap curve (MATH-500 n=24 @4096/@8192; n=8 @32768 COMPUTE_SUBSTRIDE_32K)
+**Cell verdict: NON_REPLICATE (named causes)** — supersedes the PARTIAL-44
+verdict; class unchanged at full subset. No CI contains the other point in
+either config. Local paired delta −1.1 pp raw / +2.2 pp strict-gated
+(favoring edited), CIs overlap → no significant local delta; published
++41.3 pp not approached. Causes: IFEVAL_SUBSET_COMPOSITION;
+GREEDY_VS_SAMPLED_TRUNCATION_REGIME; CAP_4096_VS_32768;
+EMPTY_ANSWER_LENIENT_ROWS; SAMPLER_DELTA; TEMPLATE_NEWLINES_COLLAPSED;
+BATTERY_POWER_ROWS_44_90 (wall non-claims only). NOT harness-suspect.
+IFEval is not part of calibration C0.
 
-Frozen cap-curve prompts: MATH-500 idx=21·i (i=0..23); 32k sub-stride = first
-8 of the 24 (addendum-2 COMPUTE_SUBSTRIDE_32K n=8, recorded in run receipt).
-Within-cell cap order 4096 → 32768 → 8192 (ordering_decision row: the 32k
-point is the only published-comparable one; cap order inside the cell is not
-frozen). Hit rule: frozen `tokenLimitRate` (count ≥ cap); generator-flag
-agreement 48/48 so far.
+### Cell 2 — token-limit cap curve (MATH-500 stride-21; n=24 @4096; n=8 @32768 SUBSTRIDE; 8192 DEFERRED)
 
-| cap | config | hits/n | rate | Wilson 95% | mean tok | power |
+Hit rule: frozen `tokenLimitRate` (count ≥ cap); generator-flag agreement
+24/24, 24/24, 8/8 on completed runs.
+
+| cap | config | hits/n | rate | Wilson 95% | mean tok | state |
 |---|---|---|---|---|---|---|
-| 4096 | base | 22/24 | **91.7%** | [74.2, 97.7] | 3843 | AC, 0…+71 mA |
-| 4096 | edited | 20/24 | **83.3%** | [64.1, 93.3] | 3734 | AC, 0…+57 mA |
-| 32768 (n=8) | base | _RUNNING_ | | | | |
-| 32768 (n=8) | edited | _PENDING_ | | | | |
-| 8192 | base | _PENDING_ | | | | |
-| 8192 | edited | _PENDING_ | | | | |
+| 4096 | base | 22/24 | **91.7%** | [74.2, 97.7] | 3843 | COMPLETE (AC) |
+| 4096 | edited | 20/24 | **83.3%** | [64.1, 93.3] | 3734 | COMPLETE (AC) |
+| 32768 (n=8) | base | 7/8 | **87.5%** | [52.9, 97.8] | 28779 | COMPLETE; published 93.0 [91.8,94.0] INSIDE our CI → base replicates directionally |
+| 32768 (n=8) | edited | 3/5 so far (r1,r3,r4 HIT; r0 1801, r2 864 no-hit) | — | — | — | **HELD at 5/8** (fleet decision 2; resume pointer in run receipt `hold_state` row; rows 5-7 on coordinator go) |
+| 8192 | base | — | — | — | — | COMPUTE_DEFERRED (addendum 3; 0 rows; resume command in `compute_deferred` row) |
+| 8192 | edited | — | — | — | — | COMPUTE_DEFERRED (addendum 3; 0 rows) |
 
-@4096 reading: BOTH configs saturate the 4k cap (published edited mean_tokens
-22,037 ≫ 4096) — delta −8.3 pp, CIs overlap; the config contrast is expected
-at 32k (published: base 93.0 [91.8, 94.0] → edited 33.05 [31.0, 35.1]).
-Events: base@4096 run suffered an EXTERNAL_STOP at row 22 with a stale-lock
-leak (trap killed with the process group); recovered by verified manual rmdir
-(lock_event rows in run receipt + manifest); relaunched run completed 24/24.
+@4096 reading: BOTH configs saturate the 4k cap (published edited
+mean_tokens 22,037 ≫ 4096) — delta −8.3 pp, CIs overlap; the config contrast
+lives at 32k. Events: EXTERNAL_STOP ×2 (reaper pattern → detached launches),
+STALE_LOCK_RECOVERY ×2 (verified-no-owner rmdir), LOCK_TIMEOUT ×2 (bounded,
+receipted; V6/V-1v2 contention), FLEET_HOLD_2 (coordinator hold at clean
+boundary, exact-PID stop of own child).
 
-### Cell 3 — MATH-500 accuracy n=100 stride-5 (cap 4096, greedy)
-_PENDING_
+### Cell 3 — MATH-500 accuracy n=24 stride-21 (cap 4096, greedy) — COMPLETE (addendum-3 cell), PARTIAL
 
-### Cell 4 — GSM8K n=100 even-stride (cap 4096, greedy)
-_PENDING_
+Zero new device time: scored from the digest-verified capcurve 4096 gens
+(addendum-3 reuse allowance; the cap-curve prompt set IS the stride-21 n=24).
+Frozen `--cell math` mapping (post-think text, last `\boxed{}`, frozen
+mathScore). Cross-arm check: P-2's independent reuse of the base gens scored
+EXACTLY 4/24 = 16.67% [6.68, 35.85] = this cell's base row.
+
+| config | k/n | acc | Wilson 95% | cap hits @4096 | mean tok | published @32k avg@4 |
+|---|---|---|---|---|---|---|
+| base   | 4/24 | 16.7% | [6.7, 35.9] | 22/24 | 3843 | 7.9% [6.8, 9.2] — INSIDE our CI |
+| edited | 6/24 | 25.0% | [12.0, 44.9] | 20/24 | 3734 | 48.1% [45.9, 50.3] — outside our CI by 1.2pp |
+
+**Cell verdict: PARTIAL** — direction REPLICATED (local +8.3pp edited>base;
+published +40.2pp), base side REPLICATE (published point inside our CI),
+edited side CI-excluded marginally under a floor-biased regime. Named
+causes: CAP_4096_VS_32768_TRUNCATION_SUPPRESSION (both configs truncate;
+published edited mean 22,037 tok ≫ 4096 cap); SMALL_N_WIDE_CI (n=24);
+SAMPLER_DELTA; TEMPLATE_NEWLINES_COLLAPSED; SUBSET (stride-21 n=24 of 500).
+The n=100 stride-5 volume cell is COMPUTE_DEFERRED (addendum 3).
+
+### Cell 4 — GSM8K n=100 even-stride (cap 4096, greedy) — COMPUTE_DEFERRED
+
+Addendum 3: deferred with resume pointer (`compute_deferred` receipt row;
+prompts+gold digest-receipted, no rebuild needed). 0 rows generated.
 
 ## Verdict
 
-_PENDING — verdict class (REPLICATE / PARTIAL / NON_REPLICATE) with named
-causes and the addendum's comparability caveat attached to every A2-local
-verdict._
+_PROVISIONAL — final arm verdict class lands when the edited-32k cell
+completes (rows 5-7, HELD pending coordinator go). Current standings:
+IFEval NON_REPLICATE (91/91, named causes, comparability DIRECTIONAL ONLY);
+cap-curve base@32k directional REPLICATE of the published 93.0 cut (pub
+point inside our n=8 CI); math24 PARTIAL (direction replicated, edited CI
+marginally excludes published under truncation suppression); cap-curve
+edited@32k at 5/8 (hits 3/5 — early trend BELOW the base 7/8 rate, i.e.
+toward the published direction, NOT yet scored); 8192 pair + MATH-100 +
+GSM8K-100 COMPUTE_DEFERRED with pointers. Comparability caveat attached to
+every A2-local verdict per addendum law._

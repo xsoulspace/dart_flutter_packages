@@ -1,0 +1,97 @@
+{
+ "kind": "v1v2-null",
+ "payload": {
+  "artifact": "V-1 v2 matched null (PREREG-C addendum 2026-11-06b; constructor v2)",
+  "at": "2026-11-06T15:38:04+00:00",
+  "target_edit": {
+   "edit": "a3-plant-1",
+   "arm": "arm-002",
+   "join_metrics": {
+    "loop_delta_R_minus_M": -0.3333333333333333,
+    "loop_rate_M": 0.6666666666666666,
+    "loop_rate_R": 0.3333333333333333,
+    "task_success_M": 0.045454545454545456,
+    "task_success_R": 0.45454545454545453
+   }
+  },
+  "null_id": "v1v2-p1-null2",
+  "null_kind": "null2_shuffle",
+  "construction": "v[i]=d_hat[perm[i]], perm=Random(seed*10+2+layer).sample(range(1024),1024); norm preserved exactly [REUSED_V12 (digest-verified vs v1 ledger rows)]",
+  "spec_sha256": "20be6f5bfbf9e83c2de117a9127276f3345e8c9d60b12b0bbb9be8541c92d369",
+  "scale": -4.8,
+  "per_layer": {
+   "15": {
+    "direction_sha256": "8062fc2929bd7e95e28af442c5b0b2a270ebe50c7b8a7a04c2d80cf93b1b3244",
+    "norm": 1.0,
+    "cos_with_d_hat": 0.021133624858703747
+   },
+   "19": {
+    "direction_sha256": "bd8764791c840e1adc9cfa6b80bed6f68dbfe9d9d2f6a329386e7e1b2f8c3137",
+    "norm": 0.9999999999999999,
+    "cos_with_d_hat": 0.030564358908185207
+   }
+  },
+  "certification_rule": "certified(arm) := loop_rate(R) < loop_rate(M) AND task_success(R) >= task_success(M), where M = planted/null mirror battery and R = removal-edit battery (R = M with -scale*recovered_direction merged in-memory, same columns). Strict inequality / non-strict floor per PREREG-A A3 wording ('loop-rate down', 'task success not down'). Per-cell flips recorded in arm receipts for knife-edge diagnosis.",
+  "loop_rate_M": 0.6666666666666666,
+  "loop_rate_R": 1.0,
+  "loop_delta_R_minus_M": 0.33333333333333337,
+  "task_success_M": 0.045454545454545456,
+  "task_success_R": 0.18181818181818182,
+  "task_success_delta_R_minus_M": 0.13636363636363635,
+  "task_pass_M": 1,
+  "task_pass_R": 4,
+  "certified": false,
+  "flips": [
+   {
+    "cell_id": "g0-rle",
+    "M": true,
+    "R": false
+   },
+   {
+    "cell_id": "g0-clamp",
+    "M": false,
+    "R": true
+   },
+   {
+    "cell_id": "g1-perm-01",
+    "M": false,
+    "R": true
+   },
+   {
+    "cell_id": "g1-perm-02",
+    "M": false,
+    "R": true
+   },
+   {
+    "cell_id": "g1-perm-06",
+    "M": false,
+    "R": true
+   }
+  ],
+  "digests": {
+   "battery_M": "38bf31bebc450929ba7c30b37a901fb529a9fb8d69889d659ed2690185706122",
+   "battery_R": "ff29285307993cb8a408cc03347c85832f7c0ca1cff8eab79d0064fee1f517d9",
+   "recovered_json": "MISSING",
+   "mirror_receipt": "MISSING",
+   "repair_receipt": "MISSING",
+   "arm_receipt": "MISSING",
+   "battery_M_session_B": "38bf31bebc450929ba7c30b37a901fb529a9fb8d69889d659ed2690185706122"
+  },
+  "repair_plumbing": {
+   "model_on_disk_untouched": true,
+   "receipt_sha256": "f220e7653f5bab9f4c36d1e2c418ef434d706c103bb8ef313fc0531b1e4afaa8",
+   "tensors": [
+    "model.layers.15.mlp.down_proj.weight",
+    "model.layers.19.mlp.down_proj.weight"
+   ],
+   "columns_equal_arm": true,
+   "scales": [
+    -4.8
+   ],
+   "direction_sha256_match_spec": true,
+   "columns_64": true,
+   "all_ok": true
+  },
+  "plumbing_flag": null
+ }
+}

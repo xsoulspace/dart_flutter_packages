@@ -1,0 +1,92 @@
+{
+ "kind": "v1v2-null",
+ "payload": {
+  "artifact": "V-1 v2 matched null (PREREG-C addendum 2026-11-06b; constructor v2)",
+  "at": "2026-11-06T15:58:39+00:00",
+  "target_edit": {
+   "edit": "a3-plant-3",
+   "arm": "arm-009",
+   "join_metrics": {
+    "loop_delta_R_minus_M": -0.5,
+    "loop_rate_M": 1.0,
+    "loop_rate_R": 0.5,
+    "task_success_M": 0.045454545454545456,
+    "task_success_R": 0.4090909090909091
+   }
+  },
+  "null_id": "v1v2-p3-null3v2",
+  "null_kind": "null3_unrelated_v2",
+  "construction": "format-style contrast: direction = unit(mean(UPPER) - mean(lowercase)) via FROZEN a3_propose.py (--cap-loop=upper capture, --cap-neutral=lower capture); captures on E's rebuilt mirror; spec = E's tensor names, E's 64 columns, E's removal scale (-4.8); draw d0; gate |cos| <= 0.2 PASSED pre-certification",
+  "spec_sha256": "fb2a58119d1e975e37810a4114f0d6f4f197ddaec96d659a98039563471a44c7",
+  "scale": -4.8,
+  "per_layer": {
+   "15": {
+    "cos_with_d_hat": 0.14288044692850524,
+    "direction_sha256": "143a9f7912f53644fb22d63a43fdcc4c32b65e28081afbf60333628709af45ca",
+    "norm": 0.9999999999999999
+   },
+   "19": {
+    "cos_with_d_hat": 0.015002814060851884,
+    "direction_sha256": "434b247a55fe62ff75efcc85ba4ff8e66d2c424c9ff3ff8e481de188e0618813",
+    "norm": 0.9999999999999999
+   },
+   "gate": {
+    "status": "GATE_PASS",
+    "draw_used": "d0",
+    "threshold": 0.2,
+    "draws": [
+     {
+      "draw": "d0",
+      "gate_pass": true,
+      "cos": {
+       "15": 0.14288044692850524,
+       "19": 0.015002814060851884
+      }
+     }
+    ]
+   }
+  },
+  "certification_rule": "certified(arm) := loop_rate(R) < loop_rate(M) AND task_success(R) >= task_success(M), where M = planted/null mirror battery and R = removal-edit battery (R = M with -scale*recovered_direction merged in-memory, same columns). Strict inequality / non-strict floor per PREREG-A A3 wording ('loop-rate down', 'task success not down'). Per-cell flips recorded in arm receipts for knife-edge diagnosis.",
+  "loop_rate_M": 1.0,
+  "loop_rate_R": 0.8333333333333334,
+  "loop_delta_R_minus_M": -0.16666666666666663,
+  "task_success_M": 0.045454545454545456,
+  "task_success_R": 0.0,
+  "task_success_delta_R_minus_M": -0.045454545454545456,
+  "task_pass_M": 1,
+  "task_pass_R": 0,
+  "certified": false,
+  "flips": [
+   {
+    "cell_id": "g0-clamp",
+    "M": true,
+    "R": false
+   }
+  ],
+  "digests": {
+   "battery_M": "5567d80f28f5e88b62097d0d242436cf0445f15b816480c5a115dea8b4704a78",
+   "battery_R": "dd51d1ff9ce95ad62624e948f76490eaf86181c30e6121b178ec16a845f6d219",
+   "recovered_json": "MISSING",
+   "mirror_receipt": "MISSING",
+   "repair_receipt": "MISSING",
+   "arm_receipt": "MISSING",
+   "battery_M_session_B": "5567d80f28f5e88b62097d0d242436cf0445f15b816480c5a115dea8b4704a78"
+  },
+  "repair_plumbing": {
+   "model_on_disk_untouched": true,
+   "receipt_sha256": "ddd8550cbf758fff2056172a54280a7ad53ec4f9003d8986a0f626068aafa7d8",
+   "tensors": [
+    "model.layers.15.mlp.down_proj.weight",
+    "model.layers.19.mlp.down_proj.weight"
+   ],
+   "columns_equal_arm": true,
+   "scales": [
+    -4.8
+   ],
+   "direction_sha256_match_spec": true,
+   "columns_64": true,
+   "all_ok": true
+  },
+  "plumbing_flag": null
+ }
+}

@@ -1,0 +1,114 @@
+{
+ "kind": "v1v2-confounded",
+ "payload": {
+  "artifact": "CONFOUNDED_POSITIVE_CONTROL (old null-3 shape; PREREG-C addendum 2026-11-06b)",
+  "at": "2026-11-06T15:38:04+00:00",
+  "arm_type": "CONFOUNDED_POSITIVE_CONTROL",
+  "expectation": "may certify (its v1 measurement DID certify: v1-null-3, NULL_LEAK); counted SEPARATELY; NEVER in the null floor denominator",
+  "target_edit": {
+   "edit": "a3-plant-1",
+   "arm": "arm-002"
+  },
+  "null_id": "v1v2-p1-confounded",
+  "null_kind": "null3_unrelated_v1_shape",
+  "construction": "G0-slugify-vs-neutral diff-of-means on the plant mirror (frozen a3_propose.py rule); spec REUSED from V12 (digest-verified)",
+  "spec_sha256": "b939db2fbad79082040de7993c3f113860a820c7f4f3a89677fcb1bb23ee752f",
+  "scale": -4.8,
+  "per_layer": {
+   "15": {
+    "direction_sha256": "a35c4bc9b72b71470b133d0e240409e20ad6ea5bf10e0107ca5ab576fdb9856f",
+    "norm": 1.0,
+    "cos_with_d_hat": 0.680926641177338
+   },
+   "19": {
+    "direction_sha256": "c4318626c58b2f03706f45a0fcfe13934bf26420da59f7a3bc137b17566a3daf",
+    "norm": 1.0,
+    "cos_with_d_hat": 0.7175312404930452
+   }
+  },
+  "certification_rule": "certified(arm) := loop_rate(R) < loop_rate(M) AND task_success(R) >= task_success(M), where M = planted/null mirror battery and R = removal-edit battery (R = M with -scale*recovered_direction merged in-memory, same columns). Strict inequality / non-strict floor per PREREG-A A3 wording ('loop-rate down', 'task success not down'). Per-cell flips recorded in arm receipts for knife-edge diagnosis.",
+  "loop_rate_M": 0.6666666666666666,
+  "loop_rate_R": 0.5833333333333334,
+  "loop_delta_R_minus_M": -0.08333333333333326,
+  "task_success_M": 0.045454545454545456,
+  "task_success_R": 0.36363636363636365,
+  "task_success_delta_R_minus_M": 0.3181818181818182,
+  "task_pass_M": 1,
+  "task_pass_R": 8,
+  "certified": true,
+  "flips": [
+   {
+    "cell_id": "g0-ws",
+    "M": false,
+    "R": true
+   },
+   {
+    "cell_id": "g1-perm-01",
+    "M": false,
+    "R": true
+   },
+   {
+    "cell_id": "g1-perm-02",
+    "M": false,
+    "R": true
+   },
+   {
+    "cell_id": "g1-perm-03",
+    "M": false,
+    "R": true
+   },
+   {
+    "cell_id": "g1-perm-04",
+    "M": false,
+    "R": true
+   },
+   {
+    "cell_id": "g1-perm-05",
+    "M": false,
+    "R": true
+   },
+   {
+    "cell_id": "g1-perm-06",
+    "M": false,
+    "R": true
+   }
+  ],
+  "digests": {
+   "battery_M": "38bf31bebc450929ba7c30b37a901fb529a9fb8d69889d659ed2690185706122",
+   "battery_R": "33f42d6192d874038be0ae46540422d365736eb9c9a54daadad55ea4207382bc",
+   "recovered_json": "MISSING",
+   "mirror_receipt": "MISSING",
+   "repair_receipt": "MISSING",
+   "arm_receipt": "MISSING",
+   "battery_M_session_B": "38bf31bebc450929ba7c30b37a901fb529a9fb8d69889d659ed2690185706122"
+  },
+  "v1_reference": {
+   "null_id": "v1-null-3",
+   "note": "fresh re-run this arc as CONFOUNDED_POSITIVE_CONTROL; v1 history read from receipts/V1-nulls.jsonl (continuity observation, not a rule)",
+   "certified": true,
+   "battery_R_sha256": "4e41a044147d0d48ec1e7b200ca3c08b3162a2fd790deb71cbdc1617f005b95b",
+   "loop_rate_M": 0.6666666666666666,
+   "loop_rate_R": 0.5833333333333334,
+   "task_success_M": 0.045454545454545456,
+   "task_success_R": 0.36363636363636365,
+   "v1_seq": 3,
+   "v1_digest": "e1c8890299775b3d56eac139968b080c4c6f470833dbdb7649514e5eaa763fa5"
+  },
+  "repair_plumbing": {
+   "model_on_disk_untouched": true,
+   "receipt_sha256": "c585fa361b5da3867e42636a56c7290f812a6bcc2aa0660e771b17ff15029c06",
+   "tensors": [
+    "model.layers.15.mlp.down_proj.weight",
+    "model.layers.19.mlp.down_proj.weight"
+   ],
+   "columns_equal_arm": true,
+   "scales": [
+    -4.8
+   ],
+   "direction_sha256_match_spec": true,
+   "columns_64": true,
+   "all_ok": true
+  },
+  "plumbing_flag": null
+ }
+}

@@ -1,0 +1,16 @@
+{
+ "kind": "v2-unblock-note",
+ "payload": {
+  "artifact": "V-2 UNBLOCK note (supersedes the NOT_RUN halt row for this arc; halt history KEPT as seq 0 of this ledger)",
+  "at": "2026-11-06T15:45:16+00:00",
+  "gate": "V-2 runs on plant-1 ONLY IF V-1 clean on plant-1 (task gate + PREREG-C ordering)",
+  "gate_evidence": {
+   "ledger": "receipts/V1-v2-nulls.jsonl",
+   "seq": 11,
+   "digest": "814435159d5234afaa3553d1b81521c6a2baa9cfcd658039650e67647f5f8f5f",
+   "verdict": "CLEAN_0_OF_4 (constructor v2, addendum 2026-11-06b)"
+  },
+  "rules": "V-2 rules FROZEN in receipts/V1-nulls.jsonl seq 0 (v12-run-plan v2_rules): tol = |E_ref|/2 = 1/6; dies(x): |loop_G2(x) - loop_G2(M)| <= tol; returns: loop(restore) < loop(M) AND |delta - E_ref| <= tol; EFFECT on held-out G1 perm cells (delta_G1 >= |ref_G1|/2 = 0.25); MECHANISM = PASS iff ablate dies AND restore returns AND relocate dies; classes PASS / EFFECT_TRUE_MECHANISM_FALSE / EFFECT_FALSE never merged",
+  "specs": "ablate/restore/relocate + B3 batch REUSED from receipts/V12 digest-verified (ablate 14fa817b..., restore 65d1f5e0..., relocate 5c921943...); mirrors via FROZEN A3 builders with MIRROR_NONREPRODUCIBLE gate vs arm-002 archive"
+ }
+}
