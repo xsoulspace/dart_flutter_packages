@@ -368,9 +368,10 @@ void main(List<String> argv) {
   }
   if (!File(cellsPath!).existsSync()) refuse('CELLS_FILE_MISSING', cellsPath);
   final cellsDigest = sha256File(cellsPath);
-  if (cellsDigest != cellsShaFrozen) {
+  final expectSha = args['expect-cells-sha'] ?? cellsShaFrozen;
+  if (cellsDigest != expectSha) {
     refuse('CELLS_DIGEST_DRIFT',
-        '$cellsPath is $cellsDigest, frozen $cellsShaFrozen');
+        '$cellsPath is $cellsDigest, expected $expectSha');
   }
   final cellsDoc =
       jsonDecode(File(cellsPath).readAsStringSync()) as Map<String, Object?>;
@@ -400,9 +401,10 @@ void main(List<String> argv) {
   final outFile = File(outPath!);
   append(outFile, 'g3_stage_start', {
     'stage': 'pilot',
-    'prereg': 'PREREG-G.md FROZEN 2026-11-07',
+    'prereg': 'PREREG-G.md FROZEN 2026-11-07 (stage 2: PREREG-G-STAGE2.md)',
     'cells': cellsPath,
     'cells_sha256': cellsDigest,
+    'expect_cells_sha': expectSha,
     'state': state,
     'arms_expected': armsFrozen,
     'arms_blocked': blocked.toList()..sort(),

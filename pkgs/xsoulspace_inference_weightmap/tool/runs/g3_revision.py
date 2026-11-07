@@ -269,14 +269,15 @@ def resample_seed(seed, cell_idx, int_idx):
 # Cells
 # --------------------------------------------------------------------------
 
-def load_cells(path):
+def load_cells(path, expect_sha=None):
     if not os.path.isfile(path):
         raise RuntimeError('CELLS_FILE_MISSING: %s' % path)
     digest = sha256_file(path)
-    if digest != CELLS_SHA256_FROZEN:
+    frozen = expect_sha or CELLS_SHA256_FROZEN
+    if digest != frozen:
         raise RuntimeError(
-            'CELLS_DIGEST_DRIFT: %s is %s, frozen %s (frozen-oracle law: a '
-            'change = new prereg row)' % (path, digest, CELLS_SHA256_FROZEN))
+            'CELLS_DIGEST_DRIFT: %s is %s, expected %s (frozen-oracle law: a '
+            'change = new prereg row)' % (path, digest, frozen))
     data = json.load(open(path, encoding='utf-8'))
     groups = data['cells']
     sel = []
@@ -299,7 +300,7 @@ def run_arm(args):
         return fail('SURFACE_UNEXPECTED', '--arm %r not in %s'
                     % (arm, ARMS_FROZEN))
     try:
-        cells, cells_digest = load_cells(args.cells)
+        cells, cells_digest = load_cells(args.cells, args.expect_cells_sha)
     except (RuntimeError, ValueError, KeyError) as exc:
         code, _, detail = str(exc).partition(': ')
         return fail(code if code.isupper() else 'CELLS_FILE_MISSING',
@@ -619,7 +620,7 @@ def run_locked(lock_dir, argv, state_dir, what):
 
 def orchestrate(args):
     try:
-        cells, cells_digest = load_cells(args.cells)
+        cells, cells_digest = load_cells(args.cells, args.expect_cells_sha)
     except (RuntimeError, ValueError, KeyError) as exc:
         code, _, detail = str(exc).partition(': ')
         return fail(code if code.isupper() else 'CELLS_FILE_MISSING',
@@ -709,6 +710,8 @@ def orchestrate(args):
         argv = [args.venv_python, '-I', os.path.abspath(__file__),
                 '--arm', arm, '--model', snap, '--cells', args.cells,
                 '--out', args.out, '--seed', str(args.seed)]
+        if args.expect_cells_sha:
+            argv += ['--expect-cells-sha', args.expect_cells_sha]
         proc = run_locked(args.lock_dir, argv, args.out, 'arm_%s' % arm)
         if proc.returncode == EXIT_DEP:
             return fail('MLX_UNAVAILABLE', proc.stderr[-400:], EXIT_DEP)
@@ -745,6 +748,10 @@ def main(argv=None):
     ap.add_argument('--arms', default=','.join(ARMS_FROZEN))
     ap.add_argument('--cells',
                     default=os.path.join(_SCRIPT_DIR, 'cells_frozen_A3.json'))
+    ap.add_argument('--expect-cells-sha', dest='expect_cells_sha',
+                    default=None,
+                    help='expected cells sha256 (default: stage-1 frozen '
+                         'constant; PREREG-G-STAGE2 passes its own)')
     ap.add_argument('--out', default=None,
                     help='state dir (default $TMPDIR/g3-artifacts/run)')
     ap.add_argument('--lock-dir', default=None,
