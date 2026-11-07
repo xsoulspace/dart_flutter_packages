@@ -1,0 +1,13 @@
+{
+ "schema": "g3-detector-golden/v1",
+ "spec": "PREREG-G section 3 FROZEN: n-gram n=4 over generated ids; window = last 64 ids; fires at position t when the just-completed 4-gram ids[t-3..t] has >= 3 distinct occurrence starts within the window. triggers = every t where the detector fires on ids[:t+1]. Expectations HAND-COMPUTED pre-run (not machine-generated from either implementation).",
+ "params": {"n": 4, "window": 64, "threshold": 3},
+ "vectors": [
+  {"name": "empty", "ids": [], "triggers": []},
+  {"name": "period8_x3", "ids": [1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8], "triggers": [19,20,21,22,23]},
+  {"name": "third_occurrence_late", "ids": [1,2,3,4,9,9,1,2,3,4,8,8,1,2,3,4], "triggers": [15]},
+  {"name": "all_distinct_64", "ids": [100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163], "triggers": []},
+  {"name": "window_excludes_first_occurrence", "ids": [1,2,3,4,300,301,302,303,304,305,306,307,308,309,310,311,312,313,314,315,316,317,318,319,320,321,322,323,324,325,326,327,328,329,330,331,332,333,334,335,336,337,338,339,340,341,342,343,344,345,346,347,348,349,350,351,352,353,354,355,356,357,358,359,360,361,362,363,1,2,3,4,400,401,402,403,404,405,406,407,408,409,1,2,3,4], "triggers": [], "note": "3 global occurrences of [1,2,3,4] but the first lies outside the 64-window at the final completion: in-window count 2 => no trigger. A global-count implementation FAILS this vector."},
+  {"name": "constant_token_loop", "ids": [7,7,7,7,7,7,7,7], "triggers": [5,6,7], "note": "overlapping occurrences: at t=5 the gram ids[2..6) has starts {0,1,2} in-window => 3rd occurrence completes at t=5, not t=6"}
+ ]
+}
