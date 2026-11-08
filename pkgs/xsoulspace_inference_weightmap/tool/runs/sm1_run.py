@@ -45,7 +45,7 @@ K_COLS = 8
 SCALE = 4.8
 LAYERS = ('15', '19')
 N_GUIDED, N_RANDOM, N_SHUFFLED = 12, 12, 6
-FITNESS_N = 6            # first 6 G2 cells, cap 256 (base = 6/6 cap-hit)
+FITNESS_BANK = 12        # ALL 12 G2 cells, cap 256 (addendum 2026-11-08c)
 GUARD_N = 4              # first 4 G1 label/string cells, cap 64
 CAP_LOOP, CAP_GUARD = 256, 64
 TENSOR_TEMPLATE = 'model.language_model.layers.%s.mlp.down_proj.weight'
@@ -365,11 +365,14 @@ def score_first_line(cell, output):
     return s == gold
 
 
-def fitness_from_rows(loop_rows):
-    """Sample fitness = cells improved = FITNESS_N - cap-hits (PREREG-SM1
-    §3)."""
-    hits = sum(1 for r in loop_rows if r['cap_hit'])
-    return FITNESS_N - hits
+def fitness_from_rows(loop_rows, base_hits):
+    """Sample fitness = PAIRED improvement = base_hits - sample cap-hits
+    over the 12-cell bank (PREREG-SM1 addendum 2026-11-08c). Accepts both
+    generator field names (hit_token_limit from the frozen generator;
+    cap_hit from runner-produced rows)."""
+    hits = sum(1 for r in loop_rows
+               if r.get('cap_hit', r.get('hit_token_limit', False)))
+    return base_hits - hits
 
 
 def verdict_classes(manifest_rows, base_loop_hits, det_ok, det_present):
@@ -388,8 +391,8 @@ def verdict_classes(manifest_rows, base_loop_hits, det_ok, det_present):
         out['verdict'] = 'DETERMINISM_DRIFT'
     elif not g:
         out['verdict'] = 'PARTIAL_WITH_DENOMINATOR_NO_GUIDED_SAMPLES'
-    elif not any(f > (FITNESS_N - base_loop_hits) for f in g) \
-            and not any(f > (FITNESS_N - base_loop_hits) for f in rnd):
+    elif not any(f > 0 for f in g) \
+            and not any(f > 0 for f in rnd):
         out['verdict'] = 'NO_SAMPLE_IMPROVES'
     elif g and rnd and max(g) >= max(rnd) + 1 \
             and (sum(g) / len(g)) > (sum(rnd) / len(rnd)):
@@ -449,12 +452,12 @@ def load_banks():
     path = os.path.join(_SCRIPT_DIR, 'cells_frozen_A3.json')
     data = json.load(open(path, encoding='utf-8'))
     cells = data['cells']
-    loop = [c for c in cells['G2']][:FITNESS_N]
+    loop = [c for c in cells['G2']][:FITNESS_BANK]
     guard_pool = [c for c in cells['G1']
                   if c.get('scorer') in SCORERS_OK][:GUARD_N]
-    if len(loop) < FITNESS_N:
+    if len(loop) < FITNESS_BANK:
         raise RuntimeError('BANK_SHORT: G2 loop bank %d < %d'
-                           % (len(loop), FITNESS_N))
+                           % (len(loop), FITNESS_BANK))
     if len(guard_pool) < GUARD_N:
         raise RuntimeError('BANK_SHORT: G1 guard pool %d < %d'
                            % (len(guard_pool), GUARD_N))
@@ -562,12 +565,11 @@ def cmd_probe(args, log):
                 if ln.strip()]
         gens[name] = rows
     base_hits = sum(1 for r in gens['loop'] if r['hit_token_limit'])
-    if base_hits != FITNESS_N:
+    if base_hits == 0 or base_hits == FITNESS_BANK:
         return fail('BASELINE_DRIFT',
-                    'base cap-hits %d/%d on the frozen fitness bank '
-                    '(stage-1 receipt says 12/12 on the full bank; probe '
-                    'frozen to first 6)'
-                    % (base_hits, FITNESS_N))
+                    'base cap-hits %d/%d on the same-surface bank: 0 = no '
+                    'improvable cells, 12 = no headroom (saturation lesson);'
+                    ' addendum 2026-11-08c gate' % (base_hits, FITNESS_BANK))
     guard_pass = [score_first_line(c, r['output_text'])
                   for c, r in zip(guard_pool, gens['guard'])]
     if sum(guard_pass) < 3:
@@ -736,13 +738,15 @@ def cmd_run(args, log):
         guard_rows = [json.loads(ln) for ln in open(guard_out,
                                                     encoding='utf-8')
                       if ln.strip()]
-        fitness = fitness_from_rows(loop_rows)
+        fitness = fitness_from_rows(loop_rows,
+                                    state['base_loop_hits'])
         guard_pass = sum(1 for c, r in zip(guard_pool, guard_rows)
                          if score_first_line(c, r['output_text']))
         append_manifest(args.out, {
             'kind': 'sample_complete', 'arm': arm, 'idx': idx,
             'seed': s['seed'], 'columns': s['columns'],
-            'fitness': fitness, 'loop_cap_hits': FITNESS_N - fitness,
+            'fitness': fitness,
+            'loop_cap_hits': state['base_loop_hits'] - fitness,
             'guard_pass': guard_pass, 'mirror': mirror, 'at': now()})
         ran += 1
 

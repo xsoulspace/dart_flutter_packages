@@ -61,10 +61,13 @@ class TestSampling(unittest.TestCase):
 
 
 class TestFitness(unittest.TestCase):
-    def test_fitness_counts_improvements(self):
+    def test_paired_improvement(self):
         rows = [{'cap_hit': True}, {'cap_hit': False}, {'cap_hit': True},
                 {'cap_hit': False}, {'cap_hit': False}, {'cap_hit': True}]
-        self.assertEqual(sm1.fitness_from_rows(rows), 3)  # 6 - 3 hits
+        # addendum 2026-11-08c: fitness = base_hits - sample hits
+        self.assertEqual(sm1.fitness_from_rows(rows, 6), 3)
+        self.assertEqual(sm1.fitness_from_rows(rows, 4), 1)
+        self.assertEqual(sm1.fitness_from_rows(rows, 3), 0)  # no improvement
 
 
 class TestVerdictClasses(unittest.TestCase):
