@@ -638,7 +638,7 @@ def orchestrate(args):
     for tool in (args.venv_python, os.path.abspath(__file__)):
         if not os.path.isfile(tool):
             return fail('TOOL_MISSING', tool)
-    if not args.dry_run and not on_ac_power():
+    if not args.dry_run and not args.allow_battery and not on_ac_power():
         return fail('POWER_GATE_BATTERY',
                     'live launch requires AC power (PREREG-G §7 POWER GATE; '
                     'current source: %r)' % power_facts().get('source'))
@@ -760,6 +760,10 @@ def main(argv=None):
     ap.add_argument('--seed', type=int, default=SEED_DEFAULT)
     ap.add_argument('--max-min', type=float, default=None,
                     help='orchestrator wall budget; clean stop BETWEEN arms')
+    ap.add_argument('--allow-battery', action='store_true',
+                    help='OWNER OVERRIDE 2026-11-08: run device batches on '
+                         'battery by explicit owner order (default: '
+                         'AC-only gate stands)')
     ap.add_argument('--dry-run', action='store_true')
     args = ap.parse_args(argv)
     tmp = os.environ.get('TMPDIR') or '/tmp'

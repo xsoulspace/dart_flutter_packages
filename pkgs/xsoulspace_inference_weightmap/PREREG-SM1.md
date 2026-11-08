@@ -85,3 +85,6 @@ CPU-only unit tests pin the pure parts (score-proportional sampling, shuffle
 permutation, fitness tally, verdict classes, chain writer). Frozen tools
 reused via subprocess, never edited; PYTHONDONTWRITEBYTECODE=1; scratch
 $TMPDIR; named exits; no commit by the runner.
+
+## Addendum 2026-11-08b (owner override; surface-only)
+Owner authorized battery device runs 2026-11-08 ("apply all recommendations even not on AC"): runners gained an additive `--allow-battery` flag (default UNCHANGED = AC-only); the coordinator chain script enforces a 20% battery floor between units (BATTERY_FLOOR_REACHED stop, resume-safe). No rule, arm, cell, floor, or kill clause changed.

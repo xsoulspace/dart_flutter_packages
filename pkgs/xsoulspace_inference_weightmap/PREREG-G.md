@@ -232,3 +232,6 @@ thinking-trained casts; a null at 0.8B is an expected-shape result, not a
 refutation of the literature). Absolute wall-ms = non-claims. A
 SAMPLER_GENERIC or HEADROOM_REJECTED verdict is a successful cheap outcome
 of the design.
+
+## Addendum 2026-11-08b (owner override; surface-only)
+Owner authorized battery device runs 2026-11-08: `--allow-battery` additive flag on the orchestrator (default UNCHANGED = AC-only gate stands); 20% battery floor enforced at the chain level. Rules unchanged.

@@ -153,8 +153,16 @@ def on_ac_power():
     return 'AC Power' in power_facts()
 
 
-def ac_gate_wait(log):
-    """POWER gate: AC-only device batches; poll 300s x12 then named stop."""
+def ac_gate_wait(log, allow_battery=False):
+    """POWER gate: AC-only device batches; poll 300s x12 then named stop.
+    OWNER OVERRIDE 2026-11-08 (VERDICTS row): --allow-battery runs on
+    battery by explicit owner order; the coordinator chain script enforces
+    a 20% battery floor between units."""
+    if allow_battery:
+        print('POWER_OVERRIDE: owner-authorized battery run '
+              '(source: %s; floor 20%% enforced by chain script)' % power_facts(),
+              file=log)
+        return True
     for attempt in range(12):
         if on_ac_power():
             return True
@@ -465,7 +473,7 @@ def render_prompt(hf_tok, template_note, prompt):
 # --------------------------------------------------------------------------
 
 def cmd_probe(args, log):
-    if not ac_gate_wait(log):
+    if not ac_gate_wait(log, args.allow_battery):
         append_manifest(args.out, {'kind': 'stop', 'reason':
                                    'POWER_GATE_BATTERY_WAIT_EXHAUSTED',
                                    'at': now()})
@@ -605,7 +613,7 @@ def cmd_probe(args, log):
 # --------------------------------------------------------------------------
 
 def cmd_run(args, log):
-    if not ac_gate_wait(log):
+    if not ac_gate_wait(log, args.allow_battery):
         append_manifest(args.out, {'kind': 'stop', 'reason':
                                    'POWER_GATE_BATTERY_WAIT_EXHAUSTED',
                                    'at': now()})
@@ -860,6 +868,10 @@ def main(argv=None):
     ap.add_argument('--venv-python', default=VENV_PYTHON_DEFAULT)
     ap.add_argument('--seed', type=int, default=SEED_DEFAULT)
     ap.add_argument('--max-min', type=float, default=None)
+    ap.add_argument('--allow-battery', action='store_true',
+                    help='OWNER OVERRIDE 2026-11-08: run device batches on '
+                         'battery by explicit owner order (default: '
+                         'AC-only gate stands)')
     ap.add_argument('--summary', default=None)
     args = ap.parse_args(argv)
     tmp = os.environ.get('TMPDIR') or '/tmp'
