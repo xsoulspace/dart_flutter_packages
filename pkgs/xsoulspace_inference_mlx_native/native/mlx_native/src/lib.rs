@@ -14,6 +14,7 @@
 //! lock; the harness server serves decisions one at a time.
 
 pub mod bindings;
+pub mod delta_sidecar;
 pub mod bpe;
 pub mod lfm2;
 pub mod lora;
