@@ -742,12 +742,18 @@ def cmd_run(args, log):
                                     state['base_loop_hits'])
         guard_pass = sum(1 for c, r in zip(guard_pool, guard_rows)
                          if score_first_line(c, r['output_text']))
+        # MIRROR_RECLAMATION (ops 2026-11-08: 35 mirrors x 3.2GB filled the
+        # volume; mirrors are probe scratch — spec + gens + fitness rows
+        # carry the evidence; the determinism re-measure rebuilds its own)
+        import shutil as _sh
+        _sh.rmtree(mirror, ignore_errors=True)
         append_manifest(args.out, {
             'kind': 'sample_complete', 'arm': arm, 'idx': idx,
             'seed': s['seed'], 'columns': s['columns'],
-            'fitness': fitness,
-            'loop_cap_hits': state['base_loop_hits'] - fitness,
-            'guard_pass': guard_pass, 'mirror': mirror, 'at': now()})
+            'fitness': fitness, 'loop_cap_hits':
+                state['base_loop_hits'] - fitness,
+            'guard_pass': guard_pass, 'mirror': '(reclaimed)',
+            'mirror_reclaimed': True, 'at': now()})
         ran += 1
 
     # determinism re-measure of the best GUIDED sample
@@ -803,6 +809,8 @@ def cmd_run(args, log):
                           == [r['hit_token_limit'] for r in second]
                           and [r['output_tokens'] for r in first]
                           == [r['output_tokens'] for r in second])}
+        import shutil as _sh2
+        _sh2.rmtree(mirror, ignore_errors=True)   # reclamation law
     state['determinism'] = det
     atomic_write_json(state_path, state)
     append_manifest(args.out, {'kind': 'run_complete', 'samples_ran': ran,
