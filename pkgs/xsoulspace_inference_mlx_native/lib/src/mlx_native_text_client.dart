@@ -4,9 +4,14 @@ import 'laya_native_lfm2_chat_template.dart';
 import 'laya_native_lfm2_client.dart';
 import 'laya_native_qwen_chat_template.dart';
 import 'laya_native_qwen_client.dart';
+import 'mlx_native_resource_gates.dart';
 import 'native_text_protocol.dart';
 
 export 'native_text_model_names.dart';
+
+/// A non-product VM (debug or JIT run) — decode on these is slow and
+/// hot; the client says so in its warnings rather than pretending.
+const bool _releaseVm = bool.fromEnvironment('dart.vm.product');
 
 /// The EOS stop's emitted token must not ride the answer (HF convention —
 /// the native stop keeps the token; the wire and the unified client strip
@@ -112,7 +117,9 @@ final class MlxNativeTextClient implements LoraAttachableInferenceClient {
     this._loadEngine,
     this._qwenEngine,
     this._qwenCacheScope,
-  });
+    this._loadGate,
+    MxlLane? lane,
+  }) : _lane = lane ?? MxlLane();
 
   /// The Qwen3 cast: ChatML with the thinking switch, EOS stop on
   /// `<|im_end|>`/`<|endoftext|>`, tools rendered via the fixture-gated
@@ -125,6 +132,8 @@ final class MlxNativeTextClient implements LoraAttachableInferenceClient {
     int defaultMaxTokens = 320,
     double defaultTemperature = 0.0,
     ToolCallSyntax? toolSyntax = ToolCallSyntax.qwenJson,
+    MlxLoadGate? loadGate = MlxLoadGate.defaults,
+    int maxLaneDepth = 3,
   }) => MlxNativeTextClient._(
     id: 'mlx_native_qwen',
     eosIds: () => const <int>[151645, 151643], // <|im_end|>, <|endoftext|>
@@ -168,6 +177,8 @@ final class MlxNativeTextClient implements LoraAttachableInferenceClient {
         ),
     qwenEngine: () => engine,
     qwenCacheScope: cacheScope,
+    loadGate: loadGate,
+    lane: MxlLane(maxLaneDepth: maxLaneDepth),
   );
 
   /// The LFM2.5 cast: the fixture-gated instruct template (tools render
@@ -179,6 +190,8 @@ final class MlxNativeTextClient implements LoraAttachableInferenceClient {
     int defaultMaxTokens = 320,
     double defaultTemperature = 0.0,
     ToolCallSyntax? toolSyntax,
+    MlxLoadGate? loadGate = MlxLoadGate.defaults,
+    int maxLaneDepth = 3,
   }) => MlxNativeTextClient._(
     id: 'mlx_native_lfm2',
     eosIds: () => engine.specialIds().chatStopIds,
@@ -219,12 +232,15 @@ final class MlxNativeTextClient implements LoraAttachableInferenceClient {
           adapterPath,
           scale: scale,
         ),
+    loadGate: loadGate,
+    lane: MxlLane(maxLaneDepth: maxLaneDepth),
   );
 
   /// The lazy Qwen3 cast: the weight load happens on the first [load]
   /// (composition stays cheap; a bounded last-in-order lane is used only
   /// on explicit cast). Same render/stop behavior as
-  /// [MlxNativeTextClient.qwen].
+  /// [MlxNativeTextClient.qwen]. The load itself rides
+  /// [NativeQwenTextEngine.loadAsync] — off the calling isolate.
   factory MlxNativeTextClient.lazyQwen({
     String? snapshotDir,
     bool thinking = false,
@@ -232,6 +248,8 @@ final class MlxNativeTextClient implements LoraAttachableInferenceClient {
     int defaultMaxTokens = 320,
     double defaultTemperature = 0.0,
     ToolCallSyntax? toolSyntax = ToolCallSyntax.qwenJson,
+    MlxLoadGate? loadGate = MlxLoadGate.defaults,
+    int maxLaneDepth = 3,
   }) {
     NativeQwenTextEngine? engine;
     final client = MlxNativeTextClient._(
@@ -249,9 +267,11 @@ final class MlxNativeTextClient implements LoraAttachableInferenceClient {
       loraAttachProbe: () => NativeQwenTextEngine.loraApiSupported,
       attachLora: _boxedQwenAttachLora(() => engine),
       loadEngine: () async {
-        engine = await NativeQwenTextEngine.load(snapshotDir: snapshotDir);
+        engine = await NativeQwenTextEngine.loadAsync(snapshotDir: snapshotDir);
       },
       qwenEngine: () => engine,
+      loadGate: loadGate,
+      lane: MxlLane(maxLaneDepth: maxLaneDepth),
     );
     client._onUnloadEngine = () {
       engine?.dispose();
@@ -273,6 +293,8 @@ final class MlxNativeTextClient implements LoraAttachableInferenceClient {
     // (ADR 0058 law: the textual format is fixture-gated before it
     // executes). Null keeps prose-only behavior.
     ToolCallSyntax? toolSyntax = ToolCallSyntax.lfmNative,
+    MlxLoadGate? loadGate = MlxLoadGate.defaults,
+    int maxLaneDepth = 3,
   }) {
     NativeLfm2TextEngine? engine;
     final client = MlxNativeTextClient._(
@@ -290,8 +312,10 @@ final class MlxNativeTextClient implements LoraAttachableInferenceClient {
       loraAttachProbe: () => NativeLfm2TextEngine.loraApiSupported,
       attachLora: _boxedLfmAttachLora(() => engine),
       loadEngine: () async {
-        engine = await NativeLfm2TextEngine.load(snapshotDir: snapshotDir);
+        engine = await NativeLfm2TextEngine.loadAsync(snapshotDir: snapshotDir);
       },
+      loadGate: loadGate,
+      lane: MxlLane(maxLaneDepth: maxLaneDepth),
     );
     client._onUnloadEngine = () {
       engine?.dispose();
@@ -430,33 +454,46 @@ final class MlxNativeTextClient implements LoraAttachableInferenceClient {
   );
 
   /// Loads the cached Qwen3 snapshot and returns the client. See
-  /// [NativeQwenTextEngine.load] for the resolution order (never
-  /// downloads).
+  /// [NativeQwenTextEngine.loadAsync] for the resolution order (never
+  /// downloads); the weight load runs off the calling isolate.
   static Future<MlxNativeTextClient> loadQwen({
     String? snapshotDir,
     bool thinking = false,
     String model = 'qwen3-mlx-4bit',
+    MlxLoadGate? loadGate = MlxLoadGate.defaults,
   }) async => MlxNativeTextClient.qwen(
-    await NativeQwenTextEngine.load(snapshotDir: snapshotDir),
+    await NativeQwenTextEngine.loadAsync(snapshotDir: snapshotDir),
     thinking: thinking,
     model: model,
+    loadGate: loadGate,
   );
 
   /// Loads the cached LFM2.5 snapshot and returns the client. See
-  /// [NativeLfm2TextEngine.load] for the resolution order (never
-  /// downloads).
+  /// [NativeLfm2TextEngine.loadAsync] for the resolution order (never
+  /// downloads); the weight load runs off the calling isolate.
   static Future<MlxNativeTextClient> loadLfm2({
     String? snapshotDir,
     String model = 'lfm2.5-instruct-mlx-4bit',
+    MlxLoadGate? loadGate = MlxLoadGate.defaults,
   }) async => MlxNativeTextClient.lfm2(
-    await NativeLfm2TextEngine.load(snapshotDir: snapshotDir),
+    await NativeLfm2TextEngine.loadAsync(snapshotDir: snapshotDir),
     model: model,
+    loadGate: loadGate,
   );
 
   final String _id;
   final List<int> Function() _eosIds;
   final _Generate _generate;
   final _Render _render;
+
+  /// The weight-load gate (null = disabled — benches and explicit
+  /// experiments pass null; everything else rides
+  /// [MlxLoadGate.defaults]).
+  final MlxLoadGate? _loadGate;
+
+  /// The generation lane: ONE decode at a time, bounded depth — the
+  /// typed `engine_busy` refusal instead of an unbounded treadmill.
+  final MxlLane _lane;
 
   /// Performs the deferred weight load (lazy form only; null = eager).
   final Future<void> Function()? _loadEngine;
@@ -524,11 +561,21 @@ final class MlxNativeTextClient implements LoraAttachableInferenceClient {
   /// Performs the deferred weight load once per success — a failed load
   /// is recorded ([loadError]) and the next call retries. Concurrent
   /// callers share one attempt. Never throws.
+  ///
+  /// The load first walks [MlxLoadGate] (when one is set): a machine
+  /// that cannot hold the weights gets the typed [MlxLoadRefusal]
+  /// recorded instead of a load that pushes it into swap (the
+  /// 2026-11-14 incident class).
   @override
   Future<void> load() {
     if (_loaded || _disposed || _loadEngine == null) return Future.value();
     final pending = _pendingLoad ??= () async {
       try {
+        final gate = _loadGate;
+        if (gate != null) {
+          final refusal = await gate.evaluate();
+          if (refusal != null) throw refusal;
+        }
         await _loadEngine();
         _loaded = true;
       } on Object catch (error) {
@@ -592,6 +639,19 @@ final class MlxNativeTextClient implements LoraAttachableInferenceClient {
     if (!isAvailable) {
       await load();
       if (!isAvailable) {
+        final refusal = _loadError;
+        if (refusal is MlxLoadRefusal) {
+          return InferenceResult.fail(
+            code: 'engine_load_refused',
+            message: refusal.message,
+            details: <String, Object?>{
+              'retryable': true,
+              'required_available_megabytes':
+                  refusal.requiredAvailableMegabytes,
+              'available_megabytes': refusal.availableMegabytes,
+            },
+          );
+        }
         return InferenceResult.fail(
           code: 'unavailable',
           message:
@@ -602,6 +662,12 @@ final class MlxNativeTextClient implements LoraAttachableInferenceClient {
       }
     }
     final warnings = <String>[];
+    if (!_releaseVm) {
+      warnings.add(
+        'mlx_native runs in a non-product (debug/JIT) build; decode is '
+        'slow and hot — use a release or profile build for local casts',
+      );
+    }
     final temperature = request.temperature ?? defaultTemperature;
     final repetitionPenalty = request.repetitionPenalty;
     final samplingRequested =
@@ -679,19 +745,34 @@ final class MlxNativeTextClient implements LoraAttachableInferenceClient {
     final maxTokens = request.maxTokens ?? defaultMaxTokens;
     final ({List<int> promptIds, List<int> ids, String text}) completion;
     try {
-      completion = await generate(
-        prompt: _render(
-          system: request.systemPrompt,
-          user: request.prompt,
-          messages: messages,
-          tools: tools,
-          thinking: effectiveThinking,
+      // The lane bound: ONE decode at a time, at most `maxLaneDepth`
+      // requests held — a deeper caller gets the typed `engine_busy`
+      // refusal NOW instead of joining an unbounded treadmill that
+      // keeps the machine hot forever (the 2026-11-14 incident class).
+      completion = await _lane.run(
+        () => generate(
+          prompt: _render(
+            system: request.systemPrompt,
+            user: request.prompt,
+            messages: messages,
+            tools: tools,
+            thinking: effectiveThinking,
+          ),
+          maxTokens: maxTokens,
+          stopOnEos: true,
+          eosIds: _eosIds(),
+          temperature: temperature,
+          repetitionPenalty: repetitionPenalty,
         ),
-        maxTokens: maxTokens,
-        stopOnEos: true,
-        eosIds: _eosIds(),
-        temperature: temperature,
-        repetitionPenalty: repetitionPenalty,
+      );
+    } on MxlLaneBusy catch (busy) {
+      return InferenceResult.fail(
+        code: 'engine_busy',
+        message: busy.message,
+        details: <String, Object?>{
+          'retryable': true,
+          'lane_depth': busy.laneDepth,
+        },
       );
     } on NativeQwenRequestCancelled {
       return InferenceResult.fail(

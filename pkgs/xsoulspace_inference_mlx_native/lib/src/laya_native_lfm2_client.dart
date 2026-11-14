@@ -246,6 +246,47 @@ final class NativeLfm2TextEngine {
     return NativeLfm2TextEngine._(handle, dir);
   }
 
+  /// [load] off the caller's isolate: snapshot resolution and binding
+  /// preload stay on the caller, then the FFI weight load — the
+  /// seconds-long deserialize that otherwise freezes whatever isolate
+  /// called [load] (the daemon's main loop included) — runs in a fresh
+  /// worker. The returned handle is process-global, the same discipline
+  /// [NativeLfm2TextEngine.generateAsync] already rides.
+  static Future<NativeLfm2TextEngine> loadAsync({String? snapshotDir}) async {
+    final dir = resolveLfm2SnapshotDir(snapshotDir);
+    if (dir == null) {
+      throw StateError(
+        'lfm2 snapshot absent: pass snapshotDir or LFM2_SNAPSHOT, or cache '
+        'LiquidAI/LFM2.5-1.2B under the HF hub (the runtime never downloads)',
+      );
+    }
+    final library = await Isolate.resolvePackageUri(
+      Uri.parse(
+        'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.dart',
+      ),
+    );
+    final packageRoot = library == null
+        ? null
+        : File.fromUri(library).parent.parent.path;
+    ensureNativeBindingsAvailable(packageRoot: packageRoot);
+    final handle = await Isolate.run(() {
+      final dirNative = toNativeUtf8(dir);
+      final handle = _lfm2Load(dirNative);
+      malloc.free(dirNative);
+      if (handle <= 0) {
+        final detail = jsonDecode(
+          fromNativeUtf8(_lfm2LastLoadError()),
+        ) as Map<String, dynamic>;
+        throw StateError(
+          'laya lfm2 load failed (code $handle) for snapshot $dir: '
+          '${detail['error']}',
+        );
+      }
+      return handle;
+    });
+    return NativeLfm2TextEngine._(handle, dir);
+  }
+
   /// The checkpoint's own special-token ids (BOS, `<|im_end|>`,
   /// `<|endoftext|>`).
   NativeLfm2SpecialIds specialIds() {

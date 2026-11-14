@@ -475,6 +475,36 @@ final class NativeQwenTextEngine {
     return NativeQwenTextEngine._(handle, dir);
   }
 
+  /// [load] off the caller's isolate: snapshot resolution and binding
+  /// preload stay on the caller (asset state lives there), then the FFI
+  /// weight load — the seconds-long deserialize that otherwise freezes
+  /// whatever isolate called [load] (the daemon's main loop included) —
+  /// runs in a fresh worker. The returned handle is process-global, the
+  /// same discipline [generateByHandle] already rides.
+  static Future<NativeQwenTextEngine> loadAsync({String? snapshotDir}) async {
+    final dir = resolveQwenSnapshotDir(snapshotDir);
+    if (dir == null) {
+      throw StateError(
+        'qwen snapshot absent: pass snapshotDir or QWEN3_SNAPSHOT, or cache '
+        'Qwen3-0.6B-4bit under the HF hub (the runtime never downloads)',
+      );
+    }
+    final packageRoot = await resolveNativePackageRoot();
+    ensureNativeBindingsAvailable(packageRoot: packageRoot);
+    final handle = await Isolate.run(() {
+      final dirNative = toNativeUtf8(dir);
+      final handle = _qwenLoad(dirNative);
+      malloc.free(dirNative);
+      if (handle <= 0) {
+        throw StateError(
+          'laya qwen load failed (code $handle) for snapshot $dir',
+        );
+      }
+      return handle;
+    });
+    return NativeQwenTextEngine._(handle, dir);
+  }
+
   /// Greedy decode by default; opt-in sampled decode when [temperature] or
   /// [repetitionPenalty] is supplied (native sampling rung — needs
   /// [samplingApiSupported]). Supply [prompt] (tokenized by the checkpoint
