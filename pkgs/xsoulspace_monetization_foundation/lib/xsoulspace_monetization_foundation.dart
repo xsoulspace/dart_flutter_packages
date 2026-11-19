@@ -16,7 +16,9 @@
 /// - **Commands**: Immutable business logic objects for purchase operations
 /// - **Models**: Core enums and types for monetization state
 /// - **Resources**: Reactive state management with ChangeNotifier
-/// - **Widgets**: UI components for monetization flows
+/// - **Widgets**: headless, slot-based compositional views — state flows in
+///   through properties, actions flow out through callbacks, and every
+///   visual is a caller-supplied builder (no Material UI)
 /// - **Noop Providers**: Testing implementations without real transactions
 ///
 /// ### State Flow:

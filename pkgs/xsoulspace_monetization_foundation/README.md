@@ -139,7 +139,7 @@ lib/
 ├── commands/      # Business logic (SubscribeCommand, etc.)
 ├── models/        # Core types (MonetizationStatus, MonetizationType)
 ├── resources/     # State management (ChangeNotifier-based)
-├── widgets/       # UI components (SubscriptionScreen, etc.)
+├── widgets/       # Headless slot-based views (PurchaseListView, PurchaseGate, etc.)
 └── noop_providers/ # Testing implementations
 ```
 
