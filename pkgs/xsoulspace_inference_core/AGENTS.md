@@ -1,7 +1,8 @@
 # pkgs/xsoulspace_inference_core: Agent Working Agreement
 
-Provider-agnostic inference contracts and validation utilities for text, STT,
-and TTS task flows. This package is part of the `dart_flutter_packages`
+Provider-agnostic inference contracts and validation utilities for text,
+STT, TTS, image generation (text-to-image / image-to-image, ADR 0072) and vision (image-to-text — multipart ChatMessage parts, ADR 0072 amendment 1)
+task flows. This package is part of the `dart_flutter_packages`
 workspace; Skill Steward is adopted at the workspace root with package-scoped
 actions.
 
