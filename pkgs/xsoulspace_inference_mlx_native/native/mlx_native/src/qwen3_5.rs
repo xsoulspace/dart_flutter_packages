@@ -112,6 +112,10 @@ pub struct Qwen35Config {
     pub lin_k_dim: usize,
     pub lin_v_dim: usize,
     pub conv_kernel: usize,
+    /// The export's affine-quantization spec `(group_size, bits)` when the
+    /// checkpoint ships one (the mlx-community 4-bit converts do; the raw
+    /// bf16 parity fixture does not). `None` = plain bf16 linears/embedding.
+    pub quant: Option<(i32, i32)>,
 }
 
 impl Qwen35Config {
@@ -174,6 +178,32 @@ impl Qwen35Config {
             .get("tie_word_embeddings")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
+        // The affine-quantization spec: mlx-lm exports carry it at the TOP
+        // level (the whole-model quantization config); accept the text
+        // sub-object too. A non-affine mode is refused by name — the
+        // engine implements affine only (qwen.rs's dense 4-bit law).
+        let quant_doc = doc.get("quantization").or_else(|| text.get("quantization"));
+        let quant = match quant_doc {
+            None => None,
+            Some(q) => {
+                let mode = q.get("mode").and_then(|v| v.as_str()).unwrap_or("affine");
+                if mode != "affine" {
+                    return Err(format!(
+                        "QWEN35_QUANT_MODE_UNSUPPORTED: mode={mode:?} (this engine \
+                         implements affine quantization only)"
+                    ));
+                }
+                let group_size = q
+                    .get("group_size")
+                    .and_then(|v| v.as_i64())
+                    .ok_or("QWEN35_QUANT_MISSING_FIELD: group_size")?;
+                let bits = q
+                    .get("bits")
+                    .and_then(|v| v.as_i64())
+                    .ok_or("QWEN35_QUANT_MISSING_FIELD: bits")?;
+                Some((group_size as i32, bits as i32))
+            }
+        };
         Ok(Qwen35Config {
             hidden_size: hidden,
             layers: get_u("num_hidden_layers")?,
@@ -192,6 +222,7 @@ impl Qwen35Config {
             lin_k_dim: get_u("linear_key_head_dim")?,
             lin_v_dim: get_u("linear_value_head_dim")?,
             conv_kernel: get_u("linear_conv_kernel_dim")?,
+            quant,
         })
     }
 
@@ -232,19 +263,88 @@ impl Qwen35Config {
     }
 }
 
+/// One linear's weight: the plain bf16 path keeps the transposed [in, out]
+/// view (the `x @ w.T` strided operand), the affine-quantized path keeps
+/// the packed triple and rides `Array::quantized_matmul(transpose=true)` —
+/// the exact call `nn.QuantizedLinear.__call__` makes, the same kernels
+/// qwen.rs's dense 4-bit converts run. Norms/conv/dt_bias/A_log stay plain
+/// in every layout (the exports never quantize them — verified on the
+/// 0.8B-4bit convert's store: 187 quantized tensors, zero of them norms).
+enum LinW {
+    T(Array),
+    Q(crate::safetensors::QuantizedTensor, i32, i32),
+}
+
+impl LinW {
+    /// `y = x @ w.T` in whichever storage the checkpoint ships.
+    fn matmul(&self, x: &Array, s: Stream) -> MlxResult<Array> {
+        match self {
+            LinW::T(w_t) => x.matmul(w_t, s),
+            LinW::Q(q, group_size, bits) => Array::quantized_matmul(
+                x, &q.w, &q.scales, &q.biases, true, *group_size, *bits, s,
+            ),
+        }
+    }
+
+    fn collect<'a>(&'a self, out: &mut Vec<&'a Array>) {
+        match self {
+            LinW::T(w) => out.push(w),
+            LinW::Q(q, _, _) => {
+                out.push(&q.w);
+                out.push(&q.scales);
+                out.push(&q.biases);
+            }
+        }
+    }
+}
+
+/// The (tied) embedding table: plain keeps the table + its transposed
+/// as_linear view; quantized keeps the triple — the head runs
+/// `quantized_matmul(transpose=true)` (mlx-lm `QuantizedEmbedding.as_linear`)
+/// and the lookup gathers packed rows then `Array::dequantize`s them
+/// (`QuantizedEmbedding.__call__`'s exact pair).
+enum EmbedW {
+    Plain(Array, Array),
+    Q(crate::safetensors::QuantizedTensor, i32, i32),
+}
+
+impl EmbedW {
+    fn collect<'a>(&'a self, out: &mut Vec<&'a Array>) {
+        match self {
+            EmbedW::Plain(table, table_t) => {
+                out.push(table);
+                out.push(table_t);
+            }
+            EmbedW::Q(q, _, _) => {
+                out.push(&q.w);
+                out.push(&q.scales);
+                out.push(&q.biases);
+            }
+        }
+    }
+}
+
 struct MlpW {
     /// Transposed views ([in, out]) of the checkpoint weights — the same
     /// strided operand `nn.Linear`'s `x @ w.T` hands the matmul kernel.
-    gate_t: Array,
-    up_t: Array,
-    down_t: Array,
+    gate: LinW,
+    up: LinW,
+    down: LinW,
+}
+
+impl MlpW {
+    fn collect<'a>(&'a self, out: &mut Vec<&'a Array>) {
+        self.gate.collect(out);
+        self.up.collect(out);
+        self.down.collect(out);
+    }
 }
 
 struct LinearAttnW {
-    qkv_t: Array,
-    z_t: Array,
-    b_t: Array,
-    a_t: Array,
+    qkv: LinW,
+    z: LinW,
+    b: LinW,
+    a: LinW,
     /// [conv_dim, kernel, 1] — the checkpoint's [conv_dim, 1, kernel] with
     /// axes swapped (mlx-lm sanitize's `moveaxis(2, 1)`).
     conv_w: Array,
@@ -254,17 +354,42 @@ struct LinearAttnW {
     a_log: Array,
     /// RAW f32 [Dv] gated-norm weight (never +1-offset).
     gated_norm_w: Array,
-    out_t: Array,
+    out: LinW,
+}
+
+impl LinearAttnW {
+    fn collect<'a>(&'a self, out: &mut Vec<&'a Array>) {
+        self.qkv.collect(out);
+        self.z.collect(out);
+        self.b.collect(out);
+        self.a.collect(out);
+        out.push(&self.conv_w);
+        out.push(&self.dt_bias);
+        out.push(&self.a_log);
+        out.push(&self.gated_norm_w);
+        self.out.collect(out);
+    }
 }
 
 struct FullAttnW {
-    q_t: Array,
-    k_t: Array,
-    v_t: Array,
-    o_t: Array,
+    q: LinW,
+    k: LinW,
+    v: LinW,
+    o: LinW,
     /// +1.0 folded in at load (HF `Qwen3_5RMSNorm` is plus-one).
     q_norm: Array,
     k_norm: Array,
+}
+
+impl FullAttnW {
+    fn collect<'a>(&'a self, out: &mut Vec<&'a Array>) {
+        self.q.collect(out);
+        self.k.collect(out);
+        self.v.collect(out);
+        self.o.collect(out);
+        out.push(&self.q_norm);
+        out.push(&self.k_norm);
+    }
 }
 
 enum LayerW {
@@ -296,6 +421,15 @@ impl LayerW {
     fn mlp(&self) -> &MlpW {
         match self {
             LayerW::Linear { mlp, .. } | LayerW::Full { mlp, .. } => mlp,
+        }
+    }
+    fn collect<'a>(&'a self, out: &mut Vec<&'a Array>) {
+        out.push(self.ln1());
+        out.push(self.ln2());
+        self.mlp().collect(out);
+        match self {
+            LayerW::Linear { attn, .. } => attn.collect(out),
+            LayerW::Full { attn, .. } => attn.collect(out),
         }
     }
 }
@@ -504,9 +638,7 @@ fn softplus_kernel() -> Option<&'static MetalKernel> {
 
 pub struct Qwen35 {
     pub cfg: Qwen35Config,
-    embed: Array,
-    /// Transposed embedding view — the tied lm_head (`as_linear`).
-    embed_t: Array,
+    embed: EmbedW,
     layers: Vec<LayerW>,
     norm: Array,
     // normalize_qk constants (see the module header for the pinning):
@@ -552,6 +684,23 @@ impl Qwen35 {
         // must NOT be offset again. Every linear layer's conv weight is
         // pre-read once (kept for the main loop, no double load) so the
         // ANY-gate matches the reference exactly, mixed layouts included.
+        // Weight-name prefix: the raw HF checkpoint (the parity fixture's
+        // provenance) nests the tower as `model.language_model.*`; an
+        // mlx-lm export of the same model renames it
+        // `language_model.model.*` (the 0.8B-4bit convert's store). Detect
+        // once from the embedding row and refuse anything else by name —
+        // never probe tensor by tensor.
+        let lm = if store.has("model.language_model.embed_tokens.weight") {
+            "model.language_model"
+        } else if store.has("language_model.model.embed_tokens.weight") {
+            "language_model.model"
+        } else {
+            return Err(
+                "QWEN35_WEIGHT_PREFIX_UNKNOWN: no embed_tokens under \
+                 model.language_model.* or language_model.model.*"
+                    .to_string(),
+            );
+        };
         let mut convs: Vec<Option<Array>> = (0..cfg.layers).map(|_| None).collect();
         let mut hf_format = false;
         for (li, kind) in cfg.layer_types.iter().enumerate() {
@@ -560,7 +709,7 @@ impl Qwen35 {
             }
             let c = store
                 .take_any(&format!(
-                    "model.language_model.layers.{li}.linear_attn.conv1d.weight"
+                    "{lm}.layers.{li}.linear_attn.conv1d.weight"
                 ))
                 .map_err(|e| format!("QWEN35_WEIGHT_CONV1D_L{li}: {e:?}"))?;
             if c.ndim() == 3 && c.dim(2) as usize != 1 {
@@ -572,6 +721,24 @@ impl Qwen35 {
         let take = |name: &str| -> Result<Array, String> {
             store.take_any(name).map_err(err(name.to_string()))
         };
+        // One linear: quantized when the spec says so AND the store carries
+        // the scales sibling (per-tensor presence, exactly qwen.rs's dense
+        // law); plain otherwise.
+        let transpose = |w: Array| -> Result<Array, String> {
+            w.transpose_axes(&[1, 0], s).map_err(err("TRANSPOSE".into()))
+        };
+        let take_lin = |name: &str| -> Result<LinW, String> {
+            match cfg.quant {
+                Some((group_size, bits)) if store.has(&format!("{name}.scales")) => Ok(LinW::Q(
+                    store
+                        .take_quantized(name)
+                        .map_err(err(name.to_string()))?,
+                    group_size,
+                    bits,
+                )),
+                _ => Ok(LinW::T(transpose(take(&format!("{name}.weight"))?)?)),
+            }
+        };
         let plus_one = |w: Array| -> Result<Array, String> {
             if !hf_format {
                 return Ok(w);
@@ -579,10 +746,6 @@ impl Qwen35 {
             let one = Array::full(1.0, &[1], Dtype::BFloat16, s).map_err(err("ONE".into()))?;
             w.add(&one, s).map_err(err("PLUS_ONE".into()))
         };
-        let transpose = |w: Array| -> Result<Array, String> {
-            w.transpose_axes(&[1, 0], s).map_err(err("TRANSPOSE".into()))
-        };
-        let lm = "model.language_model";
 
         let mut layers = Vec::with_capacity(cfg.layers);
         for (li, kind) in cfg.layer_types.iter().enumerate() {
@@ -590,9 +753,9 @@ impl Qwen35 {
             let ln1 = plus_one(take(&format!("{p}.input_layernorm.weight"))?)?;
             let ln2 = plus_one(take(&format!("{p}.post_attention_layernorm.weight"))?)?;
             let mlp = MlpW {
-                gate_t: transpose(take(&format!("{p}.mlp.gate_proj.weight"))?)?,
-                up_t: transpose(take(&format!("{p}.mlp.up_proj.weight"))?)?,
-                down_t: transpose(take(&format!("{p}.mlp.down_proj.weight"))?)?,
+                gate: take_lin(&format!("{p}.mlp.gate_proj"))?,
+                up: take_lin(&format!("{p}.mlp.up_proj"))?,
+                down: take_lin(&format!("{p}.mlp.down_proj"))?,
             };
             match kind {
                 LayerKind::LinearAttention => {
@@ -612,15 +775,15 @@ impl Qwen35 {
                         ln2,
                         mlp,
                         attn: LinearAttnW {
-                            qkv_t: transpose(take(&format!("{p}.linear_attn.in_proj_qkv.weight"))?)?,
-                            z_t: transpose(take(&format!("{p}.linear_attn.in_proj_z.weight"))?)?,
-                            b_t: transpose(take(&format!("{p}.linear_attn.in_proj_b.weight"))?)?,
-                            a_t: transpose(take(&format!("{p}.linear_attn.in_proj_a.weight"))?)?,
+                            qkv: take_lin(&format!("{p}.linear_attn.in_proj_qkv"))?,
+                            z: take_lin(&format!("{p}.linear_attn.in_proj_z"))?,
+                            b: take_lin(&format!("{p}.linear_attn.in_proj_b"))?,
+                            a: take_lin(&format!("{p}.linear_attn.in_proj_a"))?,
                             conv_w,
                             dt_bias: take(&format!("{p}.linear_attn.dt_bias"))?,
                             a_log: take(&format!("{p}.linear_attn.A_log"))?,
                             gated_norm_w: take(&format!("{p}.linear_attn.norm.weight"))?,
-                            out_t: transpose(take(&format!("{p}.linear_attn.out_proj.weight"))?)?,
+                            out: take_lin(&format!("{p}.linear_attn.out_proj"))?,
                         },
                     });
                 }
@@ -630,10 +793,10 @@ impl Qwen35 {
                         ln2,
                         mlp,
                         attn: FullAttnW {
-                            q_t: transpose(take(&format!("{p}.self_attn.q_proj.weight"))?)?,
-                            k_t: transpose(take(&format!("{p}.self_attn.k_proj.weight"))?)?,
-                            v_t: transpose(take(&format!("{p}.self_attn.v_proj.weight"))?)?,
-                            o_t: transpose(take(&format!("{p}.self_attn.o_proj.weight"))?)?,
+                            q: take_lin(&format!("{p}.self_attn.q_proj"))?,
+                            k: take_lin(&format!("{p}.self_attn.k_proj"))?,
+                            v: take_lin(&format!("{p}.self_attn.v_proj"))?,
+                            o: take_lin(&format!("{p}.self_attn.o_proj"))?,
                             q_norm: plus_one(take(&format!("{p}.self_attn.q_norm.weight"))?)?,
                             k_norm: plus_one(take(&format!("{p}.self_attn.k_norm.weight"))?)?,
                         },
@@ -642,10 +805,24 @@ impl Qwen35 {
             }
         }
 
-        let embed = take(&format!("{lm}.embed_tokens.weight"))?;
-        let embed_t = embed
-            .transpose_axes(&[1, 0], s)
-            .map_err(err("EMBED_TRANSPOSE".into()))?;
+        let embed = match cfg.quant {
+            Some((group_size, bits)) if store.has(&format!("{lm}.embed_tokens.scales")) => {
+                EmbedW::Q(
+                    store
+                        .take_quantized(&format!("{lm}.embed_tokens"))
+                        .map_err(err("EMBED_TOKENS".into()))?,
+                    group_size,
+                    bits,
+                )
+            }
+            _ => {
+                let table = take(&format!("{lm}.embed_tokens.weight"))?;
+                let table_t = table
+                    .transpose_axes(&[1, 0], s)
+                    .map_err(err("EMBED_TRANSPOSE".into()))?;
+                EmbedW::Plain(table, table_t)
+            }
+        };
         let norm = plus_one(take(&format!("{lm}.norm.weight"))?)?;
 
         // normalize_qk constants — computed in f64 exactly like the python
@@ -662,10 +839,9 @@ impl Qwen35 {
         let zero_f32 =
             Array::full(0.0, &[1], Dtype::Float32, s).map_err(err("ZERO_F32".into()))?;
 
-        Ok(Qwen35 {
+        let model = Qwen35 {
             cfg: cfg.clone(),
             embed,
-            embed_t,
             layers,
             norm,
             ones_dk,
@@ -674,7 +850,37 @@ impl Qwen35 {
             qk_norm_eps: qk_norm_eps as f32,
             zero_f32,
             attn_scale: (cfg.head_dim as f32).powf(-0.5),
-        })
+        };
+        model
+            .materialize()
+            .map_err(|e| format!("QWEN35_MATERIALIZE: {e:?}"))?;
+        Ok(model)
+    }
+
+    /// Materializes every load-built array on the LOADING thread before
+    /// it can exit: the plus-one folds, transposes and constants are
+    /// lazy ops queued on the loading thread's stream, and the
+    /// engine-isolate pattern loads in one isolate and generates in
+    /// another — a stream-bound lazy array whose stream died takes the
+    /// process down (`There is no Stream(gpu, 0) in current thread`,
+    /// the 2026-11-18 in-app crash). Eval turns them into
+    /// thread-independent buffers: the dense loader's eager-host-array
+    /// property, restored for the derived views.
+    fn materialize(&self) -> MlxResult<()> {
+        let mut arrays: Vec<&Array> = Vec::with_capacity(64 + self.layers.len() * 16);
+        self.embed.collect(&mut arrays);
+        for layer in &self.layers {
+            layer.collect(&mut arrays);
+        }
+        arrays.push(&self.norm);
+        arrays.push(&self.ones_dk);
+        arrays.push(&self.s_q);
+        arrays.push(&self.s_k);
+        arrays.push(&self.zero_f32);
+        for array in arrays {
+            array.eval()?;
+        }
+        Ok(())
     }
 
     // ---- forward ----
@@ -735,16 +941,32 @@ impl Qwen35 {
         // Row gather [V, H] × ids [1, L] → [1, L, H]: the flat-index take
         // idiom of qwen.rs's gather_rows — mlx's no-axis `take` indexes the
         // FLATTENED table, so the row-major index math (id * H + col) is
-        // explicit. Pure data movement: the same rows python's
-        // `weight[inputs]` gather returns, bitwise.
+        // explicit. Plain: pure data movement, the same rows python's
+        // `weight[inputs]` gather returns, bitwise. Quantized
+        // (`QuantizedEmbedding.__call__`): the same gather runs on the
+        // packed U32 rows and the per-group scales/biases rows, then
+        // `Array::dequantize` affinely undoes the packing.
         let mut h = {
             let hidden = self.cfg.hidden_size;
-            let flat = self.embed.reshape(&[self.cfg.vocab * hidden], s)?;
-            let ids_col = tokens.reshape(&[1, l, 1], s)?;
-            let scaled = ids_col.mul(&Array::scalar_i32(hidden as i32), s)?;
-            let col_idx = Array::arange_i32(0, hidden as i32, s)?;
-            let flat_idx = scaled.add(&col_idx, s)?;
-            flat.take(&flat_idx, s)? // [1, L, H] bf16
+            let gather = |row_width: usize, table: &Array| -> MlxResult<Array> {
+                let flat = table.reshape(&[self.cfg.vocab * row_width], s)?;
+                let ids_col = tokens.reshape(&[1, l, 1], s)?;
+                let scaled = ids_col.mul(&Array::scalar_i32(row_width as i32), s)?;
+                let col_idx = Array::arange_i32(0, row_width as i32, s)?;
+                let flat_idx = scaled.add(&col_idx, s)?;
+                flat.take(&flat_idx, s)
+            };
+            match &self.embed {
+                EmbedW::Plain(table, _) => gather(hidden, table)?, // [1, L, H] bf16
+                EmbedW::Q(q, group_size, bits) => {
+                    let packed_row = q.w.dim(1) as usize;
+                    let group_row = q.scales.dim(1) as usize;
+                    let wq = gather(packed_row, &q.w)?; // [1, L, packed] u32
+                    let ws = gather(group_row, &q.scales)?; // [1, L, groups] bf16
+                    let wb = gather(group_row, &q.biases)?; // [1, L, groups] bf16
+                    Array::dequantize(&wq, &ws, &wb, *group_size, *bits, s)?
+                }
+            }
         };
         Self::shape_dbg("embed", &h);
         Self::digest_dbg("embed", &h, s);
@@ -761,13 +983,13 @@ impl Qwen35 {
             Self::digest_dbg(&format!("l{li:02}.h1"), &h1, s);
             let ln2 = Array::rms_norm(&h1, layer.ln2(), self.cfg.rms_eps, s)?;
             let mlp = layer.mlp();
-            let g = ln2.matmul(&mlp.gate_t, s)?;
-            let u = ln2.matmul(&mlp.up_t, s)?;
+            let g = mlp.gate.matmul(&ln2, s)?;
+            let u = mlp.up.matmul(&ln2, s)?;
             // swiglu(g, u) = nn.silu(g) * u = (g * sigmoid(g)) * u — the
             // reference composite, op for op, in bf16.
             let act = g.mul(&g.sigmoid(s)?, s)?.mul(&u, s)?;
             Self::digest_dbg(&format!("l{li:02}.act"), &act, s);
-            let ff = act.matmul(&mlp.down_t, s)?;
+            let ff = mlp.down.matmul(&act, s)?;
             h = h1.add(&ff, s)?;
             Self::digest_dbg(&format!("l{li:02}"), &h, s);
         }
@@ -775,8 +997,15 @@ impl Qwen35 {
         cache.offset += l;
         let t = Array::rms_norm(&h, &self.norm, self.cfg.rms_eps, s)?;
         if with_head {
-            // Tied head: `embed_tokens.as_linear(t)` = t @ embed.T.
-            t.matmul(&self.embed_t, s)
+            // Tied head: plain = `embed_tokens.as_linear(t)` = t @ embed.T;
+            // quantized = `QuantizedEmbedding.as_linear`'s exact call
+            // (quantized_matmul over the checkpoint's [out, in] packing).
+            match &self.embed {
+                EmbedW::Plain(_, table_t) => t.matmul(table_t, s),
+                EmbedW::Q(q, group_size, bits) => Array::quantized_matmul(
+                    &t, &q.w, &q.scales, &q.biases, true, *group_size, *bits, s,
+                ),
+            }
         } else {
             Ok(t)
         }
@@ -796,16 +1025,18 @@ impl Qwen35 {
         let cfg = &self.cfg;
         let slot = cache.kv_slot_of_layer[li].ok_or(MlxError(-978))?;
 
-        let q = x.matmul(&w.q_t, s)?; // [1, L, heads*head_dim*2]
+        let q = w.q.matmul(x, s)?; // [1, L, heads*head_dim*2]
         let qh = q.reshape(&[1, l, cfg.heads, cfg.head_dim * 2], s)?;
         Self::shape_dbg("attn.qh", &qh);
         let (queries, gate) = qh.split2(-1, s)?; // [1, L, heads, head_dim] each
         let gate = gate.reshape(&[1, l, cfg.heads * cfg.head_dim], s)?;
-        let k = x
-            .matmul(&w.k_t, s)?
+        let k = w
+            .k
+            .matmul(x, s)?
             .reshape(&[1, l, cfg.kv_heads, cfg.head_dim], s)?;
-        let v = x
-            .matmul(&w.v_t, s)?
+        let v = w
+            .v
+            .matmul(x, s)?
             .reshape(&[1, l, cfg.kv_heads, cfg.head_dim], s)?;
 
         let qn = Array::rms_norm(&queries, &w.q_norm, cfg.rms_eps, s)?;
@@ -840,7 +1071,7 @@ impl Qwen35 {
             .transpose_axes(&[0, 2, 1, 3], s)?
             .reshape(&[1, l, cfg.heads * cfg.head_dim], s)?;
         let gated = att_r.mul(&gate.sigmoid(s)?, s)?;
-        gated.matmul(&w.o_t, s)
+        w.o.matmul(&gated, s)
     }
 
     /// `GatedDeltaNet` (qwen3_5.py): split in-projections, depthwise conv
@@ -870,10 +1101,10 @@ impl Qwen35 {
             return Err(MlxError(-975));
         }
 
-        let qkv = x.matmul(&w.qkv_t, s)?; // [1, L, conv_dim]
-        let z = x.matmul(&w.z_t, s)?; // [1, L, hv*dv]
-        let b = x.matmul(&w.b_t, s)?; // [1, L, hv]
-        let a = x.matmul(&w.a_t, s)?;
+        let qkv = w.qkv.matmul(x, s)?; // [1, L, conv_dim]
+        let z = w.z.matmul(x, s)?; // [1, L, hv*dv]
+        let b = w.b.matmul(x, s)?; // [1, L, hv]
+        let a = w.a.matmul(x, s)?;
 
         // Conv carry state (ArraysCache slot 0); zeros on first use, bf16
         // like the reference (`dtype=inputs.dtype`).
@@ -1037,7 +1268,7 @@ impl Qwen35 {
 
         let flat = gated.reshape(&[1, l, hv * dv], s)?;
         Self::shape_dbg("gdn.flat", &flat);
-        flat.matmul(&w.out_t, s)
+        w.out.matmul(&flat, s)
     }
 }
 
@@ -1125,6 +1356,176 @@ impl Qwen35 {
         s: Stream,
     ) -> MlxResult<Vec<i32>> {
         self.generate_greedy(prompt_ids, max_tokens, 0, s, &mut |_, _, _| {})
+    }
+
+    // ---- the engine-host decode loop (the FFI chat surface) ----
+    //
+    // A deliberate SIBLING of `generate_greedy` above, not a refactor of
+    // it: the parity pipeline stays byte-frozen (its env override and
+    // digest hooks are part of the fixture contract), and this loop adds
+    // exactly the engine contract qwen.rs's loop already serves — EOS
+    // stop, cooperative cancellation (-980, the dense code), per-token
+    // emission for the streaming session, and FULL-id returns (prompt
+    // included — the blocking FFI decodes `ids[prompt.len()..]`).
+
+    /// The ONE decode loop behind streaming and blocking generation on
+    /// this engine: chunked prefill (2048, the same default the parity
+    /// pipeline pins), greedy argmax — or, when `sampling` is `Some`, the
+    /// sampled draw over host-read logits (the dense engine's exact
+    /// `crate::sampling::sample_next` tail, full-row f32 readback,
+    /// penalty window = prompt + generated) — then EOS stop and
+    /// cancellation at every chunk/step boundary. Returns the FULL id
+    /// sequence (prompt + generated).
+    fn decode_loop(
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: Stream,
+        cancelled: Option<&std::sync::atomic::AtomicBool>,
+        mut on_token: impl FnMut(i32),
+        sampling: Option<&crate::sampling::SamplingParams>,
+    ) -> MlxResult<Vec<i32>> {
+        if prompt_ids.is_empty() {
+            return Err(MlxError(-978));
+        }
+        let check = || -> MlxResult<()> {
+            if cancelled.is_some_and(|flag| flag.load(std::sync::atomic::Ordering::Acquire)) {
+                Err(MlxError(-980))
+            } else {
+                Ok(())
+            }
+        };
+        check()?;
+        let mut cache = Qwen35Cache::new(&self.cfg);
+        cache.reserve(
+            1,
+            self.cfg.kv_heads,
+            self.cfg.head_dim,
+            prompt_ids.len() + max_tokens,
+            s,
+        )?;
+        let mut out: Vec<i32> = Vec::with_capacity(prompt_ids.len() + max_tokens);
+        out.extend_from_slice(prompt_ids);
+        let mut rng = crate::sampling::XorShift64::seeded_from_clock();
+
+        const PREFILL_STEP: usize = 2048;
+        let mut rest = prompt_ids;
+        while rest.len() > 1 {
+            check()?;
+            let n = PREFILL_STEP.min(rest.len() - 1);
+            let t = Array::from_data_i32(&rest[..n], &[1, n])?;
+            // KV/state-only chunk: no lm_head (a chunk's logits are never
+            // read; dead outputs have no numerical effect).
+            self.forward(&t, &mut cache, false, s)?;
+            rest = &rest[n..];
+        }
+
+        let mut next: i32 = rest[0];
+        for _ in 0..max_tokens {
+            check()?;
+            let tokens = Array::from_data_i32(&[next], &[1, 1])?;
+            let logits = self.forward(&tokens, &mut cache, true, s)?; // [1,1,V]
+            let row = logits.reshape(&[1, self.cfg.vocab], s)?;
+            let tok = match sampling {
+                None => {
+                    let am = row.argmax_axis(-1, false, s)?;
+                    let f = am.astype(Dtype::Float32, s)?;
+                    let v = f.to_f32_vec(s)?;
+                    v.first().copied().ok_or(MlxError(-978))? as i32
+                }
+                Some(params) => {
+                    // The dense sampled tail, op for op: the FULL row
+                    // read back in f32 (the penalty + draw happen on the
+                    // host), the penalty window = prompt + generated.
+                    let mut v = row.astype(Dtype::Float32, s)?.to_f32_vec(s)?;
+                    crate::sampling::sample_next(&mut v, &out, params, &mut rng)
+                }
+            };
+            on_token(tok);
+            out.push(tok);
+            if stop.is_some_and(|ids| ids.contains(&tok)) {
+                break;
+            }
+            next = tok;
+        }
+        check()?;
+        Ok(out)
+    }
+
+    /// The engine-host streaming contract (qwen.rs's signature shape): the
+    /// session observes every GENERATED token through `on_token`; the full
+    /// id sequence (prompt + generated) is the return value.
+    pub fn generate_greedy_streaming(
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: Stream,
+        cancelled: Option<&std::sync::atomic::AtomicBool>,
+        on_token: &mut impl FnMut(i32),
+    ) -> MlxResult<Vec<i32>> {
+        self.decode_loop(
+            prompt_ids,
+            max_tokens,
+            stop,
+            s,
+            cancelled,
+            |t| on_token(t),
+            None,
+        )
+    }
+
+    /// The engine-host blocking greedy contract (the exact-prefix pool has
+    /// no Qwen3.5 binding — a fresh cache serves every request, the same
+    /// isolation the sampled rung already accepts).
+    pub fn generate_greedy_full_ids(
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: Stream,
+        cancelled: Option<&std::sync::atomic::AtomicBool>,
+    ) -> MlxResult<Vec<i32>> {
+        self.decode_loop(prompt_ids, max_tokens, stop, s, cancelled, |_| {}, None)
+    }
+
+    /// The sampled rung: the decode loop's sampled tail over host-read
+    /// logits (the dense `crate::sampling` module — temperature +
+    /// repetition penalty, clock-seeded process-local rng), on a fresh
+    /// cache like every Qwen3.5 request. A NEUTRAL request (temperature
+    /// 0, penalty 1) computes the same draw greedy does and rides the
+    /// argmax branch.
+    pub fn generate_sampled_cancellable(
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: Stream,
+        cancelled: Option<&std::sync::atomic::AtomicBool>,
+        params: &crate::sampling::SamplingParams,
+    ) -> MlxResult<Vec<i32>> {
+        self.decode_loop(
+            prompt_ids,
+            max_tokens,
+            stop,
+            s,
+            cancelled,
+            |_| {},
+            Some(params),
+        )
+    }
+
+    /// [`Self::generate_sampled_cancellable`] without cancellation.
+    pub fn generate_sampled(
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: Stream,
+        params: &crate::sampling::SamplingParams,
+    ) -> MlxResult<Vec<i32>> {
+        self.generate_sampled_cancellable(prompt_ids, max_tokens, stop, s, None, params)
     }
 }
 

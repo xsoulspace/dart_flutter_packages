@@ -22,6 +22,25 @@ import 'native_text_protocol.dart'
 )
 external int _qwenLoad(Pointer<Uint8> modelDir);
 
+/// The last load failure's payload — `{"error": <the dense MlxError Debug
+/// print | the qwen3_5 loader's NAMED QWEN35_* string | null>}` — so a
+/// rejected checkpoint is diagnosable instead of a bare `-2` (mirror of
+/// the lfm2 last-error ABI).
+@Native<Pointer<Uint8> Function()>(
+  symbol: 'mlx_native_qwen_last_load_error',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
+)
+external Pointer<Uint8> _qwenLastLoadError();
+
+/// The loaded engine's handle for a snapshot dir, or -1 — the
+/// one-engine-per-snapshot probe (the load itself is idempotent per dir,
+/// so an adopter and a loader can never hold the weights twice).
+@Native<Int64 Function(Pointer<Uint8>)>(
+  symbol: 'mlx_native_qwen_lookup',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
+)
+external int _qwenLookup(Pointer<Uint8> modelDir);
+
 @Native<Pointer<Uint8> Function(Int64, Pointer<Uint8>)>(
   symbol: 'mlx_native_qwen_generate',
   assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
@@ -464,15 +483,49 @@ final class NativeQwenTextEngine {
     }
     final packageRoot = await resolveNativePackageRoot();
     ensureNativeBindingsAvailable(packageRoot: packageRoot);
+    // Adopt-first (the one-engine-per-snapshot law): a snapshot the
+    // runtime already holds needs neither a reload nor the gate — the
+    // weights are in RAM, the load is the registry lookup.
+    final adopted = NativeQwenTextEngine._adoptIfLoaded(dir);
+    if (adopted != null) return adopted;
     final dirNative = toNativeUtf8(dir);
     final handle = _qwenLoad(dirNative);
     malloc.free(dirNative);
     if (handle <= 0) {
+      final detail = jsonDecode(
+        fromNativeUtf8(_qwenLastLoadError()),
+      ) as Map<String, dynamic>;
       throw StateError(
-        'laya qwen load failed (code $handle) for snapshot $dir',
+        'laya qwen load failed (code $handle) for snapshot $dir: '
+        '${detail['error']}',
       );
     }
     return NativeQwenTextEngine._(handle, dir);
+  }
+
+  /// Adopts the ALREADY-LOADED engine for [dir], or null — the
+  /// one-engine-per-snapshot read side: the dylib itself is the registry
+  /// (handles are process-global), so a UI preload and an engine-host
+  /// cast resolve to ONE engine instead of holding the weights twice.
+  /// Sync by design: the probe is a map scan, never a load.
+  static NativeQwenTextEngine? adoptLoaded(String dir) =>
+      NativeQwenTextEngine._adoptIfLoaded(dir);
+
+  static NativeQwenTextEngine? _adoptIfLoaded(String dir) {
+    final dirNative = toNativeUtf8(dir);
+    final handle = _qwenLookup(dirNative);
+    malloc.free(dirNative);
+    if (handle <= 0) return null;
+    return NativeQwenTextEngine._(handle, dir);
+  }
+
+  /// Whether the dylib already holds a loaded engine for [dir]. The
+  /// runtime surface's cheap poll (a map scan, no load, no isolate hop).
+  static bool isLoaded(String dir) {
+    final dirNative = toNativeUtf8(dir);
+    final handle = _qwenLookup(dirNative);
+    malloc.free(dirNative);
+    return handle > 0;
   }
 
   /// [load] off the caller's isolate: snapshot resolution and binding
@@ -489,6 +542,11 @@ final class NativeQwenTextEngine {
         'Qwen3-0.6B-4bit under the HF hub (the runtime never downloads)',
       );
     }
+    // Adopt-first (the one-engine-per-snapshot law): the weights may
+    // already be in RAM — a lookup beats an isolate spawn, and an
+    // already-loaded snapshot needs neither a reload nor the gate.
+    final adopted = NativeQwenTextEngine._adoptIfLoaded(dir);
+    if (adopted != null) return adopted;
     final packageRoot = await resolveNativePackageRoot();
     ensureNativeBindingsAvailable(packageRoot: packageRoot);
     final handle = await Isolate.run(() {
@@ -496,8 +554,12 @@ final class NativeQwenTextEngine {
       final handle = _qwenLoad(dirNative);
       malloc.free(dirNative);
       if (handle <= 0) {
+        final detail = jsonDecode(
+          fromNativeUtf8(_qwenLastLoadError()),
+        ) as Map<String, dynamic>;
         throw StateError(
-          'laya qwen load failed (code $handle) for snapshot $dir',
+          'laya qwen load failed (code $handle) for snapshot $dir: '
+          '${detail['error']}',
         );
       }
       return handle;

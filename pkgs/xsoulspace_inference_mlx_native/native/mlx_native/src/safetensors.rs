@@ -261,4 +261,10 @@ impl WeightStore {
     pub fn take_any(&self, name: &str) -> MlxResult<Array> {
         self.file_for(name)?.take_any(name)
     }
+
+    /// [`SafetensorsFile::take_quantized`] routed through the store (the
+    /// qwen3_5 loader reads the affine triple from either store layout).
+    pub fn take_quantized(&self, name: &str) -> MlxResult<QuantizedTensor> {
+        self.file_for(name)?.take_quantized(name)
+    }
 }

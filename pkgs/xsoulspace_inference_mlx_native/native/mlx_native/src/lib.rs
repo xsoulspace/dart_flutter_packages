@@ -462,14 +462,133 @@ pub extern "C" fn mlx_native_unload(handle: i64) {
 
 // ---- qwen text engine (ADR 0054 R2) — same handle/JSON conventions ----
 
+/// The qwen engine's loaded model: the dense Qwen3 engine (every
+/// pre-qwen3_5 checkpoint) or the Qwen3.5 text tower (`qwen3_5.rs` — the
+/// hybrid GDN/full-attention arch, greedy-only). Dispatch lives HERE so
+/// every FFI call site reads the same way; qwen3_5's honest gaps (LoRA,
+/// fused batching, non-neutral sampling, the exact-prefix pool) answer
+/// with NAMED refusals, never a silent dense fallback.
+enum QwenVariant {
+    Dense(crate::qwen::Qwen3),
+    Dot35(Box<crate::qwen3_5::Qwen35>),
+}
+
+impl QwenVariant {
+    /// The dense model, when this engine IS one — the exact-prefix pool
+    /// is dense-only machinery (its reuse law is pinned on the dense KV
+    /// binding table; qwen3_5 requests run on fresh caches instead).
+    fn dense(&self) -> Option<&crate::qwen::Qwen3> {
+        match self {
+            QwenVariant::Dense(m) => Some(m),
+            QwenVariant::Dot35(_) => None,
+        }
+    }
+
+    fn generate_greedy_streaming(
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: mlx::Stream,
+        cancelled: Option<&AtomicBool>,
+        on_token: &mut impl FnMut(i32),
+    ) -> mlx::MlxResult<Vec<i32>> {
+        match self {
+            QwenVariant::Dense(m) => {
+                m.generate_greedy_streaming(prompt_ids, max_tokens, stop, s, cancelled, on_token)
+            }
+            QwenVariant::Dot35(m) => {
+                m.generate_greedy_streaming(prompt_ids, max_tokens, stop, s, cancelled, on_token)
+            }
+        }
+    }
+
+    /// Blocking greedy on a fresh cache (the exact-prefix pool has no
+    /// binding for this engine variant; the same isolation the sampled
+    /// rung already accepts). Both variants serve it through their
+    /// streaming loop with no observer.
+    fn generate_greedy_full_ids(
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: mlx::Stream,
+        cancelled: Option<&AtomicBool>,
+    ) -> mlx::MlxResult<Vec<i32>> {
+        self.generate_greedy_streaming(prompt_ids, max_tokens, stop, s, cancelled, &mut |_| {})
+    }
+
+    fn generate_sampled(
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: mlx::Stream,
+        params: &crate::sampling::SamplingParams,
+    ) -> mlx::MlxResult<Vec<i32>> {
+        match self {
+            QwenVariant::Dense(m) => m.generate_sampled(prompt_ids, max_tokens, stop, s, params),
+            QwenVariant::Dot35(m) => m.generate_sampled(prompt_ids, max_tokens, stop, s, params),
+        }
+    }
+
+    fn generate_sampled_cancellable(
+        &self,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        stop: Option<&[i32]>,
+        s: mlx::Stream,
+        cancelled: Option<&AtomicBool>,
+        params: &crate::sampling::SamplingParams,
+    ) -> mlx::MlxResult<Vec<i32>> {
+        match self {
+            QwenVariant::Dense(m) => {
+                m.generate_sampled_cancellable(prompt_ids, max_tokens, stop, s, cancelled, params)
+            }
+            QwenVariant::Dot35(m) => {
+                m.generate_sampled_cancellable(prompt_ids, max_tokens, stop, s, cancelled, params)
+            }
+        }
+    }
+
+    fn attach_lora(
+        &self,
+        path: &std::path::Path,
+        scale: f32,
+        s: mlx::Stream,
+    ) -> Result<usize, String> {
+        match self {
+            QwenVariant::Dense(m) => m.attach_lora(path, scale, s),
+            QwenVariant::Dot35(_) => Err(
+                "qwen35_lora_unsupported: the qwen3_5 engine serves the bare \
+                 base only (no runtime adapter attach)"
+                    .to_string(),
+            ),
+        }
+    }
+
+    fn active_lora_digest(&self) -> Option<String> {
+        match self {
+            QwenVariant::Dense(m) => m.active_lora_digest(),
+            QwenVariant::Dot35(_) => None,
+        }
+    }
+}
+
 struct QwenEngine {
     prefixes: Mutex<qwen_prefix::PrefixPool>,
     requests: Mutex<HashMap<i64, Arc<QwenRequestState>>>,
     /// Streaming sessions keyed by their request id (one id, two maps —
     /// cancellation reuses the request machinery, state lives here).
     streams: Mutex<HashMap<i64, Arc<Mutex<QwenStreamState>>>>,
-    model: Arc<crate::qwen::Qwen3>,
+    model: Arc<QwenVariant>,
     tokenizer: crate::bpe::ByteLevelBpe,
+    /// The snapshot dir this engine was loaded from — the one-engine-per-
+    /// snapshot law: `mlx_native_qwen_load` answers an already-loaded dir
+    /// with the EXISTING handle and `mlx_native_qwen_lookup` finds it, so
+    /// any isolate (UI preload, engine-host cast) adopts one engine
+    /// instead of holding the weights twice.
+    model_dir: String,
 }
 
 /// One streaming generation's shared decode state. The session thread
@@ -592,6 +711,33 @@ pub extern "C" fn mlx_native_lfm2_sampling_api_version() -> i32 {
     1
 }
 
+/// The last `mlx_native_qwen_load` failure's payload — the dense loader's
+/// `MlxError` Debug print, or the qwen3_5 loader's NAMED `QWEN35_*` error
+/// string — surfaced so a rejected checkpoint is diagnosable from Dart
+/// instead of a bare `-2` (mirror of the lfm2 last-error ABI).
+static QWEN_LOAD_ERROR: Mutex<Option<String>> = Mutex::new(None);
+
+fn qwen_load_error_set(message: String) {
+    *QWEN_LOAD_ERROR.lock().unwrap() = Some(message);
+}
+
+#[no_mangle]
+pub extern "C" fn mlx_native_qwen_last_load_error() -> *mut c_char {
+    let held = QWEN_LOAD_ERROR.lock().unwrap().clone();
+    match held {
+        Some(text) => ok_json(&serde_json::json!({ "error": text })),
+        None => ok_json(&serde_json::json!({ "error": null })),
+    }
+}
+
+/// Loads the model from `model_dir`. Returns a positive handle, or negative
+/// codes matching the historical contract: -1 null arg, -2 load failure
+/// (the reason lands in `mlx_native_qwen_last_load_error`).
+///
+/// Dispatch reads `config.json`'s model_type: `qwen3_5` /
+/// `qwen3_5_text` loads the Qwen3.5 text tower (`qwen3_5.rs`); everything
+/// else loads the dense Qwen3 engine, unchanged. An unreadable config is
+/// recorded and refused — never guessed.
 #[no_mangle]
 pub extern "C" fn mlx_native_qwen_load(model_dir: *const c_char) -> i64 {
     if model_dir.is_null() {
@@ -603,13 +749,65 @@ pub extern "C" fn mlx_native_qwen_load(model_dir: *const c_char) -> i64 {
             .to_string_lossy()
             .to_string(),
     );
-    let model = match crate::qwen::Qwen3::load(&dir) {
-        Ok(m) => m,
-        Err(_) => return -2,
+    // One engine per snapshot: an already-loaded dir answers with its
+    // EXISTING handle — the weights never load twice (the UI preload and
+    // the engine-host cast share one engine).
+    {
+        let registry = qwen_registry().lock().unwrap();
+        let dir_text = dir.to_string_lossy().to_string();
+        for (handle, engine) in registry.iter() {
+            if engine.model_dir == dir_text {
+                return *handle;
+            }
+        }
+    }
+    let is_dot35 = match std::fs::read_to_string(dir.join("config.json")) {
+        Ok(text) => match serde_json::from_str::<serde_json::Value>(&text) {
+            Ok(doc) => {
+                let top = doc
+                    .get("model_type")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let text_type = doc
+                    .get("text_config")
+                    .and_then(|t| t.get("model_type"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                top == "qwen3_5" || text_type == "qwen3_5_text" || text_type == "qwen3_5"
+            }
+            Err(e) => {
+                qwen_load_error_set(format!("QWEN_CONFIG_PARSE: {e}"));
+                return -2;
+            }
+        },
+        Err(e) => {
+            qwen_load_error_set(format!("QWEN_CONFIG_IO: {e}"));
+            return -2;
+        }
+    };
+    let model = if is_dot35 {
+        match crate::qwen3_5::Qwen35::load(&dir) {
+            Ok(m) => QwenVariant::Dot35(Box::new(m)),
+            Err(e) => {
+                qwen_load_error_set(e);
+                return -2;
+            }
+        }
+    } else {
+        match crate::qwen::Qwen3::load(&dir) {
+            Ok(m) => QwenVariant::Dense(m),
+            Err(e) => {
+                qwen_load_error_set(format!("{e:?}"));
+                return -2;
+            }
+        }
     };
     let tokenizer = match crate::bpe::ByteLevelBpe::load(&dir) {
         Ok(t) => t,
-        Err(_) => return -2,
+        Err(e) => {
+            qwen_load_error_set(format!("QWEN_TOKENIZER: {e:?}"));
+            return -2;
+        }
     };
     let handle = QWEN_NEXT_HANDLE.fetch_add(1, Ordering::SeqCst);
     qwen_registry().lock().unwrap().insert(
@@ -620,9 +818,30 @@ pub extern "C" fn mlx_native_qwen_load(model_dir: *const c_char) -> i64 {
             prefixes: Mutex::new(qwen_prefix::PrefixPool::default()),
             requests: Mutex::new(HashMap::new()),
             streams: Mutex::new(HashMap::new()),
+            model_dir: dir.to_string_lossy().to_string(),
         }),
     );
     handle
+}
+
+/// The loaded engine's handle for `model_dir`, or -1 — the one-engine-per-
+/// snapshot probe any isolate rides (`mlx_native_qwen_load` is idempotent
+/// per dir; this is its read-only form).
+#[no_mangle]
+pub extern "C" fn mlx_native_qwen_lookup(model_dir: *const c_char) -> i64 {
+    if model_dir.is_null() {
+        return -1;
+    }
+    let dir = unsafe { CStr::from_ptr(model_dir) }
+        .to_string_lossy()
+        .to_string();
+    let registry = qwen_registry().lock().unwrap();
+    for (handle, engine) in registry.iter() {
+        if engine.model_dir == dir {
+            return *handle;
+        }
+    }
+    -1
 }
 
 /// Create request state before dispatching the blocking generation FFI to a
@@ -811,28 +1030,44 @@ fn qwen_generate(handle: i64, request_id: Option<i64>, request_json: *const c_ch
             Err(e) => fail(&format!("generate failed: mlx status {}", e.0)),
         };
     }
-    let mut prefixes = engine.prefixes.lock().unwrap();
-    let result = if let Some(state) = cancellation.as_ref() {
-        prefixes.generate_cancellable(
-            &engine.model,
-            &prompt_ids,
-            request.max_tokens,
-            stop,
-            stream,
-            request.cache_scope,
-            request.cache_reset,
-            Some(&state.cancelled),
-        )
-    } else {
-        prefixes.generate(
-            &engine.model,
-            &prompt_ids,
-            request.max_tokens,
-            stop,
-            stream,
-            request.cache_scope,
-            request.cache_reset,
-        )
+    let result = match engine.model.dense() {
+        Some(dense) => {
+            let mut prefixes = engine.prefixes.lock().unwrap();
+            if let Some(state) = cancellation.as_ref() {
+                prefixes.generate_cancellable(
+                    dense,
+                    &prompt_ids,
+                    request.max_tokens,
+                    stop,
+                    stream,
+                    request.cache_scope,
+                    request.cache_reset,
+                    Some(&state.cancelled),
+                )
+            } else {
+                prefixes.generate(
+                    dense,
+                    &prompt_ids,
+                    request.max_tokens,
+                    stop,
+                    stream,
+                    request.cache_scope,
+                    request.cache_reset,
+                )
+            }
+        }
+        // Qwen3.5: no exact-prefix pool binding — a fresh cache serves
+        // the request (reused is honestly 0).
+        None => engine
+            .model
+            .generate_greedy_full_ids(
+                &prompt_ids,
+                request.max_tokens,
+                stop,
+                stream,
+                cancellation.as_ref().map(|state| &state.cancelled),
+            )
+            .map(|ids| (ids, 0usize)),
     };
     match result {
         Ok((ids, reused)) => {
@@ -1048,6 +1283,15 @@ pub extern "C" fn mlx_native_qwen_generate_batched(
         Ok(stream) => stream,
         Err(e) => return fail(&format!("stream initialization failed: mlx status {}", e.0)),
     };
+    // Fused batching is dense-Qwen3 machinery (its kernels bind the dense
+    // KV table); the qwen3_5 engine refuses by name instead of silently
+    // coalescing.
+    let Some(dense) = engine.model.dense() else {
+        return fail(
+            "qwen35_batched_unsupported: fused batching is dense-Qwen3 \
+             machinery; the qwen3_5 engine serves single-request paths",
+        );
+    };
     let mut rows: Vec<crate::qwen_batch::BatchRequest> = Vec::with_capacity(request.requests.len());
     for (i, row) in request.requests.iter().enumerate() {
         let prompt_ids = if let Some(ids) = &row.prompt_ids {
@@ -1071,7 +1315,7 @@ pub extern "C" fn mlx_native_qwen_generate_batched(
         None
     };
     let (outcome, timing) =
-        match crate::qwen_fused::generate_greedy_fused_timed(&engine.model, &rows, stop, stream) {
+        match crate::qwen_fused::generate_greedy_fused_timed(dense, &rows, stop, stream) {
             Ok(ok) => ok,
             Err(e) => return fail(&format!("batched generate failed: mlx status {}", e.0)),
         };
@@ -1703,6 +1947,13 @@ struct Lfm2Engine {
     /// checkpoint's `bos_token_id` (1 low-id-special, 124894 on the 2.6B
     /// 128k vocab) — read from config, never guessed.
     bos: u32,
+    /// The snapshot dir this engine loaded — the one-engine-per-snapshot
+    /// law's key: `mlx_native_lfm2_load` is idempotent per dir (an
+    /// already-loaded dir answers its EXISTING handle) and
+    /// `mlx_native_lfm2_lookup` finds it, so any isolate (UI preload,
+    /// engine-host cast) adopts one engine instead of holding the
+    /// weights twice.
+    model_dir: String,
 }
 
 static LFM2_REGISTRY: OnceLock<Mutex<HashMap<i64, Arc<Lfm2Engine>>>> = OnceLock::new();
@@ -1741,6 +1992,19 @@ pub extern "C" fn mlx_native_lfm2_load(model_dir: *const c_char) -> i64 {
             .to_string_lossy()
             .to_string(),
     );
+    // One engine per snapshot (the qwen law, 2026-11-18): an
+    // already-loaded dir answers with its EXISTING handle — the weights
+    // never load twice (the UI preload and the engine-host cast share
+    // one engine).
+    {
+        let registry = lfm2_registry().lock().unwrap();
+        let dir_text = dir.to_string_lossy().to_string();
+        for (handle, engine) in registry.iter() {
+            if engine.model_dir == dir_text {
+                return *handle;
+            }
+        }
+    }
     let model = match crate::lfm2::Lfm2::load(&dir) {
         Ok(m) => m,
         Err(e) => {
@@ -1760,9 +2024,30 @@ pub extern "C" fn mlx_native_lfm2_load(model_dir: *const c_char) -> i64 {
             model: Arc::new(model),
             tokenizer,
             bos,
+            model_dir: dir.to_string_lossy().to_string(),
         }),
     );
     handle
+}
+
+/// The loaded engine's handle for `model_dir`, or -1 — the one-engine-
+/// per-snapshot probe any isolate rides (`mlx_native_lfm2_load` is
+/// idempotent per dir; this is its read-only form).
+#[no_mangle]
+pub extern "C" fn mlx_native_lfm2_lookup(model_dir: *const c_char) -> i64 {
+    if model_dir.is_null() {
+        return -1;
+    }
+    let dir = unsafe { CStr::from_ptr(model_dir) }
+        .to_string_lossy()
+        .to_string();
+    let registry = lfm2_registry().lock().unwrap();
+    for (handle, engine) in registry.iter() {
+        if engine.model_dir == dir {
+            return *handle;
+        }
+    }
+    -1
 }
 
 /// The checkpoint's special-token ids, resolved from its own tokenizer

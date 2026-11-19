@@ -22,6 +22,15 @@ import 'laya_native_lfm2_chat_template.dart';
 )
 external int _lfm2Load(Pointer<Uint8> modelDir);
 
+/// The loaded engine's handle for a snapshot dir, or -1 — the
+/// one-engine-per-snapshot probe (the load itself is idempotent per dir,
+/// so an adopter and a loader can never hold the weights twice).
+@Native<Int64 Function(Pointer<Uint8>)>(
+  symbol: 'mlx_native_lfm2_lookup',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
+)
+external int _lfm2Lookup(Pointer<Uint8> modelDir);
+
 @Native<Pointer<Uint8> Function(Int64, Pointer<Uint8>)>(
   symbol: 'mlx_native_lfm2_generate',
   assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
@@ -104,7 +113,13 @@ String? resolveLfm2SnapshotDir(String? override) {
       final snapshots = Directory('${entry.path}/snapshots');
       if (!snapshots.existsSync()) continue;
       for (final snap in snapshots.listSync()) {
-        if (snap is Directory && File('${snap.path}/config.json').existsSync()) {
+        if (snap is! Directory) continue;
+        // The dangling-blob law (the qwen discovery's 2026-11-18 twin):
+        // a snapshot dir counts only when its weights RESOLVE — a
+        // shared-blobs wipe leaves config.json behind, and naming it
+        // would promise a load that can only answer file-absent.
+        if (File('${snap.path}/config.json').existsSync() &&
+            File('${snap.path}/model.safetensors').existsSync()) {
           return snap.path;
         }
       }
@@ -211,6 +226,29 @@ final class NativeLfm2TextEngine {
     }
   }
 
+  /// Adopts the ALREADY-LOADED engine for [dir], or null — the
+  /// one-engine-per-snapshot read side (the qwen law, 2026-11-18): the
+  /// dylib itself is the registry (handles are process-global), so a UI
+  /// preload and an engine-host cast resolve to ONE engine instead of
+  /// holding the weights twice. Sync by design: the probe is a map
+  /// scan, never a load.
+  static NativeLfm2TextEngine? adoptLoaded(String dir) {
+    final dirNative = toNativeUtf8(dir);
+    final handle = _lfm2Lookup(dirNative);
+    malloc.free(dirNative);
+    if (handle <= 0) return null;
+    return NativeLfm2TextEngine._(handle, dir);
+  }
+
+  /// Whether the dylib already holds a loaded engine for [dir]. The
+  /// runtime surface's cheap poll (a map scan, no load, no isolate hop).
+  static bool isLoaded(String dir) {
+    final dirNative = toNativeUtf8(dir);
+    final handle = _lfm2Lookup(dirNative);
+    malloc.free(dirNative);
+    return handle > 0;
+  }
+
   /// Loads the cached snapshot: [snapshotDir], else `LFM2_SNAPSHOT`, else
   /// the LiquidAI LFM2.5-1.2B checkout under the HF hub cache (never
   /// downloads).
@@ -231,6 +269,11 @@ final class NativeLfm2TextEngine {
         ? null
         : File.fromUri(library).parent.parent.path;
     ensureNativeBindingsAvailable(packageRoot: packageRoot);
+    // The adopt-first law (the qwen twin, 2026-11-18): an
+    // already-loaded snapshot needs neither reload nor the loading
+    // isolate — the dylib registry is the fact.
+    final adopted = NativeLfm2TextEngine.adoptLoaded(dir);
+    if (adopted != null) return adopted;
     final dirNative = toNativeUtf8(dir);
     final handle = _lfm2Load(dirNative);
     malloc.free(dirNative);
@@ -269,6 +312,8 @@ final class NativeLfm2TextEngine {
         ? null
         : File.fromUri(library).parent.parent.path;
     ensureNativeBindingsAvailable(packageRoot: packageRoot);
+    final adopted = NativeLfm2TextEngine.adoptLoaded(dir);
+    if (adopted != null) return adopted;
     final handle = await Isolate.run(() {
       final dirNative = toNativeUtf8(dir);
       final handle = _lfm2Load(dirNative);

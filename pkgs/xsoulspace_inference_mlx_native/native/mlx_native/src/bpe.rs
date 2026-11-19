@@ -111,6 +111,34 @@ fn read_tokenizer_json(dir: &Path) -> Result<serde_json::Value, String> {
     .map_err(|e| format!("tokenizer.json parse: {e}"))
 }
 
+/// tokenizer.json's `model.merges` (string `"a b"` entries or `[a, b]`
+/// pairs) → the rank-ordered merge table — the exact table merges.txt's
+/// lines produce (HF fast tokenizers embed the same list).
+fn parse_merges_value(
+    raw: &[serde_json::Value],
+) -> Result<HashMap<(String, String), u32>, String> {
+    let mut merges = HashMap::new();
+    let mut rank = 0u32;
+    for m in raw {
+        let (a, b) = match m {
+            serde_json::Value::String(s) => match s.split_once(' ') {
+                Some((a, b)) => (a.to_string(), b.to_string()),
+                None => continue,
+            },
+            serde_json::Value::Array(pair) if pair.len() == 2 => {
+                let (Some(a), Some(b)) = (pair[0].as_str(), pair[1].as_str()) else {
+                    continue;
+                };
+                (a.to_string(), b.to_string())
+            }
+            _ => continue,
+        };
+        merges.insert((a, b), rank);
+        rank += 1;
+    }
+    Ok(merges)
+}
+
 impl ByteLevelBpe {
     /// The id of an added/special token by literal content (e.g.
     /// "<|im_end|>") — None when the checkpoint has no such token.
@@ -123,6 +151,10 @@ impl ByteLevelBpe {
 
     /// Loads a Qwen3 snapshot (vocab.json, merges.txt, tokenizer.json for
     /// the added-token list): single-digit pre-tokens, NFC normalization.
+    /// A snapshot without `merges.txt` (the mlx-community 4-bit converts
+    /// ship vocab.json + tokenizer.json only) reads the SAME merges from
+    /// tokenizer.json's embedded copy — the HF fast tokenizer's exact
+    /// merge list, byte-for-byte the merges.txt content.
     pub fn load(dir: &Path) -> Result<ByteLevelBpe, String> {
         let vocab: HashMap<String, u32> = serde_json::from_str(
             &std::fs::read_to_string(dir.join("vocab.json"))
@@ -130,22 +162,34 @@ impl ByteLevelBpe {
         )
         .map_err(|e| format!("vocab.json parse: {e}"))?;
 
-        let mut merges = HashMap::new();
-        let merges_txt = std::fs::read_to_string(dir.join("merges.txt"))
-            .map_err(|e| format!("merges.txt: {e}"))?;
-        let mut rank = 0u32;
-        for line in merges_txt.lines() {
-            if line.starts_with("#version") || line.trim().is_empty() {
-                continue;
+        let merges = match std::fs::read_to_string(dir.join("merges.txt")) {
+            Ok(merges_txt) => {
+                let mut merges = HashMap::new();
+                let mut rank = 0u32;
+                for line in merges_txt.lines() {
+                    if line.starts_with("#version") || line.trim().is_empty() {
+                        continue;
+                    }
+                    let mut parts = line.split_whitespace();
+                    let (a, b) = match (parts.next(), parts.next()) {
+                        (Some(a), Some(b)) => (a.to_string(), b.to_string()),
+                        _ => continue,
+                    };
+                    merges.insert((a, b), rank);
+                    rank += 1;
+                }
+                merges
             }
-            let mut parts = line.split_whitespace();
-            let (a, b) = match (parts.next(), parts.next()) {
-                (Some(a), Some(b)) => (a.to_string(), b.to_string()),
-                _ => continue,
-            };
-            merges.insert((a, b), rank);
-            rank += 1;
-        }
+            Err(_) => {
+                let tj = read_tokenizer_json(dir)?;
+                let raw = tj
+                    .get("model")
+                    .and_then(|m| m.get("merges"))
+                    .and_then(|v| v.as_array())
+                    .ok_or("merges absent: no merges.txt and no tokenizer.json merges")?;
+                parse_merges_value(raw)?
+            }
+        };
 
         let tj = read_tokenizer_json(dir)?;
         Ok(finish(vocab, merges, &tj, 1, true))
@@ -172,29 +216,11 @@ impl ByteLevelBpe {
         )
         .map_err(|e| format!("tokenizer.json vocab: {e}"))?;
 
-        let mut merges = HashMap::new();
         let raw = model
             .get("merges")
             .and_then(|v| v.as_array())
             .ok_or_else(|| "tokenizer.json: no merges".to_string())?;
-        let mut rank = 0u32;
-        for m in raw {
-            let (a, b) = match m {
-                serde_json::Value::String(s) => match s.split_once(' ') {
-                    Some((a, b)) => (a.to_string(), b.to_string()),
-                    None => continue,
-                },
-                serde_json::Value::Array(pair) if pair.len() == 2 => {
-                    let (Some(a), Some(b)) = (pair[0].as_str(), pair[1].as_str()) else {
-                        continue;
-                    };
-                    (a.to_string(), b.to_string())
-                }
-                _ => continue,
-            };
-            merges.insert((a, b), rank);
-            rank += 1;
-        }
+        let merges = parse_merges_value(raw)?;
 
         Ok(finish(vocab, merges, &tj, 3, false))
     }

@@ -386,20 +386,56 @@ String nfcNormalize(String text) {
   return result;
 }
 
-/// Resolves the weights directory: [override], else `LAYA_MODEL_DIR`, else
-/// the fleet cache.
+/// Resolves the weights directory: [override] or `LAYA_MODEL_DIR` when
+/// set and present, else the HF hub cache (the manager's one store —
+/// the row's Delete IS the lane's un-provisioning), else the legacy
+/// fleet cache (pre-manager machines).
 String resolveModelDir(String? override) {
-  final dir =
-      override ??
-      Platform.environment['LAYA_MODEL_DIR'] ??
-      '${_home()}/.cache/xsoulspace/laya-mlx';
-  if (!Directory(_expand(dir)).existsSync()) {
-    throw StateError(
-      'laya model dir not found: $dir (set LAYA_MODEL_DIR or fetch '
-      'aac6fef/laya-mlx)',
-    );
+  final pinned = override ?? Platform.environment['LAYA_MODEL_DIR'];
+  if (pinned != null) {
+    final dir = _expand(pinned);
+    if (Directory(dir).existsSync()) return dir;
   }
-  return _expand(dir);
+  // The one-store law (2026-11-18, the lfm2 resolver's twin; 2026-11-19
+  // order): the hub cache LEADS so the manager row stays the truth (a
+  // hub install provisions the lane without a second copy of the
+  // weights), and the legacy xsoulspace cache keeps pre-manager
+  // machines working.
+  final hubDir = _hubLayaDir();
+  if (hubDir != null) return hubDir;
+  final legacy = '${_home()}/.cache/xsoulspace/laya-mlx';
+  if (Directory(_expand(legacy)).existsSync()) return _expand(legacy);
+  throw StateError(
+    'laya model dir not found: ${pinned ?? '(none pinned)'} (set '
+    'LAYA_MODEL_DIR, fetch aac6fef/laya-mlx, or install it through the '
+    'model manager)',
+  );
+}
+
+/// The newest resolvable `laya-mlx` snapshot under the HF hub cache, or
+/// null — the dangling-blob law applies (the checkpoint counts only
+/// when its config AND its weights are actually readable).
+String? _hubLayaDir() {
+  final home = _home();
+  final hub = Directory('$home/.cache/huggingface/hub');
+  if (!hub.existsSync()) return null;
+  for (final entry in hub.listSync()) {
+    if (!entry.path.contains('laya-mlx')) continue;
+    final snapshots = Directory('${entry.path}/snapshots');
+    if (!snapshots.existsSync()) continue;
+    for (final snap in snapshots.listSync()) {
+      if (snap is! Directory) continue;
+      if (!File('${snap.path}/rl_agent_config.json').existsSync()) {
+        continue;
+      }
+      if (File('${snap.path}/model.safetensors').existsSync()) {
+        return snap.path;
+      }
+      final index = File('${snap.path}/model.safetensors.index.json');
+      if (index.existsSync()) return snap.path;
+    }
+  }
+  return null;
 }
 
 String _expand(String path) =>
@@ -511,7 +547,8 @@ String? resolveQwenSnapshotDir(String? override) {
       if (!snapshots.existsSync()) continue;
       for (final snap in snapshots.listSync()) {
         if (snap is Directory &&
-            File('${snap.path}/config.json').existsSync()) {
+            File('${snap.path}/config.json').existsSync() &&
+            qwenSnapshotWeightsResolve(snap.path)) {
           return snap.path;
         }
       }
@@ -526,7 +563,14 @@ final class CachedQwen3Snapshot {
     required this.refName,
     required this.paramLabel,
     required this.snapshotDir,
+    this.org = 'mlx-community',
   });
+
+  /// The hub-cache org the snapshot came from (`mlx-community` = the
+  /// MLX-converted, loadable form; the raw `Qwen` org checkpoints
+  /// shadow the same refName but the native engine cannot load them —
+  /// the collision law prefers the convert).
+  final String org;
 
   /// Ref-friendly lowercase name, e.g. `qwen3-1.7b` (the trailing `4bit`
   /// quant tag is dropped — the default quant stays unnamed; other quants
@@ -559,6 +603,33 @@ final RegExp _qwen3HubDirPattern = RegExp(
 /// `models--<org>--Qwen3[.<n>]-<Name>` hub-cache directory (org in
 /// [_qwen3HubOrgs]), or null when the name is not a Qwen3 text cast or
 /// no complete snapshot (config.json) is checked out.
+/// Whether the snapshot's weights actually resolve on disk: a
+/// `model.safetensors` whose bytes exist (single-file layout), or an
+/// index whose at least one shard file exists (the sharded layout).
+/// `existsSync` follows symlinks, so a DANGLING cache entry — the shared
+/// blob target wiped, the 2026-11-18 Qwen3-0.6B-4bit live failure whose
+/// load answered a bare `code -2` — passes a config-only check and then
+/// fails the weight load; the scan refuses it here instead, honestly, at
+/// discovery time.
+bool qwenSnapshotWeightsResolve(String snapshotDir) {
+  if (File('$snapshotDir/model.safetensors').existsSync()) return true;
+  final index = File('$snapshotDir/model.safetensors.index.json');
+  if (!index.existsSync()) return false;
+  try {
+    final doc = jsonDecode(index.readAsStringSync()) as Map<String, dynamic>;
+    final map = doc['weight_map'];
+    if (map is! Map) return false;
+    for (final shard in map.values.toSet()) {
+      if (shard is String && File('$snapshotDir/$shard').existsSync()) {
+        return true;
+      }
+    }
+  } on FormatException {
+    return false;
+  }
+  return false;
+}
+
 CachedQwen3Snapshot? cachedQwen3SnapshotFromDir(String dirPath) {
   final base = dirPath.split(Platform.pathSeparator).last;
   final match = _qwen3HubDirPattern.firstMatch(base);
@@ -570,10 +641,14 @@ CachedQwen3Snapshot? cachedQwen3SnapshotFromDir(String dirPath) {
   if (!snapshots.existsSync()) return null;
   String? dir;
   for (final snap in snapshots.listSync()) {
-    if (snap is Directory && File('${snap.path}/config.json').existsSync()) {
-      dir = snap.path;
-      break;
-    }
+    if (snap is! Directory) continue;
+    if (!File('${snap.path}/config.json').existsSync()) continue;
+    // The weights must resolve too (the dangling-symlink law): a
+    // config-only dir loads nothing and surfaces the failure as a bare
+    // native code at reply time — not a discoverable variant.
+    if (!qwenSnapshotWeightsResolve(snap.path)) continue;
+    dir = snap.path;
+    break;
   }
   if (dir == null) return null;
   final quantMatch = RegExp(r'-(4bit|8bit|bf16|fp16|iq\w+|q\w+)$')
@@ -596,6 +671,7 @@ CachedQwen3Snapshot? cachedQwen3SnapshotFromDir(String dirPath) {
             .replaceAll(RegExp(r'-+'), '-'),
     paramLabel: paramLabel,
     snapshotDir: dir,
+    org: match.group(1)!,
   );
 }
 
@@ -615,14 +691,25 @@ List<CachedQwen3Snapshot> listCachedQwen3Snapshots({String? hubRoot}) {
   if (root == null) return const <CachedQwen3Snapshot>[];
   final hub = Directory(root);
   if (!hub.existsSync()) return const <CachedQwen3Snapshot>[];
-  final found = <CachedQwen3Snapshot>[];
-  final seen = <String>{};
+  // Same-refName collision law (2026-11-18, the live dogfood's load
+  // failure): the RAW `Qwen/Qwen3.5-0.8B` org checkpoint and the
+  // `mlx-community` 4bit convert share one refName, and the sorted
+  // dir scan used to let the raw one win — a layout the native engine
+  // refuses (code -2). The CONVERTED org is the loadable form: it
+  // wins the dedupe regardless of directory sort order.
+  final byRef = <String, CachedQwen3Snapshot>{};
   final dirs = hub.listSync().map((e) => e.path).toList()..sort();
   for (final dirPath in dirs) {
     final snapshot = cachedQwen3SnapshotFromDir(dirPath);
     if (snapshot == null) continue;
-    if (seen.add(snapshot.refName)) found.add(snapshot);
+    final held = byRef[snapshot.refName];
+    if (held == null ||
+        (held.org != 'mlx-community' && snapshot.org == 'mlx-community')) {
+      byRef[snapshot.refName] = snapshot;
+    }
   }
+  final found = byRef.values.toList()
+    ..sort((a, b) => a.snapshotDir.compareTo(b.snapshotDir));
   return found;
 }
 

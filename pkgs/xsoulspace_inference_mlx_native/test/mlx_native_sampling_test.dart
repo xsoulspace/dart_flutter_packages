@@ -108,7 +108,20 @@ void main() {
       final snap = Directory('${temp.path}/$name/snapshots/abc123');
       snap.createSync(recursive: true);
       File('${snap.path}/config.json').writeAsStringSync('{}');
+      // The weights must RESOLVE to be discoverable (the dangling-blob
+      // law): a config-only dir once passed the scan and then failed the
+      // load with a bare native code — the 2026-11-18 live 0.6B failure
+      // (its shared-blob symlinks dangled). An empty file qualifies the
+      // fixture; the loader's own refusals own the bytes' truth.
+      File('${snap.path}/model.safetensors').writeAsStringSync('');
     }
+    // A snapshot whose weights DANGLLE (config present, weights absent)
+    // is refused by the scan — never a discoverable variant.
+    final broken = Directory(
+      '${temp.path}/models--mlx-community--Qwen3-4B-4bit/snapshots/dead',
+    );
+    broken.createSync(recursive: true);
+    File('${broken.path}/config.json').writeAsStringSync('{}');
     // The real Qwen3.5 checkout pins the `main` revision dir; discovery
     // takes any revision with a config.json.
     final qwen35Main = Directory(
@@ -116,12 +129,13 @@ void main() {
     );
     qwen35Main.createSync(recursive: true);
     File('${qwen35Main.path}/config.json').writeAsStringSync('{}');
+    File('${qwen35Main.path}/model.safetensors').writeAsStringSync('');
     final variants = listCachedQwen3Snapshots(hubRoot: temp.path);
     expect(
       variants.map((v) => v.refName),
       ['qwen3.5-0.8b', 'qwen3-0.6b', 'qwen3-0.6b-bf16', 'qwen3-1.7b'],
       reason: 'sorted by directory name; non-Qwen3 and non-allowed-org '
-          'dirs ignored',
+          'dirs ignored; config-only dirs (weights absent) refused',
     );
     expect(variants.last.paramLabel, '1.7B');
 

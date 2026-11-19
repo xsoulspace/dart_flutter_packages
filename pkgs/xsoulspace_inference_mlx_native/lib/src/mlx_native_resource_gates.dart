@@ -13,14 +13,27 @@ library;
 import 'dart:async';
 import 'dart:io';
 
-/// `{availableMegabytes, freeMegabytes, totalMegabytes}` — the load
-/// gate's input facts.
+/// `{availableMegabytes, freeMegabytes, totalMegabytes, …}` — the load
+/// gate's input facts, in Activity Monitor's own categories
+/// (2026-11-18 v3.3 recalibration, the owner's "the memory is still
+/// incorrect": the previous basis — free + inactive + speculative +
+/// purgeable — read 587 MB available on the owner's 16 GB machine
+/// where Activity Monitor showed 2.01 GB of reclaimable Cached Files).
 ///
-/// [availableMegabytes] is the macOS-honest signal: free + inactive +
-/// speculative + purgeable pages. `Pages free` alone is ALWAYS tiny on
-/// macOS (the OS caches aggressively — a freshly booted 16GB machine
-/// reports under 1GB free), so a free-only floor would refuse loads on
-/// every healthy Mac.
+/// The calibrated identity, pinned against a real screenshot (Physical
+/// 16.00 = Used 14.06 + Cached Files 2.01, Compressed 5.06, Wired
+/// 2.36, App 5.93) and live `vm_stat`:
+///
+/// * `Cached Files` = **File-backed pages** — matched to the decimal.
+/// * `App Memory` = **Anonymous pages**; `Compressed` = **Pages
+///   occupied by compressor**; `Wired` = `Pages wired down`.
+/// * the whole machine: total = anonymous + wired + compressor +
+///   file-backed + free + speculative (±1% slack).
+///
+/// So [availableMegabytes] — the gate basis — is now the RECLAIMABLE
+/// signal: cached (file-backed) + free pages. That is what the OS can
+/// hand a new allocation without squeezing running apps, and it is the
+/// number the owner cross-checks against Activity Monitor.
 ///
 /// Read fresh on every gate evaluation: available memory is exactly the
 /// fact that changes between a refused retry and the one that passes,
@@ -28,21 +41,53 @@ import 'dart:io';
 /// degrades to null — the caller allows with a warning, never blocks a
 /// machine it cannot see.
 final class MemoryFacts {
-  /// free + inactive + speculative + purgeable pages, in MB — what the
-  /// OS could hand a new allocation without squeezing running apps.
+  /// Cached (file-backed) + free pages, in MB — what the OS could hand
+  /// a new allocation by reclaiming the file cache, without squeezing
+  /// running apps. The load gate's basis. On a vm_stat too old to
+  /// report the file-backed row this degrades to the legacy composite
+  /// (free + inactive + speculative + purgeable).
   final int availableMegabytes;
 
-  /// Barely-used free pages, in MB (the misleadingly-small raw number).
+  /// Free + speculative pages, in MB — truly unallocated.
   final int freeMegabytes;
 
   /// Null when the total could not be sensed (the vm_stat path does not
   /// need it; `sysctl hw.memsize` fills it when available).
   final int? totalMegabytes;
 
+  /// The machine's working set, in MB: anonymous + wired +
+  /// compressor-occupied pages — Activity Monitor's App + Wired +
+  /// Compressed panels. Null when the vm_stat is too old to report the
+  /// anonymous row (the legacy composite is used instead).
+  final int? usedMegabytes;
+
+  /// File-backed pages, in MB — Activity Monitor's "Cached Files":
+  /// recently used file cache, reclaimable on demand. Null on the
+  /// legacy parse (treated as 0 by the UI).
+  final int? cachedMegabytes;
+
+  /// Resident pages held by the memory compressor, in MB (2026-11-18
+  /// honesty law — the owner's "the measure is incorrect"): memory the
+  /// machine has ALREADY over-subscribed and squeezed. A big compressor
+  /// (or a swapping machine) means the nominal [availableMegabytes] is
+  /// optimistic — reclaiming it costs work and the machine is paging.
+  /// Null when the row was unreadable.
+  final int? compressorMegabytes;
+
+  /// Swap currently ON DISK, in MB (`sysctl vm.swapusage`). Non-null
+  /// and > 0 = the machine has already spilled. The load gate stays
+  /// floor-based (policy), but the UI discloses this so "available"
+  /// is never read as "uncongested". Null when unreadable.
+  final int? swapUsedMegabytes;
+
   const MemoryFacts({
     required this.availableMegabytes,
     required this.freeMegabytes,
     this.totalMegabytes,
+    this.usedMegabytes,
+    this.cachedMegabytes,
+    this.compressorMegabytes,
+    this.swapUsedMegabytes,
   });
 
   /// Reads the facts fresh. Non-macOS (or any sensor failure) yields
@@ -51,20 +96,23 @@ final class MemoryFacts {
     if (!Platform.isMacOS) return null;
     String? vmStat;
     String? memSize;
+    String? swap;
     try {
       final r = await Process.run('vm_stat', const <String>[]);
       if (r.exitCode == 0) vmStat = r.stdout as String;
       final s = await Process.run('sysctl', const <String>['hw.memsize']);
       if (s.exitCode == 0) memSize = s.stdout as String;
+      final w = await Process.run('sysctl', const <String>['vm.swapusage']);
+      if (w.exitCode == 0) swap = w.stdout as String;
     } on ProcessException {
       return null;
     }
-    return MemoryFacts.parse(vmStat: vmStat, memSize: memSize);
+    return MemoryFacts.parse(vmStat: vmStat, memSize: memSize, swap: swap);
   }
 
   /// Pure parser — pin-tested against recorded `vm_stat`/`sysctl`
   /// outputs. Returns null when the page accounting cannot be read.
-  static MemoryFacts? parse({String? vmStat, String? memSize}) {
+  static MemoryFacts? parse({String? vmStat, String? memSize, String? swap}) {
     final pages = vmStat ?? '';
     final pageSize = _parsePageSize(pages);
     if (pageSize == null) return null;
@@ -74,12 +122,56 @@ final class MemoryFacts {
     final inactive = _parseLabeledPages(pages, 'Pages inactive:') ?? 0;
     final speculative = _parseLabeledPages(pages, 'Pages speculative:') ?? 0;
     final purgeable = _parseLabeledPages(pages, 'Pages purgeable:') ?? 0;
-    final totalMb = _parseMemSize(memSize ?? '');
-    return MemoryFacts(
-      availableMegabytes: mb(free + inactive + speculative + purgeable),
-      freeMegabytes: mb(free),
-      totalMegabytes: totalMb,
+    // "Pages occupied by compressor" (not "stored in" — the occupied
+    // row is the RESIDENT footprint; the stored row is the pre-squeeze
+    // size and would double-count nothing but would mislead).
+    final compressor = _parseLabeledPages(
+      pages,
+      'Pages occupied by compressor:',
     );
+    final anonymous = _parseLabeledPages(pages, 'Anonymous pages:');
+    final fileBacked = _parseLabeledPages(pages, 'File-backed pages:');
+    final freeMb = mb(free + speculative);
+    // The calibrated decomposition (v3.3): anonymous + wired +
+    // compressor is the working set; file-backed is the reclaimable
+    // cache; the gate basis is cache + free. A vm_stat without the
+    // modern rows (anonymous/file-backed — pre-macOS 13) falls back to
+    // the legacy available composite and leaves used/cached unnamed.
+    final int? usedMb;
+    final int? cachedMb;
+    final int availableMb;
+    if (anonymous != null) {
+      final wired = _parseLabeledPages(pages, 'Pages wired down:') ?? 0;
+      usedMb = mb(anonymous + wired + (compressor ?? 0));
+      cachedMb = fileBacked != null ? mb(fileBacked) : 0;
+      availableMb = freeMb + cachedMb;
+    } else {
+      usedMb = null;
+      cachedMb = null;
+      availableMb = mb(free + inactive + speculative + purgeable);
+    }
+    final totalMb = _parseMemSize(memSize ?? '');
+    final swapMb = _parseSwapUsed(swap ?? '');
+    final compressorMb = compressor != null ? mb(compressor) : null;
+    return MemoryFacts(
+      availableMegabytes: availableMb,
+      freeMegabytes: freeMb,
+      totalMegabytes: totalMb,
+      usedMegabytes: usedMb,
+      cachedMegabytes: cachedMb,
+      compressorMegabytes: compressorMb,
+      swapUsedMegabytes: swapMb,
+    );
+  }
+
+  /// `total = 8192.00M  used = 7135.00M  free = 1057.00M  (encrypted)`
+  /// — the USED figure, in whole MB.
+  static int? _parseSwapUsed(String swapusage) {
+    final match = RegExp(r'used\s*=\s*([0-9.]+)M').firstMatch(swapusage);
+    return switch (match) {
+      null => null,
+      final m => double.tryParse(m.group(1)!)?.round(),
+    };
   }
 
   /// `page size of 16384 bytes` on Apple Silicon (4096 on Intel).
@@ -113,8 +205,13 @@ final class MemoryFacts {
 
   @override
   String toString() =>
-      'MemoryFacts(available ${availableMegabytes}MB, free $freeMegabytes MB'
-      '${totalMegabytes == null ? '' : ' of $totalMegabytes MB'})';
+      'MemoryFacts(available ${availableMegabytes}MB (cache+free)'
+      '${usedMegabytes == null ? '' : ', used $usedMegabytes MB'}'
+      '${cachedMegabytes == null ? '' : ', cached $cachedMegabytes MB'}'
+      ', free $freeMegabytes MB'
+      '${totalMegabytes == null ? '' : ' of $totalMegabytes MB'}'
+      '${compressorMegabytes == null ? '' : ', compressor $compressorMegabytes MB'}'
+      '${swapUsedMegabytes == null ? '' : ', swap $swapUsedMegabytes MB'})';
 }
 
 /// The typed load refusal: why the weights were not loaded, with the
@@ -158,8 +255,9 @@ final class MlxLoadGate {
     this.readMemory = MemoryFacts.current,
   });
 
-  /// The incident floor: refuse below 4 GB AVAILABLE (free + inactive +
-  /// speculative + purgeable — never the always-tiny bare free count).
+  /// The incident floor: refuse below 4 GB AVAILABLE (v3.3 basis:
+  /// reclaimable file cache + free pages — never the always-tiny bare
+  /// free count; the legacy composite on old vm_stat).
   static const MlxLoadGate defaults = MlxLoadGate(minFreeMegabytes: 4096);
 
   /// Evaluates the gate on fresh facts. Returns the refusal when the

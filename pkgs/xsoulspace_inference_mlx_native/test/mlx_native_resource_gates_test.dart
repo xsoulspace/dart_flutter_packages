@@ -9,10 +9,51 @@ import 'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.
 /// many requests a caller may pile onto one engine.
 void main() {
   group('MemoryFacts.parse', () {
+    // Recorded verbatim from the owner's 16GB machine (2026-11-18,
+    // v3.3 calibration) — the MODERN vm_stat rows: the decomposition
+    // that matches Activity Monitor to the decimal (Cached Files =
+    // File-backed pages; App + Wired + Compressed = Anonymous + wired
+    // down + compressor-occupied).
+    const modernVmStat = '''
+Mach Virtual Memory Statistics: (page size of 16384 bytes)
+Pages free:                                    42571.
+Pages active:                                 218502.
+Pages inactive:                               212484.
+Pages speculative:                              4907.
+Pages throttled:                                   0.
+Pages wired down:                             192432.
+Pages purgeable:                               10372.
+File-backed pages:                            113546.
+Anonymous pages:                              322347.
+Pages occupied by compressor:                 342053.
+''';
+    test('pins the calibrated Activity-Monitor decomposition', () {
+      final facts = MemoryFacts.parse(
+        vmStat: modernVmStat,
+        memSize: 'hw.memsize: 17179869184',
+        swap: 'total = 8192.00M  used = 7401.81M  free = 790.19M  (encrypted)',
+      );
+      expect(facts, isNotNull);
+      // (42571 free + 4907 speculative) x 16384 bytes, floored: 741.
+      expect(facts!.freeMegabytes, 741);
+      // File-backed pages: 113546 x 16384, floored: 1774 — the owner's
+      // screenshot showed this bucket as "Cached Files 2.01 GB".
+      expect(facts.cachedMegabytes, 1774);
+      // Anonymous (322347) + wired (192432) + compressor-occupied
+      // (342053) x 16384, floored: 13388 — Activity Monitor's App +
+      // Wired + Compressed working set.
+      expect(facts.usedMegabytes, 13388);
+      expect(facts.compressorMegabytes, 5344);
+      // The gate basis: reclaimable cache + free = 1774 + 741.
+      expect(facts.availableMegabytes, 2515);
+      expect(facts.swapUsedMegabytes, 7402);
+      expect(facts.totalMegabytes, 16384);
+    });
+
     // Recorded verbatim from the incident machine (16GB, freshly
-    // booted): the bare free count is under 1.2GB — macOS keeps free
-    // pages scarce by design, which is exactly why the gate reads
-    // AVAILABLE (free + inactive + speculative + purgeable).
+    // booted, 2026-11-14): a vm_stat WITHOUT the modern anonymous /
+    // file-backed rows — the legacy fallback (free + inactive +
+    // speculative + purgeable), so old sensors keep working.
     const vmStat = '''
 Mach Virtual Memory Statistics: (page size of 16384 bytes)
 Pages free:                                    71332.
@@ -25,16 +66,18 @@ Pages purgeable:                                6765.
 "Translation faults":                       27368063.
 Pages copy-on-write:                          903969.
 ''';
-    test('pins the recorded Apple Silicon output', () {
+    test('pins the legacy fallback (no anonymous/file-backed rows)', () {
       final facts = MemoryFacts.parse(
         vmStat: vmStat,
         memSize: 'hw.memsize: 17179869184',
       );
       expect(facts, isNotNull);
-      // 71332 pages x 16384 bytes, floored to whole megabytes: 1114.
-      expect(facts!.freeMegabytes, 1114);
+      // (71332 + 2538) x 16384 bytes, floored: 1154.
+      expect(facts!.freeMegabytes, 1154);
       // (71332 + 269705 + 2538 + 6765) x 16384 bytes, one floor: 5474.
       expect(facts.availableMegabytes, 5474);
+      expect(facts.usedMegabytes, isNull);
+      expect(facts.cachedMegabytes, isNull);
       expect(facts.totalMegabytes, 16384);
     });
 
