@@ -25,6 +25,14 @@ enum OpenRouterCacheBreakpointPolicy { unknown, anthropicEphemeral }
 /// structured output (via `response_format: {type: "json_object"}`), and
 /// native tool calling.
 ///
+/// ## Image generation
+///
+/// When [imageEndpointStyle] is declared, the client also serves
+/// [InferenceTask.textToImage] and [InferenceTask.imageToImage] through the
+/// provider's images endpoint ([imagesUri]). Undeclared (the default), image
+/// tasks refuse with the honest `task_unsupported` gate — a chat-only base
+/// URL never pretends to generate pixels.
+///
 /// ## Tool calls
 ///
 /// OpenRouter returns native `tool_calls` in the response JSON. This client
@@ -52,6 +60,42 @@ Uri chatCompletionsUri(String baseUrl) {
   return root.replace(path: '$path$suffix');
 }
 
+/// Which images-endpoint shape the declared provider speaks.
+///
+/// The two live wires differ in BOTH the operation path and the
+/// image-to-image parameter, so the style is DECLARED (the palette knows
+/// the transport it named) — never sniffed from the host.
+enum ImageEndpointStyle {
+  /// OpenAI-images-compatible: `{root}/images/generations`, the reference
+  /// image rides `image` as a data URL. ModelScope and most self-hosted
+  /// image servers speak this shape.
+  openAiGenerations,
+
+  /// OpenRouter's dedicated Images API: `{root}/images` (NOT
+  /// `/images/generations`), the reference image rides `input_references`.
+  /// Responses are base64-only on this style.
+  openRouterImages,
+}
+
+/// The images endpoint for a declared API root and style. A root that
+/// already names the operation is used verbatim; otherwise the style's
+/// operation path is appended (the same derivation law as
+/// [chatCompletionsUri]).
+Uri imagesUri(String baseUrl, ImageEndpointStyle style) {
+  final trimmed = baseUrl.trim();
+  final root = trimmed.isEmpty
+      ? Uri.https('openrouter.ai', '/api/v1')
+      : Uri.parse(trimmed);
+  final operation = switch (style) {
+    ImageEndpointStyle.openAiGenerations => 'images/generations',
+    ImageEndpointStyle.openRouterImages => 'images',
+  };
+  final path = root.path;
+  if (path.endsWith('/$operation')) return root;
+  final suffix = path.endsWith('/') ? operation : '/$operation';
+  return root.replace(path: '$path$suffix');
+}
+
 class OpenRouterInferenceClient
     implements InferenceClient, ReasoningEffortInferenceClient {
   OpenRouterInferenceClient({
@@ -64,6 +108,7 @@ class OpenRouterInferenceClient
     this.onTransportDiagnostic,
     this.diagnosticCapture,
     this.cacheBreakpointPolicy = OpenRouterCacheBreakpointPolicy.unknown,
+    this.imageEndpointStyle,
   }) : _httpClient = httpClient ?? http.Client(),
        _ownsHttpClient = httpClient == null;
 
@@ -103,6 +148,13 @@ class OpenRouterInferenceClient
   /// A qualified cache dialect, independent of the transport's default model.
   final OpenRouterCacheBreakpointPolicy cacheBreakpointPolicy;
 
+  /// The declared images-endpoint shape, or null when the provider declared
+  /// NO image lane (the default — image tasks then refuse at the gate).
+  /// The binding composes this from the palette transport: `openrouter` →
+  /// [ImageEndpointStyle.openRouterImages], `openai_compatible` →
+  /// [ImageEndpointStyle.openAiGenerations].
+  final ImageEndpointStyle? imageEndpointStyle;
+
   @override
   Future<void> load() async {
     // No model download needed — OpenRouter is a hosted API.
@@ -115,9 +167,20 @@ class OpenRouterInferenceClient
   bool get isAvailable => _apiKey.isNotEmpty;
 
   @override
-  Set<InferenceTask> get supportedTasks => const <InferenceTask>{
+  Set<InferenceTask> get supportedTasks => <InferenceTask>{
     InferenceTask.text,
     InferenceTask.nativelyStructuredText,
+
+    // VISION (native-image-assets wave C): the input image rides the
+    // SAME chat endpoint as a typed content part — every
+    // chat-completions-compatible transport serves the shape, so the
+    // task is supported unconditionally (the palette's `vision` key,
+    // not the transport, decides who gets eyes).
+    InferenceTask.imageToText,
+    if (imageEndpointStyle != null) ...<InferenceTask>{
+      InferenceTask.textToImage,
+      InferenceTask.imageToImage,
+    },
   };
 
   /// OpenRouter exposes reasoning as NAMED tiers, not a numeric 1-100 scale:
@@ -181,8 +244,31 @@ class OpenRouterInferenceClient
 
     final model = _resolveModel(request);
 
+    // Image tasks take the images-endpoint lane — a different wire (path,
+    // body, response shape) that shares this class's transport, error
+    // mapping and outcome diagnostics.
+    if (request.task == InferenceTask.textToImage ||
+        request.task == InferenceTask.imageToImage) {
+      return _inferImages(request, model);
+    }
+
     // Build the messages array. The actor's context fragments are appended as
     // a trailing user message so the model sees the projected context.
+    // VISION (wave C): the chat lane accepts an image input — the same
+    // bytes-or-file carrier the images lane reads.
+    List<int>? inputBytes;
+    final chatImageInput = request.imageInput;
+    if (chatImageInput != null) {
+      try {
+        inputBytes = _imageInputBytes(chatImageInput);
+      } on ImageInputException catch (error) {
+        return InferenceResult<InferenceResponse>.fail(
+          code: error.code,
+          message: error.message,
+        );
+      }
+    }
+
     // Structured tasks: many OpenRouter models silently ignore
     // response_format=json_object — and the API itself requires the prompt to
     // mention "json" — so the schema is also spelled out in the system
@@ -208,9 +294,17 @@ class OpenRouterInferenceClient
           'You must respond with ONLY a valid JSON object (no markdown, no '
           'prose, no code fences) matching this JSON schema:\n$schemaJson';
     }
+    // VISION (wave C): the user turn's content becomes a typed array
+    // (text + image_url data-URL parts — the OpenAI-vision shape every
+    // chat-completions-compatible vision model serves). The codec and
+    // the plain string content are the TEXT paths and stay
+    // byte-identical; vision never rides the codec.
+    final visionContent = _visionUserContent(request, inputBytes);
     final messages = <Map<String, dynamic>>[
       if (systemPrompt.isNotEmpty) {'role': 'system', 'content': systemPrompt},
-      if (useMessagesCodec)
+      if (visionContent != null)
+        {'role': 'user', 'content': visionContent}
+      else if (useMessagesCodec)
         ...SituationMessagesCodec.render(
           prompt: request.prompt,
           systemPrompt: '', // already emitted as the system message above
@@ -303,7 +397,15 @@ class OpenRouterInferenceClient
     var transport = <String, Object?>{};
     try {
       final uri = chatCompletionsUri(baseUrl);
+      // The size law (ADR 0072, now on the chat lane too): a vision
+      // request's data URLs become size markers in EVERY diagnostic
+      // copy; text-only bodies keep their byte-identical diagnostics.
+      final visionDiagnostic = _sanitizeChatBodyForDiagnostics(body);
+      final diagnosticBody = visionDiagnostic ?? body;
       final encodedBody = jsonEncode(body);
+      final encodedDiagnosticBody = visionDiagnostic == null
+          ? encodedBody
+          : jsonEncode(visionDiagnostic);
       final headers = <String, String>{
         'authorization': 'Bearer $_apiKey',
         'content-type': 'application/json',
@@ -314,23 +416,23 @@ class OpenRouterInferenceClient
           endpoint: uri,
           method: 'POST',
           requestHeaders: headers,
-          requestBody: body,
+          requestBody: diagnosticBody,
           clientCohort: _diagnosticClientCohort,
           followRedirects: true,
         );
       }
       _diagnostic(
-        body,
+        diagnosticBody,
         intent,
         model,
         ContextTransportDiagnosticStage.request,
-        encodedBody: encodedBody,
+        encodedBody: encodedDiagnosticBody,
         transport: transport,
       );
       _notifyTransportDiagnostic(<String, Object?>{
         'type': 'openrouter.post',
         'uri': uri.toString(),
-        'body': encodedBody,
+        'body': encodedDiagnosticBody,
         'metadata': Map<String, Object?>.from(request.metadata),
         'reasoning': <String, Object?>{
           'thinking': request.thinking,
@@ -479,11 +581,392 @@ class OpenRouterInferenceClient
       _notifyTransportDiagnostic(<String, Object?>{
         'type': 'openrouter.result',
         'ok': diagnosticOutcome == 'completed',
-        if (diagnosticOutcome != null) 'outcome': diagnosticOutcome,
+        'outcome': diagnosticOutcome,
         'model': model,
         if (diagnosticHttpStatus != null) 'http_status': diagnosticHttpStatus,
       });
     }
+  }
+
+  /// The images-endpoint lane for [InferenceTask.textToImage] /
+  /// [InferenceTask.imageToImage]. Shares the chat lane's transport,
+  /// timeout, HTTP-error mapping and outcome diagnostics; the wire (path,
+  /// body, response shape) is the declared [imageEndpointStyle]'s.
+  Future<InferenceResult<InferenceResponse>> _inferImages(
+    InferenceRequest request,
+    String model,
+  ) async {
+    final style = imageEndpointStyle;
+    if (style == null) {
+      // Unreachable through infer() (the task gate refuses first); kept as
+      // the lane's own precondition.
+      return InferenceResult<InferenceResponse>.fail(
+        code: errorCodeTaskUnsupported,
+        message: 'Task ${request.task.name} requires a declared '
+            'imageEndpointStyle',
+      );
+    }
+
+    // Cache intent is a CHAT-lane concept (prompt-prefix reuse). A
+    // non-empty intent on an image request is refused by name, never
+    // silently dropped; the default empty intent is a no-op here.
+    final intentValue = request.metadata['context_cache_intent'];
+    if (intentValue != null) {
+      try {
+        final intent = ContextCacheIntent.fromJson(
+          Map<String, Object?>.from(intentValue as Map),
+        );
+        if (intent.writeAfterSegmentIds.isNotEmpty ||
+            intent.lookupAfterSegmentIds.isNotEmpty) {
+          return InferenceResult<InferenceResponse>.fail(
+            code: 'cache_intent_unsupported_for_task',
+            message:
+                'Cache intent is a chat-lane concept; '
+                '${request.task.name} does not carry it',
+          );
+        }
+      } on Object {
+        return InferenceResult<InferenceResponse>.fail(
+          code: 'cache_intent_invalid',
+          message: 'Invalid cache intent',
+        );
+      }
+    }
+
+    List<int>? inputBytes;
+    final input = request.imageInput;
+    if (input != null) {
+      try {
+        inputBytes = _imageInputBytes(input);
+      } on ImageInputException catch (error) {
+        return InferenceResult<InferenceResponse>.fail(
+          code: error.code,
+          message: error.message,
+        );
+      }
+    }
+
+    final body = _buildImageBody(request, model, style, inputBytes);
+    // The diagnostic copy carries SIZE MARKERS, never pixels: image data
+    // URLs and b64 payloads must not ride transport diagnostics.
+    final diagnosticBody = _sanitizeImageBodyForDiagnostics(body);
+
+    // The response body is NEVER stored for diagnostics on the image lane:
+    // b64 outputs are megabytes, and the cache analyzer is a chat-lane
+    // instrument. The outcome event below is the health record.
+    int? diagnosticHttpStatus;
+    var diagnosticOutcome = 'failed';
+    try {
+      final uri = imagesUri(baseUrl, style);
+      final encodedBody = jsonEncode(body);
+      final headers = <String, String>{
+        'authorization': 'Bearer $_apiKey',
+        'content-type': 'application/json',
+        'accept': 'application/json',
+      };
+      _notifyTransportDiagnostic(<String, Object?>{
+        'type': 'openrouter.post',
+        'lane': 'images',
+        'uri': uri.toString(),
+        // Sanitized: the encoded wire body with image payloads replaced by
+        // size markers.
+        'body': jsonEncode(diagnosticBody),
+        'metadata': Map<String, Object?>.from(request.metadata),
+      });
+      final response = await _httpClient
+          .post(uri, headers: headers, body: encodedBody)
+          .timeout(timeout);
+      diagnosticHttpStatus = response.statusCode;
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        diagnosticOutcome = 'http_${response.statusCode}';
+        return InferenceResult<InferenceResponse>.fail(
+          code: _mapHttpStatus(response.statusCode),
+          message: _errorMessage(response.body),
+          details: <String, dynamic>{
+            'http_status': response.statusCode,
+            'body': response.body,
+          },
+          meta: <String, dynamic>{'provider': id, 'model': model},
+        );
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        return InferenceResult<InferenceResponse>.fail(
+          code: 'json_parse_failed',
+          message: 'Images endpoint returned a non-object response',
+          meta: <String, dynamic>{'provider': id},
+        );
+      }
+
+      final parsed = _parseImagesResponse(
+        decoded,
+        task: request.task,
+        seed: request.seed,
+      );
+      if (parsed == null) {
+        return InferenceResult<InferenceResponse>.fail(
+          code: 'output_empty',
+          message: 'Images endpoint returned no image data',
+          details: <String, dynamic>{'body': response.body},
+          meta: <String, dynamic>{'provider': id, 'model': model},
+        );
+      }
+
+      diagnosticOutcome = 'completed';
+      return InferenceResult<InferenceResponse>.ok(
+        parsed,
+        meta: <String, dynamic>{'provider': id, 'model': model},
+      );
+    } on TimeoutException catch (_) {
+      // Same budget law as the chat lane: a spent REQUEST BUDGET is our
+      // clock, not backend absence. Image generation is slow by nature —
+      // mislabeling it `engine_unavailable` would flip palette health.
+      diagnosticOutcome = 'timeout';
+      return InferenceResult<InferenceResponse>.fail(
+        code: 'generate_timeout',
+        message:
+            'request budget expired after ${timeout.inSeconds}s — a slow '
+            'image generation hit OUR client timeout, not backend absence',
+        meta: <String, dynamic>{'provider': id},
+      );
+    } on SocketException catch (error) {
+      diagnosticOutcome = 'transport_error';
+      return InferenceResult<InferenceResponse>.fail(
+        code: 'engine_unavailable',
+        message: 'Images endpoint network connection failed',
+        details: error.toString(),
+        meta: <String, dynamic>{'provider': id},
+      );
+    } catch (error) {
+      return InferenceResult<InferenceResponse>.fail(
+        code: 'engine_unavailable',
+        message: 'Images endpoint request failed unexpectedly',
+        details: error.toString(),
+        meta: <String, dynamic>{'provider': id},
+      );
+    } finally {
+      // The OUTCOME diagnostic (ADR 0119 runtime health): the same event
+      // vocabulary as the chat lane, so palette health marks image
+      // entries ok/failed like any other dispatch.
+      _notifyTransportDiagnostic(<String, Object?>{
+        'type': 'openrouter.result',
+        'lane': 'images',
+        'ok': diagnosticOutcome == 'completed',
+        'outcome': diagnosticOutcome,
+        'model': model,
+        'http_status': ?diagnosticHttpStatus,
+      });
+    }
+  }
+
+  /// The images wire body for the declared style. Typed options map to
+  /// their snake_case wire names; [InferenceImageOptions.providerExtras]
+  /// passes verbatim LAST (an explicit extra overrides a typed field — a
+  /// deliberate caller choice, never a collision). A parameter a provider
+  /// does not support surfaces as that provider's error — mapped or
+  /// refused, never silently dropped.
+  Map<String, dynamic> _buildImageBody(
+    InferenceRequest request,
+    String model,
+    ImageEndpointStyle style,
+    List<int>? inputBytes,
+  ) {
+    final options = request.imageOptions;
+    final body = <String, dynamic>{
+      'model': model,
+      'prompt': request.prompt,
+      'seed': ?request.seed,
+      'n': ?options?.n,
+      'size': ?options?.size,
+      'aspect_ratio': ?options?.aspectRatio,
+      'quality': ?options?.quality,
+      'output_format': ?options?.outputFormat,
+      'negative_prompt': ?options?.negativePrompt,
+      'strength': ?options?.strength,
+    };
+    final input = request.imageInput;
+    if (input != null && inputBytes != null) {
+      final dataUrl =
+          'data:${input.mimeType};base64,${base64Encode(inputBytes)}';
+      switch (style) {
+        case ImageEndpointStyle.openRouterImages:
+          body['input_references'] = <Map<String, dynamic>>[
+            <String, dynamic>{
+              'type': 'image_url',
+              'image_url': <String, dynamic>{'url': dataUrl},
+            },
+          ];
+        case ImageEndpointStyle.openAiGenerations:
+          // The OpenAI-images-compatible convention: the reference image
+          // rides `image` as a data URL. A provider that names the field
+          // differently overrides via providerExtras (verbatim).
+          body['image'] = dataUrl;
+      }
+    }
+    final extras = options?.providerExtras;
+    if (extras != null && extras.isNotEmpty) {
+      body.addAll(extras.cast<String, dynamic>());
+    }
+    return body;
+  }
+
+  /// Resolves the input image's bytes. Bytes inputs pass through; file
+  /// inputs are read here (the transport owns the wire, so it owns the
+  /// encoding). Read failures name themselves.
+  List<int> _imageInputBytes(InferenceImageInput input) {
+    final bytes = input.bytes;
+    if (bytes != null && bytes.isNotEmpty) {
+      return bytes;
+    }
+    final filePath = input.filePath;
+    if (filePath == null || filePath.trim().isEmpty) {
+      throw const ImageInputException(
+        code: 'image_input_invalid',
+        message: 'Image input carries neither bytes nor a readable filePath',
+      );
+    }
+    try {
+      return File(filePath).readAsBytesSync();
+    } on Object {
+      throw ImageInputException(
+        code: 'image_input_unreadable',
+        message: 'Image input filePath could not be read: $filePath',
+      );
+    }
+  }
+
+  /// VISION (wave C) user content: the typed part array for an
+  /// imageToText request — text first, then the image as a data URL
+  /// (the OpenAI-vision shape). Null for every other task (the text
+  /// paths stay byte-identical).
+  List<Map<String, dynamic>>? _visionUserContent(
+    InferenceRequest request,
+    List<int>? inputBytes,
+  ) {
+    if (request.task != InferenceTask.imageToText) return null;
+    final bytes = inputBytes;
+    if (bytes == null || bytes.isEmpty) return null;
+    final mime = request.imageInput?.mimeType ?? 'image/png';
+    return <Map<String, dynamic>>[
+      {'type': 'text', 'text': request.prompt},
+      {
+        'type': 'image_url',
+        'image_url': {'url': 'data:$mime;base64,${base64Encode(bytes)}'},
+      },
+    ];
+  }
+
+  /// The CHAT-lane size law: null when the body carries no image
+  /// payload (text-only diagnostics stay byte-identical); otherwise the
+  /// copy with data URLs replaced by size markers — the same pass the
+  /// images lane applies unconditionally.
+  static Map<String, Object?>? _sanitizeChatBodyForDiagnostics(
+    Map<String, dynamic> body,
+  ) => _containsDataImageUrl(body)
+      ? Map<String, Object?>.from(_sanitizeValue(body) as Map)
+      : null;
+
+  static bool _containsDataImageUrl(Object? value) {
+    if (value is String) return value.startsWith('data:image/');
+    if (value is Map) return value.values.any(_containsDataImageUrl);
+    if (value is List) return value.any(_containsDataImageUrl);
+    return false;
+  }
+
+  /// The diagnostic view of an images body/response: image payloads
+  /// (data URLs) replaced with size markers. b64 outputs ride responses —
+  /// they are sanitized with the same pass before any diagnostic stores
+  /// them.
+  static Map<String, Object?> _sanitizeImageBodyForDiagnostics(
+    Map<String, dynamic> value,
+  ) => Map<String, Object?>.from(_sanitizeValue(value) as Map);
+
+  static Object? _sanitizeValue(Object? value) {
+    if (value is String && value.startsWith('data:image/')) {
+      return '[[data-url:${value.length} chars]]';
+    }
+    if (value is Map) {
+      return <String, Object?>{
+        for (final entry in value.entries)
+          '${entry.key}': _sanitizeValue(entry.value),
+      };
+    }
+    if (value is List) {
+      return <Object?>[for (final item in value) _sanitizeValue(item)];
+    }
+    return value;
+  }
+
+  /// Parse an images response into an [InferenceResponse].
+  ///
+  /// `data[]` items carry either `b64_json` (OpenRouter — pixels only,
+  /// never URLs) or `url` (OpenAI-images-compatible — frequently EXPIRING
+  /// links; the response names that with the `image_url_expiring`
+  /// warning). `usage` passes through as reported, same as the chat lane.
+  InferenceResponse? _parseImagesResponse(
+    Map<String, dynamic> decoded, {
+    required InferenceTask task,
+    int? seed,
+  }) {
+    final data = decoded['data'];
+    if (data is! List) return null;
+    final artifacts = <InferenceImageArtifact>[];
+    var urlCarried = false;
+    for (final item in data) {
+      if (item is! Map<String, dynamic>) continue;
+      final b64 = item['b64_json'];
+      final url = item['url'];
+      final mediaType = _imageMediaType(item);
+      if (b64 is String && b64.isNotEmpty) {
+        artifacts.add(
+          InferenceImageArtifact(mimeType: mediaType, bytesBase64: b64),
+        );
+      } else if (url is String && url.isNotEmpty) {
+        artifacts.add(InferenceImageArtifact(mimeType: mediaType, url: url));
+        urlCarried = true;
+      }
+    }
+    if (artifacts.isEmpty) return null;
+
+    final usage = decoded['usage'];
+    return InferenceResponse(
+      task: task,
+      imageArtifacts: artifacts,
+      warnings: urlCarried
+          ? const <String>['image_url_expiring']
+          : const <String>[],
+      meta: <String, dynamic>{
+        'provider': id,
+        inferenceSeedMetaKey: ?seed,
+        'usage_reported': decoded.containsKey('usage'),
+        if (usage is Map<String, dynamic>) 'usage': usage,
+      },
+    );
+  }
+
+  /// The image's media type: the provider's explicit field when present,
+  /// then the URL's extension, then the honest default.
+  static String _imageMediaType(Map<String, dynamic> item) {
+    for (final key in ['media_type', 'mime_type']) {
+      final value = item[key];
+      if (value is String && value.isNotEmpty) return value;
+    }
+    final url = item['url'];
+    if (url is String) {
+      final extension = Uri.parse(url).pathSegments.lastOrNull?.split('.').last;
+      final mapped = switch (extension) {
+        'png' => 'image/png',
+        'jpg' || 'jpeg' => 'image/jpeg',
+        'webp' => 'image/webp',
+        'svg' => 'image/svg+xml',
+        'gif' => 'image/gif',
+        _ => null,
+      };
+      if (mapped != null) return mapped;
+    }
+    return 'image/png';
   }
 
   static String _wireCacheId(String id) =>
@@ -925,6 +1408,7 @@ class OpenRouterInferenceClient
     _ => 'http_error',
   };
 
+
   String _errorMessage(String body) {
     try {
       final decoded = jsonDecode(body);
@@ -940,4 +1424,17 @@ class OpenRouterInferenceClient
     }
     return 'OpenRouter request failed with status $body';
   }
+}
+
+/// A named failure while resolving an image input's bytes — the input
+/// carried neither carrier, or its file could not be read.
+final class ImageInputException implements Exception {
+  const ImageInputException({required this.code, required this.message});
+
+  /// `image_input_invalid` · `image_input_unreadable`.
+  final String code;
+  final String message;
+
+  @override
+  String toString() => '$code: $message';
 }

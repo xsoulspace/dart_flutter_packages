@@ -32,7 +32,17 @@ enum InferenceTask {
   /// should be primary target for all platforms
   nativelyStructuredText,
   speechToText,
-  textToSpeech;
+  textToSpeech,
+  textToImage,
+  imageToImage,
+
+  /// VISION (native-image-assets wave C): an image INPUT rides a chat
+  /// request (the multipart lane ADR 0072 deferred — now justified).
+  /// Validation mirrors [imageToImage]: the image input is required;
+  /// the wire renders the user content as typed parts
+  /// (`text` / `image_url`), the OpenAI-vision shape every
+  /// chat-completions-compatible vision model serves.
+  imageToText;
 
   factory InferenceTask.fromJson(Object? value) {
     if (value is! String) {
@@ -86,6 +96,8 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     InferenceTask task = InferenceTask.text,
     InferenceAudioInput? audioInput,
     InferenceVoiceOptions? voiceOptions,
+    InferenceImageInput? imageInput,
+    InferenceImageOptions? imageOptions,
     List<ChatMessage> messages = const [],
 
     /// The full conversation (ADR 0059). Chat-native providers render it
@@ -123,6 +135,8 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
       task: task,
       audioInput: audioInput,
       voiceOptions: voiceOptions,
+      imageInput: imageInput,
+      imageOptions: imageOptions,
       messages: messages,
       maxTokens: maxTokens,
       temperature: temperature,
@@ -144,6 +158,8 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     InferenceTask task = InferenceTask.text,
     InferenceAudioInput? audioInput,
     InferenceVoiceOptions? voiceOptions,
+    InferenceImageInput? imageInput,
+    InferenceImageOptions? imageOptions,
     List<ChatMessage> messages = const [],
     int? maxTokens,
     double? temperature,
@@ -164,6 +180,8 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
       task: task,
       audioInput: audioInput,
       voiceOptions: voiceOptions,
+      imageInput: imageInput,
+      imageOptions: imageOptions,
       messages: messages,
       maxTokens: maxTokens,
       temperature: temperature,
@@ -212,6 +230,51 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     voiceOptions: voiceOptions,
   );
 
+  factory InferenceRequest.textToImage({
+    required String prompt,
+    InferenceImageOptions? imageOptions,
+    String workingDirectory = '.',
+    Map<String, dynamic> metadata = const <String, dynamic>{},
+  }) => InferenceRequest(
+    prompt: prompt,
+    workingDirectory: workingDirectory,
+    metadata: metadata,
+    task: InferenceTask.textToImage,
+    imageOptions: imageOptions,
+  );
+
+  factory InferenceRequest.imageToImage({
+    required String prompt,
+    required InferenceImageInput imageInput,
+    InferenceImageOptions? imageOptions,
+    String workingDirectory = '.',
+    Map<String, dynamic> metadata = const <String, dynamic>{},
+  }) => InferenceRequest(
+    prompt: prompt,
+    workingDirectory: workingDirectory,
+    metadata: metadata,
+    task: InferenceTask.imageToImage,
+    imageInput: imageInput,
+    imageOptions: imageOptions,
+  );
+
+  /// VISION (wave C): the image rides the CHAT request as a multipart
+  /// user turn; the prompt is the question/instruction around it.
+  factory InferenceRequest.imageToText({
+    required String prompt,
+    required InferenceImageInput imageInput,
+    String systemPrompt = '',
+    String workingDirectory = '.',
+    Map<String, dynamic> metadata = const <String, dynamic>{},
+  }) => InferenceRequest(
+    prompt: prompt,
+    systemPrompt: systemPrompt,
+    workingDirectory: workingDirectory,
+    metadata: metadata,
+    task: InferenceTask.imageToText,
+    imageInput: imageInput,
+  );
+
   /// The one request-map builder behind both public factories (ADR 0059
   /// dedupe — the field list existed twice and drifted once already).
   static Map<String, dynamic> _buildRequestMap({
@@ -224,6 +287,8 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     required InferenceTask task,
     required InferenceAudioInput? audioInput,
     required InferenceVoiceOptions? voiceOptions,
+    required InferenceImageInput? imageInput,
+    required InferenceImageOptions? imageOptions,
     required List<ChatMessage> messages,
     required int? maxTokens,
     required double? temperature,
@@ -243,6 +308,8 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     'metadata': metadata,
     'audio_input': ?audioInput?.toJson(),
     'voice_options': ?voiceOptions?.toJson(),
+    'image_input': ?imageInput?.toJson(),
+    'image_options': ?imageOptions?.toJson(),
     if (messages.isNotEmpty)
       'messages': <Map<String, dynamic>>[
         for (final message in messages) message.toJson(),
@@ -272,6 +339,18 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
   };
   InferenceVoiceOptions? get voiceOptions => switch (value['voice_options']) {
     final Map value => InferenceVoiceOptions.fromJson(
+      value.cast<String, dynamic>(),
+    ),
+    _ => null,
+  };
+  InferenceImageInput? get imageInput => switch (value['image_input']) {
+    final Map value => InferenceImageInput.fromJson(
+      value.cast<String, dynamic>(),
+    ),
+    _ => null,
+  };
+  InferenceImageOptions? get imageOptions => switch (value['image_options']) {
+    final Map value => InferenceImageOptions.fromJson(
       value.cast<String, dynamic>(),
     ),
     _ => null,
@@ -350,6 +429,8 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     InferenceTask? task,
     InferenceAudioInput? audioInput,
     InferenceVoiceOptions? voiceOptions,
+    InferenceImageInput? imageInput,
+    InferenceImageOptions? imageOptions,
     List<ChatMessage>? messages,
     int? maxTokens,
     double? temperature,
@@ -370,6 +451,8 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
       task: task ?? this.task,
       audioInput: audioInput ?? this.audioInput,
       voiceOptions: voiceOptions ?? this.voiceOptions,
+      imageInput: imageInput ?? this.imageInput,
+      imageOptions: imageOptions ?? this.imageOptions,
       messages: messages ?? this.messages,
       maxTokens: maxTokens ?? this.maxTokens,
       temperature: temperature ?? this.temperature,
@@ -395,6 +478,7 @@ class InferenceResponse {
     this.normalizedTranscript,
     this.segments = const <InferenceSpeechSegment>[],
     this.audioArtifact,
+    this.imageArtifacts = const <InferenceImageArtifact>[],
     this.toolResults = const [],
     this.toolCalls = const [],
   });
@@ -424,6 +508,9 @@ class InferenceResponse {
           ),
           _ => null,
         },
+        imageArtifacts: jsonDecodeListAs<Map<String, dynamic>>(
+          json['image_artifacts'],
+        ).map(InferenceImageArtifact.fromJson).toList(),
       );
 
   final Map<String, dynamic> structuredOutput;
@@ -439,6 +526,13 @@ class InferenceResponse {
   final String? normalizedTranscript;
   final List<InferenceSpeechSegment> segments;
   final InferenceAudioArtifact? audioArtifact;
+
+  /// Generated images, in the provider's own order. Each artifact carries
+  /// EXACTLY ONE of bytes / url / filePath — pure HTTP clients never write
+  /// files, so they return bytes or url; filePath stays the local-engine
+  /// form. A url carrier may be expiring (provider-dependent) — the honest
+  /// warning lives on [warnings], and callers download promptly.
+  final List<InferenceImageArtifact> imageArtifacts;
   final List<ToolExecutionResult> toolResults;
 
   /// Structured tool calls parsed by the inference client.
@@ -460,6 +554,10 @@ class InferenceResponse {
     if (segments.isNotEmpty)
       'segments': segments.map((segment) => segment.toJson()).toList(),
     if (audioArtifact != null) 'audio_artifact': audioArtifact!.toJson(),
+    if (imageArtifacts.isNotEmpty)
+      'image_artifacts': imageArtifacts
+          .map((artifact) => artifact.toJson())
+          .toList(),
     'tool_results': toolResults.map((e) => e.toJson()).toList(),
     if (toolCalls.isNotEmpty)
       'tool_calls': toolCalls.map((e) => e.toJson()).toList(),
@@ -629,6 +727,208 @@ class InferenceVoiceOptions {
     if (locale != null) 'locale': locale,
     if (speechRate != null) 'speech_rate': speechRate,
     if (pitch != null) 'pitch': pitch,
+    'provider_extras': providerExtras,
+  };
+}
+
+/// Where an image-to-image input comes from. Deliberately narrower than
+/// [InferenceAudioSource]: an image has no microphone lane.
+enum InferenceImageSource {
+  filePath,
+  bytes;
+
+  static String toJson(InferenceImageSource source) => source.name.snakeCase;
+
+  static InferenceImageSource? fromJson(Object? value) {
+    if (value is! String) {
+      return null;
+    }
+
+    return switch (value) {
+      'file_path' || 'filePath' => InferenceImageSource.filePath,
+      'bytes' => InferenceImageSource.bytes,
+      _ => null,
+    };
+  }
+}
+
+/// One reference image riding an image-to-image request. The same shape
+/// as [InferenceAudioInput] minus the audio-only fields; exactly one of
+/// [filePath] / [bytes] must be present.
+class InferenceImageInput {
+  const InferenceImageInput({
+    required this.mimeType,
+    this.source,
+    this.filePath,
+    this.bytes,
+  });
+
+  factory InferenceImageInput.fromJson(Map<String, dynamic> json) =>
+      InferenceImageInput(
+        source: InferenceImageSource.fromJson(json['source']),
+        filePath: jsonDecodeString(json['file_path']),
+        bytes: switch (json['bytes_base64']) {
+          final String value => base64Decode(value),
+          _ => null,
+        },
+        mimeType: jsonDecodeString(json['mime_type']),
+      );
+
+  const InferenceImageInput.filePath({
+    required this.filePath,
+    required this.mimeType,
+  }) : source = InferenceImageSource.filePath,
+       bytes = null;
+
+  const InferenceImageInput.bytes({
+    required this.bytes,
+    required this.mimeType,
+  }) : source = InferenceImageSource.bytes,
+       filePath = null;
+
+  final InferenceImageSource? source;
+  final String? filePath;
+  final List<int>? bytes;
+  final String mimeType;
+
+  InferenceImageSource? get resolvedSource {
+    if (source != null) {
+      return source;
+    }
+
+    final hasFilePath = (filePath ?? '').trim().isNotEmpty;
+    final hasBytes = (bytes ?? const <int>[]).isNotEmpty;
+
+    if (hasFilePath == hasBytes) {
+      return null;
+    }
+
+    return hasFilePath
+        ? InferenceImageSource.filePath
+        : InferenceImageSource.bytes;
+  }
+
+  Map<String, dynamic> toJson() => {
+    if (resolvedSource != null)
+      'source': InferenceImageSource.toJson(resolvedSource!),
+    if (filePath != null) 'file_path': filePath,
+    if (bytes != null) 'bytes_base64': base64Encode(bytes!),
+    'mime_type': mimeType,
+  };
+}
+
+/// One generated image. EXACTLY ONE carrier is present — the law the
+/// constructor documents and the validation enforces:
+/// * `bytesBase64` — the provider returned pixels (b64_json);
+/// * `url` — the provider returned a link (frequently EXPIRING — download
+///   promptly and record the named warning);
+/// * `filePath` — a local engine wrote the file (the audio precedent).
+class InferenceImageArtifact {
+  const InferenceImageArtifact({
+    required this.mimeType,
+    this.bytesBase64,
+    this.url,
+    this.filePath,
+  });
+
+  factory InferenceImageArtifact.fromJson(Map<String, dynamic> json) =>
+      InferenceImageArtifact(
+        mimeType: jsonDecodeString(json['mime_type']),
+        bytesBase64: switch (json['bytes_base64']) {
+          final String value => value,
+          _ => null,
+        },
+        url: jsonDecodeString(json['url']),
+        filePath: jsonDecodeString(json['file_path']),
+      );
+
+  final String mimeType;
+  final String? bytesBase64;
+  final String? url;
+  final String? filePath;
+
+  /// Counts the present carriers. A valid artifact has exactly one.
+  int get carrierCount => [
+    (bytesBase64 ?? '').trim().isNotEmpty,
+    (url ?? '').trim().isNotEmpty,
+    (filePath ?? '').trim().isNotEmpty,
+  ].where((present) => present).length;
+
+  Map<String, dynamic> toJson() => {
+    'mime_type': mimeType,
+    if ((bytesBase64 ?? '').trim().isNotEmpty) 'bytes_base64': bytesBase64,
+    if ((url ?? '').trim().isNotEmpty) 'url': url,
+    if ((filePath ?? '').trim().isNotEmpty) 'file_path': filePath,
+  };
+}
+
+/// Image-generation request options. Typed surface stays small — the
+/// diffusion tuning knobs (steps, guidance, sampler…) vary per backend
+/// and ride [providerExtras] verbatim; the honest carrier passes them,
+/// nothing here pretends to normalize them.
+class InferenceImageOptions {
+  const InferenceImageOptions({
+    this.n,
+    this.size,
+    this.aspectRatio,
+    this.quality,
+    this.outputFormat,
+    this.negativePrompt,
+    this.strength,
+    this.providerExtras = const <String, dynamic>{},
+  });
+
+  factory InferenceImageOptions.fromJson(Map<String, dynamic> json) =>
+      InferenceImageOptions(
+        n: switch (json['n']) {
+          final int value => value,
+          _ => null,
+        },
+        size: jsonDecodeString(json['size']),
+        aspectRatio: jsonDecodeString(json['aspect_ratio']),
+        quality: jsonDecodeString(json['quality']),
+        outputFormat: jsonDecodeString(json['output_format']),
+        negativePrompt: jsonDecodeString(json['negative_prompt']),
+        strength: jsonDecodeDouble(json['strength']),
+        providerExtras: jsonDecodeMap(json['provider_extras']),
+      );
+
+  /// How many images to generate (provider-capped; OpenRouter allows 1-10).
+  final int? n;
+
+  /// Explicit pixel size (`"1024x1024"`) or a provider tier. Providers
+  /// reject what they do not support — the refusal surfaces honestly.
+  final String? size;
+
+  /// Aspect ratio (`"1:1"`, `"16:9"`, …) where the provider takes one
+  /// instead of a pixel size.
+  final String? aspectRatio;
+
+  /// Named quality tier (`auto`/`low`/`medium`/`high`) where supported.
+  final String? quality;
+
+  /// Output encoding hint (`png`/`jpeg`/`webp`/`svg`/`gif`).
+  final String? outputFormat;
+
+  /// What the image must NOT contain (diffusion-style negative prompt).
+  final String? negativePrompt;
+
+  /// Image-to-image denoise strength (0.0 = keep the input, 1.0 = ignore
+  /// it). Null = the provider default.
+  final double? strength;
+
+  /// Provider-specific passthrough keys, forwarded verbatim.
+  final Map<String, dynamic> providerExtras;
+
+  Map<String, dynamic> toJson() => {
+    if (n != null) 'n': n,
+    if ((size ?? '').trim().isNotEmpty) 'size': size,
+    if ((aspectRatio ?? '').trim().isNotEmpty) 'aspect_ratio': aspectRatio,
+    if ((quality ?? '').trim().isNotEmpty) 'quality': quality,
+    if ((outputFormat ?? '').trim().isNotEmpty) 'output_format': outputFormat,
+    if ((negativePrompt ?? '').trim().isNotEmpty)
+      'negative_prompt': negativePrompt,
+    if (strength != null) 'strength': strength,
     'provider_extras': providerExtras,
   };
 }

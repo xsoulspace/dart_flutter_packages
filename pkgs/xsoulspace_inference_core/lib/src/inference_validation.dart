@@ -11,6 +11,9 @@ const String errorCodeAudioInputMissing = 'audio_input_missing';
 const String errorCodeAudioInputInvalid = 'audio_input_invalid';
 const String errorCodeTtsTextEmpty = 'tts_text_empty';
 const String errorCodeAudioOutputUnavailable = 'audio_output_unavailable';
+const String errorCodeImagePromptEmpty = 'image_prompt_empty';
+const String errorCodeImageInputMissing = 'image_input_missing';
+const String errorCodeImageInputInvalid = 'image_input_invalid';
 const String errorCodeInferenceSeedInvalid = 'inference_seed_invalid';
 
 /// The exclusive upper bound of a valid inference seed: `2^63`.
@@ -180,7 +183,95 @@ InferenceResult<void> validateInferenceRequest(InferenceRequest request) {
         );
       }
       return InferenceResult<void>.ok(null);
+    case .textToImage:
+      if (request.prompt.trim().isEmpty) {
+        return InferenceResult<void>.fail(
+          code: errorCodeImagePromptEmpty,
+          message: 'Text-to-image request prompt must not be empty',
+        );
+      }
+      return InferenceResult<void>.ok(null);
+    case .imageToImage:
+      if (request.prompt.trim().isEmpty) {
+        return InferenceResult<void>.fail(
+          code: errorCodeImagePromptEmpty,
+          message: 'Image-to-image request prompt must not be empty',
+        );
+      }
+      final imageInput = request.imageInput;
+      if (imageInput == null) {
+        return InferenceResult<void>.fail(
+          code: errorCodeImageInputMissing,
+          message: 'Image-to-image request requires imageInput',
+        );
+      }
+      return validateInferenceImageInput(imageInput);
+    case .imageToText:
+      if (request.prompt.trim().isEmpty) {
+        return InferenceResult<void>.fail(
+          code: errorCodeImagePromptEmpty,
+          message: 'Image-to-text request prompt must not be empty',
+        );
+      }
+      final imageInput = request.imageInput;
+      if (imageInput == null) {
+        return InferenceResult<void>.fail(
+          code: errorCodeImageInputMissing,
+          message: 'Image-to-text request requires imageInput',
+        );
+      }
+      return validateInferenceImageInput(imageInput);
   }
+}
+
+InferenceResult<void> validateInferenceImageInput(
+  InferenceImageInput imageInput,
+) {
+  final hasFilePath = (imageInput.filePath ?? '').trim().isNotEmpty;
+  final hasBytes = (imageInput.bytes ?? const <int>[]).isNotEmpty;
+  final source = imageInput.resolvedSource;
+
+  if (hasFilePath && hasBytes) {
+    return InferenceResult<void>.fail(
+      code: errorCodeImageInputInvalid,
+      message: 'Image input must not provide both filePath and bytes',
+      details: const <String, dynamic>{'reason': 'ambiguous_source'},
+    );
+  }
+
+  if (source == null) {
+    return InferenceResult<void>.fail(
+      code: errorCodeImageInputInvalid,
+      message: 'Image input must provide filePath or bytes',
+      details: const <String, dynamic>{'reason': 'source_missing'},
+    );
+  }
+
+  if (source == .filePath && !hasFilePath) {
+    return InferenceResult<void>.fail(
+      code: errorCodeImageInputInvalid,
+      message: 'Image input source=file_path requires filePath',
+      details: const <String, dynamic>{'reason': 'source_mismatch'},
+    );
+  }
+
+  if (source == .bytes && !hasBytes) {
+    return InferenceResult<void>.fail(
+      code: errorCodeImageInputInvalid,
+      message: 'Image input source=bytes requires bytes',
+      details: const <String, dynamic>{'reason': 'source_mismatch'},
+    );
+  }
+
+  if (imageInput.mimeType.trim().isEmpty) {
+    return InferenceResult<void>.fail(
+      code: errorCodeImageInputInvalid,
+      message: 'Image input mimeType must not be empty',
+      details: const <String, dynamic>{'reason': 'mime_type_empty'},
+    );
+  }
+
+  return InferenceResult<void>.ok(null);
 }
 
 InferenceResult<void> validateInferenceAudioInput(

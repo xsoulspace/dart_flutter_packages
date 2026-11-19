@@ -218,7 +218,10 @@ void main() {
       'opt-in transport event matches submitted body and omits headers',
       () async {
         http.Request? submitted;
-        Map<String, Object?>? event;
+        // ADR 0119: a dispatch fires TWO events — the request event during
+        // the POST and the settled outcome event in the finally block. The
+        // request-event assertions below read the FIRST one.
+        final events = <Map<String, Object?>>[];
         final client = OpenRouterInferenceClient(
           apiKey: 'secret-test-key',
           httpClient: http_testing.MockClient((request) async {
@@ -228,7 +231,7 @@ void main() {
               200,
             );
           }),
-          onTransportDiagnostic: (value) => event = value,
+          onTransportDiagnostic: events.add,
         );
         final metadata = <String, dynamic>{
           'actor': 'actor-7',
@@ -242,13 +245,15 @@ void main() {
         final result = await client.infer(request);
 
         expect(result.success, isTrue);
-        expect(event, isNotNull);
-        expect(event!['type'], 'openrouter.post');
-        expect(event!['body'], submitted!.body);
-        expect(event!['uri'], submitted!.url.toString());
-        expect(event!['metadata'], metadata);
-        expect(event!.containsKey('headers'), isFalse);
-        expect(event!.toString(), isNot(contains('secret-test-key')));
+        expect(events, hasLength(2));
+        final event = events.first;
+        expect(event['type'], 'openrouter.post');
+        expect(events.last['type'], 'openrouter.result');
+        expect(event['body'], submitted!.body);
+        expect(event['uri'], submitted!.url.toString());
+        expect(event['metadata'], metadata);
+        expect(event.containsKey('headers'), isFalse);
+        expect(event.toString(), isNot(contains('secret-test-key')));
       },
     );
 

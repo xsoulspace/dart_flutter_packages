@@ -238,7 +238,12 @@ void main() {
         ),
       );
       expect(result.success, true);
-      expect(legacy.single['body'], sent);
+      // ADR 0119: two legacy events per dispatch (request + outcome); the
+      // request-event assertions read the FIRST.
+      expect(legacy, hasLength(2));
+      expect(legacy.first['type'], 'openrouter.post');
+      expect(legacy.last['type'], 'openrouter.result');
+      expect(legacy.first['body'], sent);
       final wire = jsonDecode(sent!) as Map;
       expect(wire['max_tokens'], 2);
       expect(wire['temperature'], 0);
