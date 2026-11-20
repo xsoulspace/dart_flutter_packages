@@ -95,6 +95,33 @@ final class _FlakyMidBodyHub {
   }
 }
 
+/// A hub whose ONE required file's plan PROBE dies with a dart:io
+/// network death on its first fresh open (the 2026-11-20 third shape:
+/// `Connection reset by peer` during checking, before any byte moves).
+/// The retry's probe delegates to the inner hub.
+final class _FlakyPlanProbeHub {
+  _FlakyPlanProbeHub(this.inner, this.file);
+
+  final _FakeHub inner;
+  final String file;
+  var planOpens = 0;
+
+  Future<MlxRemoteModelFile?> call(Uri url, {int? resumeOffset}) async {
+    final segments = url.pathSegments;
+    final fileName = segments.last;
+    if (fileName == file && resumeOffset == null) {
+      planOpens++;
+      if (planOpens == 1) {
+        throw const HttpException(
+          'SocketException: Connection reset by peer (OS Error: '
+          'Connection reset by peer, errno = 54), address = huggingface.co',
+        );
+      }
+    }
+    return inner.call(url, resumeOffset: resumeOffset);
+  }
+}
+
 void main() {
   const configJson = '{"model_type": "qwen3", "hidden_size": 64}';
   const tokenizerJson = '{"model": "fake"}';
@@ -413,6 +440,37 @@ void main() {
             .readAsBytesSync(),
         weights,
       );
+    });
+
+    test('a SocketException during PLAN RESOLUTION retries too — the '
+        'third live shape (the checking probes ride the same fragile '
+        'CDN; no bytes are at risk)', () async {
+      final tmp = await Directory.systemTemp.createTemp('mlx_installer_test_');
+      addTearDown(() => tmp.deleteSync(recursive: true));
+      final entry = mlxModelCatalog.first;
+      final fake = _FakeHub({entry.repoId: fullRepo()});
+      final flaky = _FlakyPlanProbeHub(fake, 'config.json');
+      final installer = MlxModelInstaller(
+        hubRoot: tmp.path,
+        fileOpener: flaky.call,
+      );
+
+      final events = await collectEvents(
+        installer.install(entry, userConsent: true),
+      );
+
+      // The plan's first probe died; the retry resolved the plan and
+      // the whole install landed ready.
+      expect(phaseNames(events).last, 'ready');
+      expect(
+        File('${installer.snapshotPath(entry)}/model.safetensors')
+            .readAsBytesSync(),
+        weights,
+      );
+      // Three fresh opens of config.json: the plan probe that died, the
+      // plan retry that resolved, and the download phase's own fetch
+      // (every planned file downloads, not just the weights).
+      expect(flaky.planOpens, 3);
     });
 
     test('a network-gate refusal touches no bytes', () async {

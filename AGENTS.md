@@ -13,7 +13,8 @@ Run the following commands to interact with the project's agentic tools:
 - **Release gates + pub.dev census**: `just release-gate`
 - **Publish dry-run**: `just publish-preflight <package>`
 - **Publishing flow**: [PUBLISHING.md](PUBLISHING.md) — pub.dev primary via
-  [dart_changesets](pkgs/dart_changesets) (ADR 0073); registry flow PAUSED
+  [dart_changesets](https://github.com/Arenukvern/dart_changesets)
+  (ADR 0073); registry flow PAUSED
 
 ## North Star Impact
 

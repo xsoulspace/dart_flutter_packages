@@ -1,45 +1,27 @@
-# dart_changesets publish train — see PUBLISHING.md and ADR 0073.
-#
-# THREE paths into the same per-tag publish run:
-#   1. version-PR merge: push one <package>-v<version> tag per release, then
-#      dispatch one publish run per tag (the reliable GITHUB_TOKEN trigger;
-#      GITHUB_TOKEN push events alone do not start workflow runs).
-#   2. tag push events (works with a PAT, or for locally pushed tags).
-#   3. workflow_dispatch rescue: re-run one tag (execute) or preflight it.
-#
-# pub.dev's automated publishing is ref-gated per package tag, so each run
-# publishes exactly the package its tag names. Ordering across a train
-# emerges from dependency waits plus skip-existing self-healing: a run whose
-# dependencies are not visible on pub.dev yet fails fast and a re-dispatch
-# resumes (never re-uploads an existing version).
-#
-# The first publish of a never-published package cannot be automated; the
-# CLI reports typed BOOTSTRAP instructions and the run fails until the owner
-# has published v1 manually and enabled per-package automated publishing.
+# dart_changesets per-tag publish leg — see PUBLISHING.md and ADR 0073.
+# pub.dev's automated publishing is ref-gated, so each run publishes exactly
+# the package its tag names; the dart_changesets action dispatches one run
+# per tag when the version PR merges.
 name: dart_changesets publish
 
 on:
-  pull_request:
-    types:
-      - closed
-    # No branch filter — the merge-commit job below gates on the version PR.
   push:
     tags:
       - '*-v*'
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag to publish, e.g. xsoulspace_lints-v0.1.2'
+        description: 'Release tag, e.g. xsoulspace_lints-v0.1.2'
         required: true
         type: string
       execute:
-        description: 'Publish for real (unchecked = preflight only)'
+        description: 'Publish for real (unchecked = preflight)'
         required: true
         type: boolean
         default: false
 
 permissions:
-  contents: write
+  contents: read
   id-token: write
 
 concurrency:
@@ -47,84 +29,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # -- Version PR merge: fan out tags + publish dispatches -------------------
-  create-tags:
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.merged == true &&
-      startsWith(github.event.pull_request.head.ref, 'changesets/')
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
-          fetch-depth: 0
-
-      - name: Push one tag per release and dispatch publish runs
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          train=.changesets/.pending-train.json
-          [ -f "$train" ] || { echo "No .pending-train.json in the merge commit — nothing to release."; exit 0; }
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          for tag in $(dart run pkgs/dart_changesets/bin/dart_changesets.dart tags | python3 -c 'import json,sys; print(" ".join(json.load(sys.stdin)))'); do
-            echo "== $tag =="
-            if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
-              echo "tag exists; skipping creation"
-            else
-              git tag "$tag" "${{ github.event.pull_request.merge_commit_sha }}"
-              git push origin "$tag"
-            fi
-            gh workflow run dart_changesets_publish.yml \
-              --ref main \
-              -f tag="$tag" \
-              -f execute=true
-          done
-
-  # -- One publish run per package tag --------------------------------------
   publish:
-    if: >-
-      github.event_name == 'push' ||
-      github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    environment: pub.dev
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Detect package runner
-        id: runner
-        run: |
-          tag="${{ inputs.tag || github.ref_name }}"
-          pkg="${tag%-v*}"
-          echo "package=$pkg" >> "$GITHUB_OUTPUT"
-          if grep -qE '^[[:space:]]*flutter:[[:space:]]*$' "pkgs/$pkg/pubspec.yaml" 2>/dev/null && \
-             grep -q "sdk: flutter" "pkgs/$pkg/pubspec.yaml"; then
-            echo "flutter=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - uses: dart-lang/setup-dart@v1
-
-      - uses: subosito/flutter-action@v2
-        if: steps.runner.outputs.flutter == 'true'
-        with:
-          channel: stable
-          flutter-version: '3.50.0'
-          cache: true
-
-      - name: Workspace dependencies
-        run: dart pub get
-
-      - name: Publish this tag's package
-        run: |
-          tag="${{ inputs.tag || github.ref_name }}"
-          execute_flag=""
-          if [ "${{ github.event_name }}" = "push" ]; then execute_flag="--execute"; fi
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.execute }}" = "true" ]; then execute_flag="--execute"; fi
-          dart run pkgs/dart_changesets/bin/dart_changesets.dart publish-tag \
-            --tag "$tag" $execute_flag --skip-existing
+    uses: Arenukvern/dart_changesets/.github/workflows/publish.yml@main
+    with:
+      tag: ${{ inputs.tag || github.ref_name }}
+      execute: ${{ github.event_name == 'push' || inputs.execute }}

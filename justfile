@@ -434,13 +434,20 @@ registry-add target_package dependency_package version="^0.0.0" registry_url="ht
     just registry-rewrite-hosted registry_url="{{ registry_url }}"
 
 # dart_changesets — pub.dev-primary release engine (ADR 0073).
+# Engine lives in Arenukvern/dart_changesets; installed from git.
 # The registry-* recipes above are PAUSED (pub.xsoulspace.dev unsupported);
 # they remain for index inspection only.
-changesets-add:
-    dart run pkgs/dart_changesets/bin/dart_changesets.dart add
+changesets-engine:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dart pub global activate --source git \
+      https://github.com/Arenukvern/dart_changesets.git --git-ref main
 
-changesets-status:
-    dart run pkgs/dart_changesets/bin/dart_changesets.dart status
+changesets-add: changesets-engine
+    dart_changesets add
+
+changesets-status: changesets-engine
+    dart_changesets status
 
 # Release gates + pub.dev presence census (pass no-network=true to skip).
 release-gate no-network="false":
@@ -448,12 +455,15 @@ release-gate no-network="false":
     set -euo pipefail
     args=""
     if [ "{{ no-network }}" = "true" ]; then args="--no-network"; fi
-    dart run pkgs/dart_changesets/bin/dart_changesets.dart doctor $args
+    dart pub global activate --source git \
+      https://github.com/Arenukvern/dart_changesets.git --git-ref main >/dev/null
+    dart_changesets doctor $args
 
 # Full publish dry-run for one package (no upload).
 publish-preflight package:
     #!/usr/bin/env bash
     set -euo pipefail
     version=$(awk -F': ' '/^version:/{print $2; exit}' "pkgs/{{ package }}/pubspec.yaml" | tr -d '"')
-    dart run pkgs/dart_changesets/bin/dart_changesets.dart publish-tag \
-      --tag "{{ package }}-v$version" --skip-existing
+    dart pub global activate --source git \
+      https://github.com/Arenukvern/dart_changesets.git --git-ref main >/dev/null
+    dart_changesets publish-tag --tag "{{ package }}-v$version" --skip-existing

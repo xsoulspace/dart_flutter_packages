@@ -8,9 +8,10 @@ publishes to it automatically anymore.
 
 Design inspiration and attribution: [changesets](https://github.com/changesets/changesets)
 and [@changesets/action](https://github.com/changesets/action) (the
-TypeScript original for npm). The engine itself lives in
-[pkgs/dart_changesets](pkgs/dart_changesets) and releases itself through the
-flow below.
+TypeScript original for npm). The engine lives in the standalone
+[Arenukvern/dart_changesets](https://github.com/Arenukvern/dart_changesets)
+repository (composite GitHub Action + reusable publish workflow) and releases
+itself through its own action.
 
 ## Flow
 
@@ -90,9 +91,8 @@ much higher limits; trains self-heal via per-tag re-dispatch.
 
 | Workflow | Trigger | Job |
 |---|---|---|
-| `dart_changesets_assemble.yml` | push to main | applies the pending train onto `changesets/version-packages` and opens/updates the version PR |
-| `dart_changesets_publish.yml` | version-PR merge | pushes one tag per release and dispatches one publish run per tag |
-| `dart_changesets_publish.yml` | tag push / dispatch | publishes exactly the tagged package (OIDC via `dart-lang/setup-dart`; `id-token: write`; environment `pub.dev`) |
+| `dart_changesets_assemble.yml` | push to main | calls the `Arenukvern/dart_changesets` action: assembles the version PR from pending intent files, and on the version-PR merge pushes one tag per release and dispatches one publish run per tag |
+| `dart_changesets_publish.yml` | tag push / dispatch | wraps the engine's reusable publish workflow — publishes exactly the tagged package (OIDC via `dart-lang/setup-dart`; `id-token: write`) |
 
 No stored secrets are required. `workflow_dispatch` on the publish workflow
 is the rescue path after a partial train: run it per straggler tag with

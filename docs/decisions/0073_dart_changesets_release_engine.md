@@ -1,7 +1,10 @@
 # ADR 0073: dart_changesets — pub.dev-primary release engine
 
 - Status: Accepted. Engine landed in [pkgs/dart_changesets](../../pkgs/dart_changesets)
-  with the assembler and publish workflows wired; bootstrap (first manual
+  and on 2026-11-20 (same day) EXTRACTED to the standalone
+  [Arenukvern/dart_changesets](https://github.com/Arenukvern/dart_changesets)
+  repository — composite action + reusable publish workflow; this repo
+  consumes it via thin workflows. Bootstrap (first manual
   publishes + per-package automated-publishing toggles) is owner-paced.
 - Date: 2026-11-20
 - North Star impact: `clarifies` — publishing was the repo's weakest

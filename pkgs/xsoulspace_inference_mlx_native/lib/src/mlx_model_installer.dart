@@ -306,81 +306,31 @@ final class MlxModelInstaller {
               : null;
           final open = fileOpener ?? ownedOpener!.call;
           try {
-            // 3. checking — resolve the concrete file plan.
+            // 3. checking — resolve the concrete file plan. The plan
+            // probes ride the SAME fragile CDN as the download body
+            // (2026-11-20 validation: a SocketException here died with
+            // no retry at all — the attempt loop only covered the
+            // download), so the plan section retries transient deaths
+            // too. Nothing is at risk here: no bytes have moved, the
+            // probes are idempotent.
             final plan = <_PlannedFile>[];
-            Future<MlxRemoteModelFile?> openFile(String name) async {
-              emit(ProvisionPhase.checking, 'resolving $name');
-              return open(_resolveUrl(entry, name));
-            }
-
-            void refuseMissing(_PlannedFile file) =>
-                throw MlxModelInstallRefusal(
-                  'install_failed:${file.name}',
-                  'required file missing (404) at '
-                      '${_resolveUrl(entry, file.name)}',
-                );
-
-            for (final name in entry.requiredFiles) {
-              final f = await openFile(name);
-              if (f == null) {
-                refuseMissing(_PlannedFile(name, null, isRequired: true));
-              }
-              plan.add(_PlannedFile(name, f!.contentLength, isRequired: true));
-              await _discard(f);
-            }
-            for (final name in entry.optionalFiles) {
-              final f = await openFile(name);
-              if (f == null) continue; // skipped honestly
-              plan.add(_PlannedFile(name, f.contentLength, isRequired: false));
-              await _discard(f);
-            }
-            // Weights: a single model.safetensors, else the sharded index
-            // plus every shard its weight_map names.
-            const singleWeights = 'model.safetensors';
-            final single = await openFile(singleWeights);
-            if (single != null) {
-              plan.add(
-                _PlannedFile(
-                  singleWeights,
-                  single.contentLength,
-                  isRequired: true,
-                  isWeights: true,
-                ),
-              );
-              await _discard(single);
-            } else {
-              const indexName = 'model.safetensors.index.json';
-              final index = await openFile(indexName);
-              if (index == null) {
-                throw MlxModelInstallRefusal(
-                  'install_failed:$singleWeights',
-                  'no weights found in ${entry.repoId} (404 on '
-                      '$singleWeights and $indexName)',
-                );
-              }
-              plan.add(
-                _PlannedFile(
-                  indexName,
-                  index.contentLength,
-                  isRequired: true,
-                  isWeights: true,
-                ),
-              );
-              final shards = _weightMapShards(await _collectBytes(index.body));
-              for (final shard in shards) {
-                final s = await openFile(shard);
-                if (s == null) {
-                  refuseMissing(_PlannedFile(shard, null, isRequired: true));
+            var planAttempts = 0;
+            while (true) {
+              planAttempts++;
+              plan.clear();
+              try {
+                await _resolvePlan(entry, plan, open, emit);
+                break;
+              } on Object catch (error) {
+                // The plan probes throw RAW network deaths (the
+                // file-named wrapping only happens at the terminal
+                // fail()); the classifier reads both shapes.
+                if (!_transientNetwork(error) ||
+                    planAttempts >= 4 ||
+                    cancelled) {
+                  rethrow;
                 }
-                plan.add(
-                  _PlannedFile(
-                    shard,
-                    s!.contentLength,
-                    isRequired: true,
-                    isWeights: true,
-                  ),
-                );
-                await _discard(s);
+                await Future<void>.delayed(Duration(seconds: 2 * planAttempts));
               }
             }
 
@@ -462,27 +412,14 @@ final class MlxModelInstaller {
                 } on MlxModelInstallRefusal catch (refusal) {
                   // Transient connection deaths resume IN PLACE — the
                   // part on disk holds every byte already fetched;
-                  // re-consent is not needed. The shapes (2026-11-20
-                  // validation findings, one per live run): the read-idle
-                  // guard's own code, CDN HTTP statuses, and dart:io
-                  // network deaths wrapped by the file-named refusal —
-                  // `HttpException: Connection closed` mid-body AND
-                  // `SocketException: Operation timed out` on the hub
-                  // itself. None of these is permanent by nature; the
-                  // permanent file-named refusals (404 missing, failed
-                  // verification) carry none of these markers.
-                  final detail = refusal.detail ?? '';
-                  final transientNetwork = detail.contains('HttpException') ||
-                      detail.contains('SocketException') ||
-                      detail.contains('Connection closed') ||
-                      detail.contains('Connection reset') ||
-                      detail.contains('timed out');
-                  final transient =
-                      refusal.code == 'install_failed:read_idle' ||
-                      refusal.code.startsWith('install_failed:http_') ||
-                      (refusal.code.startsWith('install_failed:') &&
-                          transientNetwork);
-                  if (!transient || attempts >= 4 || cancelled) rethrow;
+                  // re-consent is not needed. The classifier is
+                  // single-sourced ([_transientNetwork]) — the plan
+                  // probes retry through the same law.
+                  if (!_transientNetwork(refusal) ||
+                      attempts >= 4 ||
+                      cancelled) {
+                    rethrow;
+                  }
                   await Future<void>.delayed(Duration(seconds: 2 * attempts));
                   continue;
                 }
@@ -621,6 +558,117 @@ final class MlxModelInstaller {
     return File('$dirPath/$mlxManagerMarkerFileName').existsSync() &&
         (File('$dirPath/model.safetensors').existsSync() ||
             File('$dirPath/model.safetensors.index.json').existsSync());
+  }
+
+  /// THE transient-death classifier, single-sourced (2026-11-20
+  /// validation findings, one shape per live run): the read-idle
+  /// guard's own code, CDN HTTP statuses, and dart:io network deaths —
+  /// raw (`HttpException`/`SocketException` escaping the plan probes)
+  /// or wrapped by the file-named refusal (`Connection closed` mid-body,
+  /// `Operation timed out`, `Connection reset by peer`). None is
+  /// permanent by nature; the permanent refusals (404 missing, failed
+  /// verification, budget) carry none of these markers.
+  static bool _transientNetwork(Object error) {
+    if (error is! MlxModelInstallRefusal) {
+      return _messageIsTransientNetworkDeath(error.toString());
+    }
+    if (error.code == 'install_failed:read_idle') return true;
+    if (error.code.startsWith('install_failed:http_')) return true;
+    if (!error.code.startsWith('install_failed:')) return false;
+    return _messageIsTransientNetworkDeath(error.detail ?? '');
+  }
+
+  static bool _messageIsTransientNetworkDeath(String detail) =>
+      detail.contains('HttpException') ||
+      detail.contains('SocketException') ||
+      detail.contains('Connection closed') ||
+      detail.contains('Connection reset') ||
+      detail.contains('timed out');
+
+  /// Resolves the concrete file plan into [plan]: required files,
+  /// optional files (404 skips honestly), then the weights — a single
+  /// `model.safetensors`, else the sharded index plus every shard its
+  /// weight_map names. The caller retries transient deaths around this
+  /// (the probes ride the same fragile CDN as the download body).
+  Future<void> _resolvePlan(
+    MlxModelCatalogEntry entry,
+    List<_PlannedFile> plan,
+    MlxModelFileOpener open,
+    void Function(ProvisionPhase, String) emit,
+  ) async {
+    Future<MlxRemoteModelFile?> openFile(String name) async {
+      emit(ProvisionPhase.checking, 'resolving $name');
+      return open(_resolveUrl(entry, name));
+    }
+
+    void refuseMissing(_PlannedFile file) => throw MlxModelInstallRefusal(
+      'install_failed:${file.name}',
+      'required file missing (404) at ${_resolveUrl(entry, file.name)}',
+    );
+
+    for (final name in entry.requiredFiles) {
+      final f = await openFile(name);
+      if (f == null) {
+        refuseMissing(_PlannedFile(name, null, isRequired: true));
+      }
+      plan.add(_PlannedFile(name, f!.contentLength, isRequired: true));
+      await _discard(f);
+    }
+    for (final name in entry.optionalFiles) {
+      final f = await openFile(name);
+      if (f == null) continue; // skipped honestly
+      plan.add(_PlannedFile(name, f.contentLength, isRequired: false));
+      await _discard(f);
+    }
+    // Weights: a single model.safetensors, else the sharded index
+    // plus every shard its weight_map names.
+    const singleWeights = 'model.safetensors';
+    final single = await openFile(singleWeights);
+    if (single != null) {
+      plan.add(
+        _PlannedFile(
+          singleWeights,
+          single.contentLength,
+          isRequired: true,
+          isWeights: true,
+        ),
+      );
+      await _discard(single);
+    } else {
+      const indexName = 'model.safetensors.index.json';
+      final index = await openFile(indexName);
+      if (index == null) {
+        throw MlxModelInstallRefusal(
+          'install_failed:$singleWeights',
+          'no weights found in ${entry.repoId} (404 on '
+              '$singleWeights and $indexName)',
+        );
+      }
+      plan.add(
+        _PlannedFile(
+          indexName,
+          index.contentLength,
+          isRequired: true,
+          isWeights: true,
+        ),
+      );
+      final shards = _weightMapShards(await _collectBytes(index.body));
+      for (final shard in shards) {
+        final s = await openFile(shard);
+        if (s == null) {
+          refuseMissing(_PlannedFile(shard, null, isRequired: true));
+        }
+        plan.add(
+          _PlannedFile(
+            shard,
+            s!.contentLength,
+            isRequired: true,
+            isWeights: true,
+          ),
+        );
+        await _discard(s);
+      }
+    }
   }
 
   /// Probing discards a body without consuming it (canceling an

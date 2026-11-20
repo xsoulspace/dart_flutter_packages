@@ -1,16 +1,9 @@
-# dart_changesets assembler — see PUBLISHING.md and ADR 0073.
-#
-# On pushes to main: if pending intent files exist under .changesets/, apply
-# the computed train (version bumps + dependent constraint rewrites +
-# changelogs) onto the changesets/version-packages branch and open or update
-# the single "chore: version packages" pull request.
-#
-# Merging that PR pushes one <package>-v<version> tag per release and
-# dispatches one publish run per tag (dart_changesets_publish.yml). No PAT is
-# required: tag pushes ride the merged PR workflow and publishes are
-# dispatched explicitly via `gh workflow run` (GITHUB_TOKEN-initiated push
-# events do not trigger workflows, so the dispatch is the reliable trigger).
-name: dart_changesets assemble
+# dart_changesets release train — see PUBLISHING.md and ADR 0073.
+# The engine lives in Arenukvern/dart_changesets; this thin workflow calls
+# the action, which assembles the version PR from pending intent files and,
+# on the version-PR merge, pushes one tag per release and dispatches the
+# per-tag publish runs.
+name: dart_changesets
 
 on:
   push:
@@ -23,68 +16,17 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: dart-changesets-assemble
+  group: dart-changesets-release
   cancel-in-progress: false
 
 jobs:
-  assemble:
+  release:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: dart-lang/setup-dart@v1
-
-      - name: Workspace dependencies
-        run: dart pub get
-
-      - name: Detect pending train
-        id: check
-        run: |
-          if dart run pkgs/dart_changesets/bin/dart_changesets.dart version --check; then
-            echo "has_train=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_train=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Assemble version PR
-        if: steps.check.outputs.has_train == 'true'
+      - uses: Arenukvern/dart_changesets@main
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          branch=changesets/version-packages
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          if git fetch origin "$branch" 2>/dev/null; then
-            git checkout -B "$branch" "origin/$branch"
-          else
-            git checkout -B "$branch"
-          fi
-
-          dart run pkgs/dart_changesets/bin/dart_changesets.dart version
-
-          if git diff --quiet && git diff --cached --quiet; then
-            echo "No file changes after apply — nothing to commit."
-            exit 0
-          fi
-
-          git add -A
-          git commit -m "chore: version packages"
-          git push --force-with-lease origin "$branch"
-
-          body=$(cat .changesets/.pending-train.json)
-
-          if gh pr view "$branch" --json state --jq .state >/dev/null 2>&1; then
-            gh pr edit "$branch" --body "Release train:"$'\n'"$body"
-          else
-            gh pr create \
-              --base main \
-              --head "$branch" \
-              --title "chore: version packages" \
-              --body "Release train:"$'\n'"$body"$'\n\n'"Merging pushes one tag per package and dispatches one publish run per tag."
-          fi
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
