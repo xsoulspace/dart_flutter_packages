@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   publish:
-    uses: Arenukvern/dart_changesets/.github/workflows/publish.yml@main
+    uses: Arenukvern/dart_changesets/.github/workflows/publish.yml@v1
     with:
       tag: ${{ inputs.tag || github.ref_name }}
       execute: ${{ github.event_name == 'push' || inputs.execute }}

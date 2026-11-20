@@ -27,6 +27,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: Arenukvern/dart_changesets@main
+      - uses: Arenukvern/dart_changesets@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
