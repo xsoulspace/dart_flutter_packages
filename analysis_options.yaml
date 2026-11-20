@@ -1,0 +1,11 @@
+# Root workspace analysis options.
+#
+# The frozen loop-bench experiment evidence under
+# pkgs/xsoulspace_inference_mlx_native/bench/nursery/ contains deliberately
+# broken sandbox fixtures (negative controls, e.g. s2-invalid-relative-store).
+# They are preserved evidence and must not be fixed in place; they are also
+# not part of any package gate. Excluding them keeps a root-level
+# `dart analyze` clean without touching the evidence.
+analyzer:
+  exclude:
+    - pkgs/xsoulspace_inference_mlx_native/bench/nursery/**

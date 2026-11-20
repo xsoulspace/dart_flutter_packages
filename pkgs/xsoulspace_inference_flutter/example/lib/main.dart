@@ -38,7 +38,7 @@ class _ExampleAppState extends State<_ExampleApp> {
   }
 
   @override
-  Widget build(final BuildContext context) {
+  Widget build(BuildContext context) {
     const readiness = InferenceReadinessSnapshot(
       state: InferenceReadinessState.ready,
       summary: 'Inject any provider package here',
@@ -50,7 +50,7 @@ class _ExampleAppState extends State<_ExampleApp> {
           padding: const EdgeInsets.all(16),
           child: AnimatedBuilder(
             animation: _notifier,
-            builder: (final context, final _) => InferenceDiagnosticsPresenter(
+            builder: (context, _) => InferenceDiagnosticsPresenter(
               readiness: readiness,
               transcript: _notifier.snapshot,
             ),

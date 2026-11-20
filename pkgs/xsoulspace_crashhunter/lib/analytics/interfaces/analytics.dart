@@ -5,12 +5,12 @@ import 'package:xsoulspace_foundation/xsoulspace_foundation.dart';
 enum AnalyticEvents { usedInAndroid, usedInIOS, usedInWeb }
 
 abstract class AnalyticsService extends AnalyticsServicePlugin {
-  void upsertPlugin<T extends AnalyticsServicePlugin>(final T plugin);
+  void upsertPlugin<T extends AnalyticsServicePlugin>(T plugin);
 }
 
 abstract class AnalyticsServicePlugin implements Loadable, Disposable {
   void reportIntededException([final dynamic value]) {}
-  Future<void> logAnalyticEvent(final AnalyticEvents event);
+  Future<void> logAnalyticEvent(AnalyticEvents event);
   Future<void> onDelayedLoad();
   Future<void> recordError(
     final dynamic exception,

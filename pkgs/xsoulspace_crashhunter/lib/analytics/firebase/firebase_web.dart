@@ -84,7 +84,7 @@ class FirebaseAnalyticsPlugin extends AnalyticsServicePlugin {
   }
 
   @override
-  Future<void> logAnalyticEvent(final AnalyticEvents event) async {
+  Future<void> logAnalyticEvent(AnalyticEvents event) async {
     if (!_isEnabled) return;
     await analytics.logEvent(name: event.name);
   }
@@ -92,7 +92,7 @@ class FirebaseAnalyticsPlugin extends AnalyticsServicePlugin {
 
 class FirebaseCrashlyticsPlugin extends AnalyticsServicePlugin {
   @override
-  Future<void> logAnalyticEvent(final AnalyticEvents event) async {}
+  Future<void> logAnalyticEvent(AnalyticEvents event) async {}
 
   @override
   Future<void> onDelayedLoad() async {}

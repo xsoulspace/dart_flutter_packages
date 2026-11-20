@@ -86,7 +86,7 @@ class FirebaseAnalyticsPlugin extends AnalyticsServicePlugin {
   Future<void> onDelayedLoad() async {}
 
   @override
-  Future<void> logAnalyticEvent(final AnalyticEvents event) async {
+  Future<void> logAnalyticEvent(AnalyticEvents event) async {
     if (!_isEnabled) return;
     await analytics.logEvent(name: event.name);
   }
@@ -108,7 +108,7 @@ class FirebaseCrashlyticsPlugin extends AnalyticsServicePlugin {
       );
       Isolate.current.addErrorListener(
         // ignore: avoid_types_on_closure_parameters
-        RawReceivePort((final List<dynamic> pair) async {
+        RawReceivePort((List<dynamic> pair) async {
           final List<dynamic> errorAndStacktrace = pair;
           await FirebaseCrashlytics.instance.recordError(
             errorAndStacktrace.first,
@@ -119,7 +119,7 @@ class FirebaseCrashlyticsPlugin extends AnalyticsServicePlugin {
       );
       // Pass all uncaught asynchronous errors that aren't handled by the
       // Flutter framework to Crashlytics
-      PlatformDispatcher.instance.onError = (final error, final stack) {
+      PlatformDispatcher.instance.onError = (error, stack) {
         unawaited(
           FirebaseCrashlytics.instance.recordError(error, stack, fatal: true),
         );
@@ -165,7 +165,7 @@ class FirebaseCrashlyticsPlugin extends AnalyticsServicePlugin {
   }
 
   @override
-  Future<void> logAnalyticEvent(final AnalyticEvents event) async {}
+  Future<void> logAnalyticEvent(AnalyticEvents event) async {}
 
   static Future<void> testAsyncErrorOnInit() async {
     Future<void>.delayed(const Duration(seconds: 2), () {

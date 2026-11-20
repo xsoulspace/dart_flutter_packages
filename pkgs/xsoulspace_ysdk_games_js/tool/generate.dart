@@ -565,7 +565,7 @@ void emitDartEnum(
     ..writeln('  const $name(this.value);')
     ..writeln('  final String value;')
     ..writeln()
-    ..writeln('  static $name fromValue(final String? value) {')
+    ..writeln('  static $name fromValue(String? value) {')
     ..writeln('    if (value == null) return $fallbackCase;')
     ..writeln('    for (final item in $name.values) {')
     ..writeln('      if (item.value == value) return item;')

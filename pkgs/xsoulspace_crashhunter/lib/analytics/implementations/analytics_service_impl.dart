@@ -35,7 +35,7 @@ class AnalyticsServiceImpl extends AnalyticsService {
   );
 
   @override
-  void upsertPlugin<T extends AnalyticsServicePlugin>(final T plugin) {
+  void upsertPlugin<T extends AnalyticsServicePlugin>(T plugin) {
     plugins[T] = plugin;
   }
 
@@ -47,14 +47,14 @@ class AnalyticsServiceImpl extends AnalyticsService {
   }
 
   @override
-  Future<void> logAnalyticEvent(final AnalyticEvents event) async {
+  Future<void> logAnalyticEvent(AnalyticEvents event) async {
     for (final plugin in plugins.values) {
       await plugin.logAnalyticEvent(event);
     }
   }
 
   List<String> get logs => logsNotifier.value;
-  void logString(final String value) {
+  void logString(String value) {
     if (!kDebugMode) return;
     if (logs.length == 15) {
       logs.removeLast();
@@ -176,7 +176,7 @@ class AnalyticsServiceImpl extends AnalyticsService {
   @override
   Future<void> onLoad() async {
     final originalOnError = FlutterError.onError;
-    FlutterError.onError = (final errorDetails) {
+    FlutterError.onError = (errorDetails) {
       unawaited(recordFlutterError(errorDetails));
       // Forward to original handler.
       originalOnError?.call(errorDetails);

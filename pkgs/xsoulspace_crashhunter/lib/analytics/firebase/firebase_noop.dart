@@ -45,12 +45,12 @@ class FirebaseAnalyticsPlugin extends AnalyticsServicePlugin {
   Future<void> onDelayedLoad() async {}
 
   @override
-  Future<void> logAnalyticEvent(final AnalyticEvents event) async {}
+  Future<void> logAnalyticEvent(AnalyticEvents event) async {}
 }
 
 class FirebaseCrashlyticsPlugin extends AnalyticsServicePlugin {
   @override
-  Future<void> logAnalyticEvent(final AnalyticEvents event) async {}
+  Future<void> logAnalyticEvent(AnalyticEvents event) async {}
 
   @override
   Future<void> onDelayedLoad() async {}

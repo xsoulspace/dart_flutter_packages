@@ -99,7 +99,7 @@ class _RustoreBillingExampleState extends State<RustoreBillingExample> {
     }
   }
 
-  Future<void> _purchaseOneStep(final String productId) async {
+  Future<void> _purchaseOneStep(String productId) async {
     try {
       final result = await _client.purchase(
         RustoreProductPurchaseParams(
@@ -115,7 +115,7 @@ class _RustoreBillingExampleState extends State<RustoreBillingExample> {
     }
   }
 
-  Future<void> _purchaseTwoStep(final String productId) async {
+  Future<void> _purchaseTwoStep(String productId) async {
     try {
       final result = await _client.purchaseTwoStep(
         RustoreProductPurchaseParams(
@@ -138,7 +138,7 @@ class _RustoreBillingExampleState extends State<RustoreBillingExample> {
     }
   }
 
-  void _handleUpdate(final RustoreBillingResult event) {
+  void _handleUpdate(RustoreBillingResult event) {
     final purchaseResult = event.purchaseResult;
     if (purchaseResult != null) {
       _handlePurchaseResult(purchaseResult, prefix: 'Stream');
@@ -154,7 +154,7 @@ class _RustoreBillingExampleState extends State<RustoreBillingExample> {
 
   void _handlePurchaseResult(
     final RustoreProductPurchaseResult result, {
-    required final String prefix,
+    required String prefix,
   }) {
     final purchaseId = result.purchase?.purchaseId ?? '-';
     switch (result.resultType) {
@@ -173,7 +173,7 @@ class _RustoreBillingExampleState extends State<RustoreBillingExample> {
   }
 
   @override
-  Widget build(final BuildContext context) {
+  Widget build(BuildContext context) {
     final availabilityStatus = _availability?.status.name ?? 'unknown';
     return Scaffold(
       appBar: AppBar(title: const Text('RuStore Billing 10.1 Example')),
@@ -212,7 +212,7 @@ class _RustoreBillingExampleState extends State<RustoreBillingExample> {
               Expanded(
                 child: ListView.builder(
                   itemCount: _products.length,
-                  itemBuilder: (final context, final index) {
+                  itemBuilder: (context, index) {
                     final RustoreProduct product = _products[index];
                     return Card(
                       child: ListTile(
