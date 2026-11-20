@@ -50,15 +50,26 @@ final class MlxModelRuntime {
 
   /// Loads [snapshotDir]'s weights into RAM (or adopts the engine
   /// another caller already loaded). Never downloads: an absent snapshot
-  /// throws the named snapshot-absent error. The MEMORY FLOOR still
+  /// throws the named snapshot-absent error. The MEMORY GATE still
   /// governs an explicit Load (the incident law is not a chat-lane
-  /// monopoly): a machine below `MlxLoadGate.defaults` gets the typed
-  /// [MlxLoadRefusal] — the UI's fit chip predicts it, the gate is the
-  /// fact.
-  Future<void> loadQwen(String snapshotDir) async {
+  /// monopoly), SIZE-AWARE when the caller names the weights
+  /// ([weightsBytes] — the requirement scales with the checkpoint, one
+  /// arithmetic with the UI's fit verdict): a machine that cannot hold
+  /// it gets the typed [MlxLoadRefusal]. [force] skips the gate — the
+  /// CONSENTED override (the UI's "load anyway" dialog names the risk
+  /// first; the gate is a default, never a monopoly).
+  Future<void> loadQwen(
+    String snapshotDir, {
+    int? weightsBytes,
+    bool force = false,
+  }) async {
     if (isQwenLoaded(snapshotDir)) return;
-    final refusal = await MlxLoadGate.defaults.evaluate();
-    if (refusal != null) throw refusal;
+    if (!force) {
+      final refusal = await MlxLoadGate.defaults.evaluate(
+        weightsBytes: weightsBytes,
+      );
+      if (refusal != null) throw refusal;
+    }
     final pending =
         _loading[snapshotDir] ??= NativeQwenTextEngine.loadAsync(
           snapshotDir: snapshotDir,
@@ -84,15 +95,23 @@ final class MlxModelRuntime {
     engine?.dispose();
   }
 
-  /// The lfm-family LOAD: the same gate + in-flight map law as
-  /// [loadQwen] (the dirs never collide — different snapshots), riding
-  /// `NativeLfm2TextEngine`'s adopt-first loadAsync. One engine per
-  /// snapshot holds for lfm2 too: the chat lane's lazy client adopts
+  /// The lfm-family LOAD: the same size-aware gate + in-flight map law
+  /// as [loadQwen] (the dirs never collide — different snapshots),
+  /// riding `NativeLfm2TextEngine`'s adopt-first loadAsync. One engine
+  /// per snapshot holds for lfm2 too: the chat lane's lazy client adopts
   /// what a UI preload brought in.
-  Future<void> loadLfm(String snapshotDir) async {
+  Future<void> loadLfm(
+    String snapshotDir, {
+    int? weightsBytes,
+    bool force = false,
+  }) async {
     if (isLfmLoaded(snapshotDir)) return;
-    final refusal = await MlxLoadGate.defaults.evaluate();
-    if (refusal != null) throw refusal;
+    if (!force) {
+      final refusal = await MlxLoadGate.defaults.evaluate(
+        weightsBytes: weightsBytes,
+      );
+      if (refusal != null) throw refusal;
+    }
     final pending = _loadingLfm[snapshotDir] ??= NativeLfm2TextEngine
         .loadAsync(snapshotDir: snapshotDir);
     try {

@@ -82,11 +82,16 @@ final class MlxModelCatalogEntry {
   String get hubDirName => 'models--$org--$repoName';
 }
 
-/// The four v1 catalog entries (design `models-local-manager.md`).
+/// The curated v1 catalog entries (design `models-local-manager.md`).
 ///
 /// The dotted `Qwen3.5-*` family is already inside the discovery law; the
 /// 4bit converts are the LOADABLE form of the raw checkpoints that hit
 /// the memory gate in the 2026-11-17 dogfood.
+///
+/// Qwen3-4B-4bit was REMOVED 2026-11-20 (the owner's call): at ~2.4 GB
+/// of weights + the KV slack + the machine's pressure point it is too
+/// large for this 16 GB device — the catalog offers no checkpoint the
+/// machine cannot hold.
 const List<MlxModelCatalogEntry> mlxModelCatalog = <MlxModelCatalogEntry>[
   MlxModelCatalogEntry(
     repoId: 'mlx-community/Qwen3-0.6B-4bit',
@@ -111,14 +116,6 @@ const List<MlxModelCatalogEntry> mlxModelCatalog = <MlxModelCatalogEntry>[
     paramLabel: '1.7B',
     quant: '4bit',
     approxDownloadBytes: 1024 * 1024 * 1024, // ~1.0 GB
-  ),
-  MlxModelCatalogEntry(
-    repoId: 'mlx-community/Qwen3-4B-4bit',
-    label: 'Qwen3 4B',
-    family: 'qwen3',
-    paramLabel: '4B',
-    quant: '4bit',
-    approxDownloadBytes: 2400 * 1024 * 1024, // ~2.4 GB
   ),
   // The `local:lfm` cast's checkpoint (2026-11-18 lifecycle law): the
   // lane resolves `*LFM2.5-1.2B*` under the SAME hub cache, so a

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:test/test.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
@@ -49,6 +50,48 @@ final class _FakeHub {
       contentLength: bytes.length,
       body: Stream<List<int>>.value(bytes),
     );
+  }
+}
+
+/// A hub whose ONE named file dies mid-body on the fresh fetch that
+/// DOWNLOADS it (not the existence probe — `_discard` cancels that
+/// after one chunk): the body emits half the bytes, then throws the
+/// bare dart:io network death a real CDN run produces — the shapes the
+/// 2026-11-20 validation runs caught (wrapped by the installer into
+/// `install_failed:<file>` with an `HttpException`/`SocketException`
+/// detail). The resumed attempt delegates to the inner hub.
+final class _FlakyMidBodyHub {
+  _FlakyMidBodyHub(this.inner, this.file, {this.deathMessage = 'Connection closed while receiving data'});
+
+  final _FakeHub inner;
+  final String file;
+
+  /// The message the mid-body death carries (the classifier's test
+  /// surface: HttpException vs SocketException vs timed-out shapes).
+  final String deathMessage;
+  var freshOpens = 0;
+  final List<String> requests = <String>[];
+
+  Future<MlxRemoteModelFile?> call(Uri url, {int? resumeOffset}) async {
+    final segments = url.pathSegments;
+    final fileName = segments.last;
+    requests.add(resumeOffset == null ? fileName : '$fileName@$resumeOffset');
+    if (fileName == file && resumeOffset == null) {
+      freshOpens++;
+      if (freshOpens == 2) {
+        final repoId = segments.take(segments.length - 3).join('/');
+        final bytes = inner.repos[repoId]![fileName]!;
+        return MlxRemoteModelFile(
+          contentLength: bytes.length,
+          body: () async* {
+            await Future<void>.delayed(const Duration(milliseconds: 10));
+            yield bytes.sublist(0, bytes.length ~/ 2);
+            throw HttpException(deathMessage);
+          }(),
+        );
+      }
+    }
+    return inner.call(url, resumeOffset: resumeOffset);
   }
 }
 
@@ -136,15 +179,14 @@ void main() {
 
   test('the catalog pins the v1 entries + the LFM2.5 and laya '
       'lifecycle entries with unique repo ids', () {
-    expect(mlxModelCatalog, hasLength(6));
-    expect(mlxModelCatalog.map((e) => e.repoId).toSet(), hasLength(6));
+    expect(mlxModelCatalog, hasLength(5));
+    expect(mlxModelCatalog.map((e) => e.repoId).toSet(), hasLength(5));
     expect(
       mlxModelCatalog.map((e) => e.repoId),
       containsAll(<String>[
         'mlx-community/Qwen3-0.6B-4bit',
         'mlx-community/Qwen3.5-0.8B-4bit',
         'mlx-community/Qwen3-1.7B-4bit',
-        'mlx-community/Qwen3-4B-4bit',
         // The `local:lfm` cast's checkpoint (2026-11-18 lifecycle law):
         // the manager's install IS the lane's provisioning.
         'LiquidAI/LFM2.5-1.2B-Instruct-MLX-4bit',
@@ -153,6 +195,17 @@ void main() {
         'aac6fef/laya-mlx',
       ]),
     );
+    // The 4B removal law (2026-11-20, the owner's call): the catalog
+    // offers no checkpoint this 16 GB device cannot hold — the largest
+    // entry's weights + slack + the machine's pressure point must fit
+    // the sensed total with room for the working set.
+    final totalMb = MlxLoadGate.defaults.requiredMegabytes(
+          mlxModelCatalog
+              .map((e) => e.approxDownloadBytes)
+              .reduce(math.max),
+        ) +
+        MlxLoadGate.defaults.reserveMegabytes;
+    expect(totalMb, lessThan(16 * 1024));
     for (final e in mlxModelCatalog) {
       expect(e.label, isNotEmpty);
       expect(e.family, anyOf('qwen3', 'qwen3.5', 'lfm2.5', 'laya'));
@@ -202,7 +255,8 @@ void main() {
 
   test('approximate sizes grow with the parameter count (per family)', () {
     // The monotonic law holds WITHIN a family — the LFM2.5 1.2B entry
-    // tails the list and is smaller than the Qwen3 4B by design.
+    // tails the list and is smaller than the largest qwen3 entry (the
+    // 1.7B, after the 4B's 2026-11-20 removal) by design.
     for (final family in <String>['qwen3', 'qwen3.5']) {
       final sizes = [
         for (final e in mlxModelCatalog)
@@ -290,6 +344,75 @@ void main() {
       expect(events.last.message, contains('user_consent_required'));
       expect(tmp.listSync(), isEmpty); // no paths, no bytes
       expect(fake.requests, isEmpty);
+    });
+
+    test('a mid-body HttpException connection death is TRANSIENT — '
+        'the attempt loop resumes the part in place (2026-11-20 '
+        'validation finding: dart:io wraps socket deaths in the '
+        'file-named refusal, not read_idle)', () async {
+      final tmp = await Directory.systemTemp.createTemp('mlx_installer_test_');
+      addTearDown(() => tmp.deleteSync(recursive: true));
+      final entry = mlxModelCatalog.first;
+      final fake = _FakeHub({entry.repoId: fullRepo()});
+      final flaky = _FlakyMidBodyHub(fake, 'model.safetensors');
+      final installer = MlxModelInstaller(
+        hubRoot: tmp.path,
+        fileOpener: flaky.call,
+      );
+
+      final events = await collectEvents(
+        installer.install(entry, userConsent: true),
+      );
+
+      // The install SURVIVES the dead connection: the second attempt
+      // resumes from the part (the fetched half) and lands ready.
+      expect(phaseNames(events).last, 'ready');
+      final snapshotPath = installer.snapshotPath(entry);
+      expect(
+        File('$snapshotPath/model.safetensors').readAsBytesSync(),
+        weights,
+      );
+      expect(
+        Directory(snapshotPath)
+            .listSync()
+            .where((e) => e.path.endsWith('.part')),
+        isEmpty,
+      );
+      expect(
+        fake.requests.where((r) => r.startsWith('model.safetensors@')),
+        isNotEmpty,
+        reason: 'the resumed fetch rides HTTP Range from the part',
+      );
+    });
+
+    test('a SocketException hub timeout is TRANSIENT the same way — '
+        'the second live shape (Operation timed out against '
+        'huggingface.co)', () async {
+      final tmp = await Directory.systemTemp.createTemp('mlx_installer_test_');
+      addTearDown(() => tmp.deleteSync(recursive: true));
+      final entry = mlxModelCatalog.first;
+      final fake = _FakeHub({entry.repoId: fullRepo()});
+      final flaky = _FlakyMidBodyHub(
+        fake,
+        'model.safetensors',
+        deathMessage: 'SocketException: Operation timed out (OS Error: '
+            'Operation timed out, errno = 60), address = huggingface.co',
+      );
+      final installer = MlxModelInstaller(
+        hubRoot: tmp.path,
+        fileOpener: flaky.call,
+      );
+
+      final events = await collectEvents(
+        installer.install(entry, userConsent: true),
+      );
+
+      expect(phaseNames(events).last, 'ready');
+      expect(
+        File('${installer.snapshotPath(entry)}/model.safetensors')
+            .readAsBytesSync(),
+        weights,
+      );
     });
 
     test('a network-gate refusal touches no bytes', () async {

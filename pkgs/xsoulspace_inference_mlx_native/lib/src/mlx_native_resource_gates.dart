@@ -222,16 +222,37 @@ final class MlxLoadRefusal implements Exception {
   const MlxLoadRefusal({
     required this.requiredAvailableMegabytes,
     required this.availableMegabytes,
+    this.weightsRequiredMegabytes,
+    this.pressurePointMegabytes,
   });
 
+  /// The AVAILABLE memory the gate needed in total (for the
+  /// size-aware shape: the weights requirement + the pressure point).
   final int requiredAvailableMegabytes;
+
+  /// The AVAILABLE memory the machine had.
   final int availableMegabytes;
 
-  String get message =>
-      'weight load refused: ${availableMegabytes}MB available is below the '
-      '${requiredAvailableMegabytes}MB floor (loading would push the '
-      'machine into swap); free memory or pass MlxLoadGate.disabled to '
-      'override';
+  /// The MODEL's own requirement (weights + KV/runtime slack), when the
+  /// size-aware shape refused — never carrying the pressure point (the
+  /// 2026-11-20 owner law: the reserve is the machine's, not the
+  /// model's rent).
+  final int? weightsRequiredMegabytes;
+
+  /// The machine's post-load headroom floor (the pressure point) the
+  /// load would have violated, when the size-aware shape refused.
+  final int? pressurePointMegabytes;
+
+  String get message => weightsRequiredMegabytes == null
+      ? 'weight load refused: ${availableMegabytes}MB available is below the '
+          '${requiredAvailableMegabytes}MB floor; free memory or load '
+          'anyway with explicit consent'
+      : 'weight load refused: the weights need '
+          '${weightsRequiredMegabytes}MB but only ${availableMegabytes}MB '
+          'is reclaimable — loading would leave '
+          '${availableMegabytes - weightsRequiredMegabytes!}MB under the '
+          '${pressurePointMegabytes}MB pressure point; free memory or '
+          'load anyway with explicit consent';
 
   @override
   String toString() => message;
@@ -239,37 +260,100 @@ final class MlxLoadRefusal implements Exception {
 
 /// The load gate: refuse a weight load when the machine cannot hold it.
 ///
-/// `MlxLoadGate.defaults` (4096 MB free) is the incident floor: the
-/// cached checkpoints are sub-2GB 4-bit snapshots, but the KV cache,
-/// the host app, and everything else on a 16GB machine need the rest.
-/// Benches and explicit experiments pass `gate: null` (disabled) — the
-/// gate is a default, never a monopoly.
+/// TWO evaluation shapes (2026-11-20, the one-math law — the UI's fit
+/// verdict and this gate are the same function, so a Load button can
+/// never claim a refusal the runtime would not make):
+///
+/// * SIZE-AWARE (weights known): the MODEL's requirement is the weights
+///   rounded up + the KV/runtime slack. The 1 GB RESERVE is NOT the
+///   model's rent — it is the MACHINE'S PRESSURE POINT (the owner's
+///   2026-11-20 correction): one shared post-load headroom floor for
+///   all models, checked against the machine's current reclaimable
+///   memory, never multiplied per model and never baked into what a
+///   model "requires". Refuse iff `available − weightsRequirement <
+///   reserve`.
+/// * FLOOR (weights unknown): callers that cannot size the snapshot
+///   (the chat clients' lazy loads) keep the calibrated flat
+///   `minFreeMegabytes` floor — the 2026-11-14 incident law, env-tunable
+///   upstream (`HARNESS_MLX_MIN_FREE_MB`).
+///
+/// `MlxLoadGate.defaults` (4096 MB floor, 25% slack, 1024 MB pressure
+/// point) is the policy default, never a monopoly: an explicit caller
+/// may pass `force`/`gate: null` (benches, consented UI overrides).
 final class MlxLoadGate {
   final int minFreeMegabytes;
+
+  /// The KV-cache / runtime slack over the weights (a fraction): the
+  /// incident note names the KV cache and the host app as reasons a
+  /// bare weights-size budget lies.
+  final double slackFraction;
+
+  /// The machine's pressure point, in MB: the post-load headroom every
+  /// size-aware load must leave free — ONE shared floor for all models
+  /// (the host app, the OS's own headroom), not a per-model cost.
+  final int reserveMegabytes;
 
   /// The facts source (injectable for tests; production reads fresh).
   final Future<MemoryFacts?> Function() readMemory;
 
   const MlxLoadGate({
     required this.minFreeMegabytes,
+    this.slackFraction = defaultSlackFraction,
+    this.reserveMegabytes = defaultReserveMegabytes,
     this.readMemory = MemoryFacts.current,
   });
 
-  /// The incident floor: refuse below 4 GB AVAILABLE (v3.3 basis:
-  /// reclaimable file cache + free pages — never the always-tiny bare
-  /// free count; the legacy composite on old vm_stat).
+  /// The incident floor: refuse a weights-unknown load below 4 GB
+  /// AVAILABLE (v3.3 basis: reclaimable file cache + free pages — never
+  /// the always-tiny bare free count; the legacy composite on old
+  /// vm_stat).
   static const MlxLoadGate defaults = MlxLoadGate(minFreeMegabytes: 4096);
+
+  /// The KV/runtime slack fraction (25% of the weights) the size-aware
+  /// requirement adds — single-sourced here; the UI reads this, never a
+  /// re-stated number.
+  static const double defaultSlackFraction = 0.25;
+
+  /// The machine's pressure point (1 GB of post-load headroom) — the
+  /// shared floor, never per-model rent.
+  static const int defaultReserveMegabytes = 1024;
+
+  /// The MODEL's requirement, in MB: the weights rounded UP (a partial
+  /// megabyte still occupies a whole one once resident) and the
+  /// KV/runtime slack over them. Deliberately WITHOUT the reserve —
+  /// the pressure point is the machine's (the UI renders this as what
+  /// the model needs, and names the pressure point separately). THE
+  /// one arithmetic — the UI's fit verdict delegates here so "fits"
+  /// and "the gate allows" are provably the same fact.
+  int requiredMegabytes(int weightsBytes) {
+    final weightsMb = (weightsBytes / (1024 * 1024)).ceil();
+    return (weightsMb * (1 + slackFraction)).ceil();
+  }
 
   /// Evaluates the gate on fresh facts. Returns the refusal when the
   /// machine cannot hold the load, null when the load may proceed.
   /// Unknown facts (sensor absent) allow — the caller may warn.
-  Future<MlxLoadRefusal?> evaluate() async {
+  /// [weightsBytes] switches to the size-aware shape (the model's
+  /// requirement against the machine's pressure point); without it the
+  /// flat [minFreeMegabytes] floor governs (weights-unknown callers).
+  Future<MlxLoadRefusal?> evaluate({int? weightsBytes}) async {
     final facts = await readMemory();
     if (facts == null) return null;
-    if (facts.availableMegabytes >= minFreeMegabytes) return null;
+    if (weightsBytes == null) {
+      if (facts.availableMegabytes >= minFreeMegabytes) return null;
+      return MlxLoadRefusal(
+        requiredAvailableMegabytes: minFreeMegabytes,
+        availableMegabytes: facts.availableMegabytes,
+      );
+    }
+    final weightsRequired = requiredMegabytes(weightsBytes);
+    final headroom = facts.availableMegabytes - weightsRequired;
+    if (headroom >= reserveMegabytes) return null;
     return MlxLoadRefusal(
-      requiredAvailableMegabytes: minFreeMegabytes,
+      requiredAvailableMegabytes: weightsRequired + reserveMegabytes,
       availableMegabytes: facts.availableMegabytes,
+      weightsRequiredMegabytes: weightsRequired,
+      pressurePointMegabytes: reserveMegabytes,
     );
   }
 }

@@ -460,12 +460,28 @@ final class MlxModelInstaller {
                     },
                   );
                 } on MlxModelInstallRefusal catch (refusal) {
-                  // Transient connection deaths (read_idle / http_5xx)
-                  // resume IN PLACE — the part on disk holds every byte
-                  // already fetched; re-consent is not needed.
+                  // Transient connection deaths resume IN PLACE — the
+                  // part on disk holds every byte already fetched;
+                  // re-consent is not needed. The shapes (2026-11-20
+                  // validation findings, one per live run): the read-idle
+                  // guard's own code, CDN HTTP statuses, and dart:io
+                  // network deaths wrapped by the file-named refusal —
+                  // `HttpException: Connection closed` mid-body AND
+                  // `SocketException: Operation timed out` on the hub
+                  // itself. None of these is permanent by nature; the
+                  // permanent file-named refusals (404 missing, failed
+                  // verification) carry none of these markers.
+                  final detail = refusal.detail ?? '';
+                  final transientNetwork = detail.contains('HttpException') ||
+                      detail.contains('SocketException') ||
+                      detail.contains('Connection closed') ||
+                      detail.contains('Connection reset') ||
+                      detail.contains('timed out');
                   final transient =
                       refusal.code == 'install_failed:read_idle' ||
-                      refusal.code.startsWith('install_failed:http_');
+                      refusal.code.startsWith('install_failed:http_') ||
+                      (refusal.code.startsWith('install_failed:') &&
+                          transientNetwork);
                   if (!transient || attempts >= 4 || cancelled) rethrow;
                   await Future<void>.delayed(Duration(seconds: 2 * attempts));
                   continue;

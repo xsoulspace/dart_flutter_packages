@@ -142,6 +142,126 @@ Pages copy-on-write:                          903969.
     });
   });
 
+  group('MlxLoadGate size-aware law (2026-11-20: model rent vs machine '
+      'pressure point)', () {
+    const mib = 1024 * 1024;
+
+    MemoryFacts available(int mb) => MemoryFacts(
+      availableMegabytes: mb,
+      freeMegabytes: 64,
+      totalMegabytes: 16384,
+    );
+
+    test('requiredMegabytes is the MODEL\'s rent only: weights rounded '
+        'up + 25% slack — the 1 GB pressure point is NOT baked in', () {
+      final gate = MlxLoadGate.defaults;
+      // 0.6B: 400 MB → ceil(400×1.25) = 500 — the model's whole cost.
+      expect(gate.requiredMegabytes(400 * mib), 500);
+      // A 2.4 GB checkpoint: 2400 MB → 3000.
+      expect(gate.requiredMegabytes(2400 * mib), 3000);
+      // A partial megabyte occupies a whole one once resident:
+      // 401 MB × 1.25 = 501.25 → ceil 502.
+      expect(gate.requiredMegabytes(400 * mib + 1), 502);
+    });
+
+    test('the gate allows when the post-load headroom covers the 1 GB '
+        'pressure point, exactly at the boundary', () async {
+      final gate = MlxLoadGate(
+        minFreeMegabytes: 4096,
+        readMemory: () async => available(1524), // 1524 − 500 = 1024 == point
+      );
+      expect(await gate.evaluate(weightsBytes: 400 * mib), isNull);
+      final tight = MlxLoadGate(
+        minFreeMegabytes: 4096,
+        readMemory: () async => available(1523), // headroom 1023 < 1024
+      );
+      final refusal = await tight.evaluate(weightsBytes: 400 * mib);
+      expect(refusal, isNotNull);
+      // The refusal names the total needed AND the split — the model's
+      // rent and the machine's pressure point, never merged.
+      expect(refusal!.requiredAvailableMegabytes, 1524);
+      expect(refusal.weightsRequiredMegabytes, 500);
+      expect(refusal.pressurePointMegabytes, 1024);
+      expect('$refusal', contains('pressure point'));
+    });
+
+    test('a small checkpoint loads under pressure the flat floor would '
+        'have refused — the size-aware point of the law', () async {
+      // 2 GB reclaimable: the flat 4096 floor refuses EVERYTHING; the
+      // size-aware gate still allows the 0.6B (500 MB rent leaves 1548
+      // of headroom — well above the 1 GB point).
+      final gate = MlxLoadGate(
+        minFreeMegabytes: 4096,
+        readMemory: () async => available(2048),
+      );
+      expect(await gate.evaluate(weightsBytes: 400 * mib), isNull);
+      // …but not a 2.4 GB checkpoint (3000 rent leaves −952 — under
+      // the point).
+      final refusal = await gate.evaluate(weightsBytes: 2400 * mib);
+      expect(refusal, isNotNull);
+      expect(refusal!.requiredAvailableMegabytes, 4024);
+      expect(refusal.weightsRequiredMegabytes, 3000);
+    });
+
+    test('the pressure point is ONE shared floor for ALL models, never '
+        'charged per model', () async {
+      // A mutable machine: every allowed load shrinks the facts, and
+      // the SAME 1 GB point governs the next model — no accumulation.
+      var reclaimable = 4500;
+      final gate = MlxLoadGate(
+        minFreeMegabytes: 4096,
+        readMemory: () async => available(reclaimable),
+      );
+      // A (500 rent): 4500 − 500 = 4000 ≥ 1024 → allowed.
+      expect(await gate.evaluate(weightsBytes: 400 * mib), isNull);
+      reclaimable -= 500;
+      // B (300 rent): 4000 − 300 = 3700 ≥ 1024 → allowed.
+      expect(await gate.evaluate(weightsBytes: 240 * mib), isNull);
+      reclaimable -= 300;
+      // C (1000 rent): 3700 − 1000 = 2700 ≥ 1024 → allowed.
+      expect(await gate.evaluate(weightsBytes: 800 * mib), isNull);
+      reclaimable -= 1000;
+      // D (2000 rent): 2700 − 2000 = 700 < 1024 → refused; the reserve
+      // was never ADDED per model — one floor, checked each time.
+      final refusal = await gate.evaluate(weightsBytes: 1600 * mib);
+      expect(refusal, isNotNull);
+      expect(refusal!.weightsRequiredMegabytes, 2000);
+      expect(refusal.pressurePointMegabytes, 1024);
+    });
+
+    test('weights unknown keeps the flat floor (chat lanes unchanged)', () async {
+      final gate = MlxLoadGate(
+        minFreeMegabytes: 4096,
+        readMemory: () async => available(2048),
+      );
+      // Same 2 GB machine: no weights named → the incident floor
+      // refuses, exactly the pre-2026-11-20 behavior.
+      expect(await gate.evaluate(), isNotNull);
+    });
+
+    test('the UI fit and the gate agree by construction (one function)',
+        () async {
+      final gate = MlxLoadGate.defaults;
+      const weightsBytes = 700 * mib; // Qwen3.5 0.8B
+      // The gate's own boundary: the model's rent + the pressure point.
+      final boundary =
+          gate.requiredMegabytes(weightsBytes) + gate.reserveMegabytes;
+      final atRequirement = MlxLoadGate(
+        minFreeMegabytes: 4096,
+        readMemory: () async => available(boundary),
+      );
+      final underRequirement = MlxLoadGate(
+        minFreeMegabytes: 4096,
+        readMemory: () async => available(boundary - 1),
+      );
+      expect(await atRequirement.evaluate(weightsBytes: weightsBytes), isNull);
+      expect(
+        await underRequirement.evaluate(weightsBytes: weightsBytes),
+        isNotNull,
+      );
+    });
+  });
+
   group('MxlLane', () {
     test('runs jobs serially in arrival order', () async {
       final lane = MxlLane(maxLaneDepth: 3);
