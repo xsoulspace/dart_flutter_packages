@@ -1,6 +1,11 @@
+# PAUSED 2026-11-20 (ADR 0073): pub.xsoulspace.dev is unsupported and pub.dev
+# is now the primary publishing target (dart_changesets flow). The push
+# trigger is removed; workflow_dispatch is kept so the index can still be
+# rebuilt if the registry is ever revived. See PUBLISHING.md.
+#
 # Lived in .github/archite_workflows/ until 2026-10-28 — a directory GitHub
 # Actions never reads (the mlx_native_gate relocation lesson). Logic and
-# triggers unchanged by the move: publishing fires on main/master pushes and
+# triggers unchanged by the move: publishing fired on main/master pushes and
 # workflow_dispatch, never on lane branches.
 name: registry_publish
 
@@ -15,10 +20,7 @@ on:
         description: Branch that stores generated registry metadata.
         required: false
         default: registry-index
-  push:
-    branches:
-      - main
-      - master
+  # push trigger removed — see ADR 0073.
 
 permissions:
   contents: write

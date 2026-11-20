@@ -1,0 +1,5 @@
+# dart_changesets configuration — see pkgs/dart_changesets/README.md.
+# Defaults shown explicitly; every key is optional.
+packages_dir: pkgs
+dependent_bump: patch
+tag_format: '{package}-v{version}'

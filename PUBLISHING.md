@@ -1,142 +1,107 @@
 # Publishing Guide
 
-This repository now publishes internal packages through a GitHub-backed hosted
-registry flow instead of a runtime `dart pub publish` endpoint.
+Packages in this repository publish to **pub.dev** through the
+`dart_changesets` release engine (ADR 0073). The legacy
+GitHub-backed registry flow (`pub.xsoulspace.dev`) is **PAUSED —
+unsupported**; its tooling stays in `registry/` for revival, but nothing
+publishes to it automatically anymore.
 
-Deployment runbook: [registry/DEPLOY.md](registry/DEPLOY.md).
+Design inspiration and attribution: [changesets](https://github.com/changesets/changesets)
+and [@changesets/action](https://github.com/changesets/action) (the
+TypeScript original for npm). The engine itself lives in
+[pkgs/dart_changesets](pkgs/dart_changesets) and releases itself through the
+flow below.
 
-## Registry v1 layout
+## Flow
 
-- Package metadata lives on the `registry-index` branch under `api/`.
-- Package archives are built from tracked package files and uploaded to GitHub
-  Releases as `<package>-<version>.tar.gz`.
-- The Docker gateway in `registry/gateway/` serves hosted-pub-compatible
-  read endpoints and redirects archive downloads to the release assets.
+```
+PR with an intent file (.changesets/*.md)
+  → merge to main
+  → assembler opens "chore: version packages" PR
+     (version bumps + dependent-constraint cascades + changelogs, computed
+      from the pubspec graph)
+  → merge that PR
+  → one <package>-v<version> tag per released package
+  → one publish run per tag (dependency waits + skip-existing self-heal)
+```
 
-Default registry URL:
+No conventional-commit discipline is required — release intent lives in
+reviewed files, not commit messages.
+
+## Authoring an intent
+
+Inside any pull request:
 
 ```bash
-https://pub.xsoulspace.dev
+just changesets-add        # interactive
+# or write .changesets/<name>.md by hand:
+#   ---
+#   'xsoulspace_monetization_interface': minor
+#   ---
+#   Changelog prose.
 ```
 
-## Quick start
+Frontmatter maps package names to `major` | `minor` | `patch`; the body is
+changelog prose. Dependents whose caret constraints no longer admit the new
+version are bumped (patch by default, configurable via `dependent_bump` in
+[changesets.yaml](changesets.yaml)) and get their constraint rewritten in the
+same train — dependencies always publish before dependents.
 
-**Consumers:** To depend on an internal package, add a hosted entry (see [Consumer dependency format](#consumer-dependency-format)) or run `just registry-add <target_package> <internal_package> [version]`. List available packages with `just registry-list` (optionally `versions=true` or `gateway_url="https://pub.xsoulspace.dev"`).
+## Release gates
 
-**Authors:** Before opening a release PR, run `just registry-release-preflight` once. Then push; CI publishes. To bump a package version: `just registry-bump <package> <version>`.
-
-## Local authoring flow
-
-Before opening a release PR, run the full preflight (recommended):
+Run before relying on a train (also wired into `just release-gate`):
 
 ```bash
-just registry-release-preflight
+just release-gate          # doctor: path-dep gate, private-dep gate, docs, census
+just changesets-status     # pending intents → planned releases
+just publish-preflight <package>   # full publish dry-run, no upload
 ```
 
-This runs in order: `docs-check`, `leak-audit`, `storage-release-g6`,
-`platform-sdk-verify`, `registry-test`, `registry-rewrite-hosted`, `registry-build-index`,
-`registry-validate`, then prints a "Would publish" summary. If any step fails,
-stop and fix before pushing.
+Gate rules:
 
-Alternatively, run the same steps manually:
+- Publishable packages must not declare `path:` dependencies (pub refuses
+  them at publish time — measured on Dart 3.14).
+- Publishable packages must not depend on `publish_to: none` packages. The
+  engine lane (inference mlx/laya/openai/openrouter/…, materialization,
+  meaning, local_serve) stays private until a publishable package needs it;
+  conversion = remove `publish_to: none` and rewrite its path dependencies
+  to hosted constraints in dependency order.
+- Each release needs a matching `CHANGELOG.md` entry (the assembler writes
+  it).
 
-```bash
-just docs-check
-just storage-release-g6
-just platform-sdk-verify
-just registry-test
-just registry-rewrite-hosted
-just registry-validate
-```
+## Bootstrap (first publish of a new package)
 
-What these commands do:
+pub.dev cannot automate a package's first release:
 
-1. Validate package docs and existing release gates.
-2. Rewrite internal package dependencies in `pkgs/*/pubspec.yaml` to explicit
-   hosted dependencies that point at the internal registry.
-3. Build `build/registry/` with publishable packages only (`publish_to: none`
-   packages are excluded) and produce:
-   - `api/packages/<package>.json`
-   - `api/package-names.json`
-   - `archives/<package>-<version>.tar.gz`
-   - `release-manifest.json`
-4. Validate hosted dependency rewrites, metadata payloads, and archive SHA256
-   values, and fail on stale extra artifacts.
+1. `cd pkgs/<package> && dart pub publish` (or `flutter pub publish`) —
+   sign in with the uploader account in the browser.
+2. On pub.dev open the package → **Admin → Automated publishing** → enable
+   for repository `xsoulspace/dart_flutter_packages`, environment `pub.dev`,
+   tag pattern `<package>-v{{version}}`.
+3. Re-run the publish (skip-existing keeps it idempotent).
 
-Path-based internal dependencies are rewritten to the current target package
-version because there is no version constraint to preserve.
+Never-published packages are listed by `just release-gate` (census section).
+Rate limit: pub.dev caps **new-package creation at ~12/day** (4 in a burst)
+— spread first publishes across days or file an issue on
+`dart-lang/pub-dev` for a raise. Version uploads of existing packages have
+much higher limits; trains self-heal via per-tag re-dispatch.
 
-## CI publish flow
+## CI
 
-`.github/workflows/registry_publish.yml` handles publication.
+| Workflow | Trigger | Job |
+|---|---|---|
+| `dart_changesets_assemble.yml` | push to main | applies the pending train onto `changesets/version-packages` and opens/updates the version PR |
+| `dart_changesets_publish.yml` | version-PR merge | pushes one tag per release and dispatches one publish run per tag |
+| `dart_changesets_publish.yml` | tag push / dispatch | publishes exactly the tagged package (OIDC via `dart-lang/setup-dart`; `id-token: write`; environment `pub.dev`) |
 
-On `main`/`master` pushes or manual dispatch it:
+No stored secrets are required. `workflow_dispatch` on the publish workflow
+is the rescue path after a partial train: run it per straggler tag with
+`execute=true`.
 
-1. Detects packages whose `version:` changed.
-2. Runs the existing repo gates (`docs-check`, `storage-release-g6`,
-   `platform-sdk-verify`).
-3. Runs registry tooling tests, deterministic rebuild verification, and gateway
-   smoke tests.
-4. Builds package archives and regenerates hosted metadata.
-5. Uploads changed package archives to GitHub Releases using the tag format
-   `<package>-v<version>`.
-6. Verifies each uploaded release asset matches the local archive SHA256.
-7. Pushes generated metadata to the `registry-index` branch.
+## Legacy registry (PAUSED)
 
-The workflow does not expose a hosted publish API. GitHub Actions is the write
-path in v1.
-
-## Consumer dependency format
-
-Direct internal dependencies should use explicit hosted syntax:
-
-```yaml
-dependencies:
-  xsoulspace_foundation:
-    hosted:
-      name: xsoulspace_foundation
-      url: https://pub.xsoulspace.dev
-    version: ^0.4.0
-```
-
-External dependencies continue to resolve from `pub.dev`.
-
-## Gateway deployment
-
-Build and run the gateway from `registry/gateway/`:
-
-```bash
-docker build -t xs-registry-gateway registry/gateway
-
-docker run --rm -p 8080:8080 \
-  --env REGISTRY_INDEX_BASE_URL=https://raw.githubusercontent.com/xsoulspace/dart_flutter_packages/registry-index \
-  --env GITHUB_REPOSITORY=xsoulspace/dart_flutter_packages \
-  xs-registry-gateway
-```
-
-The gateway provides:
-
-- `GET /api/packages/<package>`
-- `GET /api/packages/<package>/versions/<version>`
-- `GET /api/package-names`
-- `GET /packages/<package>/versions/<version>.tar.gz`
-- `GET /healthz`
-- `GET /readyz`
-
-## Fallback
-
-If the registry is unavailable, direct internal dependencies can be pinned to
-Git refs temporarily while the metadata branch or gateway is restored.
-
-## Rollback
-
-If a publish must be reverted:
-
-1. Remove the affected release asset/tag when archive bytes should no longer be served.
-2. Reset the `registry-index` branch to the previous known-good commit.
-3. Redeploy the previous gateway container image if the runtime itself changed.
-
-## Production Targets
-
-- Availability target: 99.9% monthly for read endpoints.
-- Metadata freshness target: within 15 minutes of a successful publish run.
+The v1 registry flow (GitHub Releases + `registry-index` branch + gateway at
+`pub.xsoulspace.dev`) is unsupported. `registry_publish.yml` lost its push
+trigger; `just registry-*` recipes remain for index inspection only.
+Consumers pinned to `pub.xsoulspace.dev` hosted URLs keep resolving whatever
+the last published index served — migrate them to plain pub.dev constraints.

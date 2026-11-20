@@ -432,3 +432,28 @@ registry-add target_package dependency_package version="^0.0.0" registry_url="ht
     set -euo pipefail
     dart registry/tools/registry_add.dart --repo-root . --hosted-url "{{ registry_url }}" "{{ target_package }}" "{{ dependency_package }}" "{{ version }}"
     just registry-rewrite-hosted registry_url="{{ registry_url }}"
+
+# dart_changesets — pub.dev-primary release engine (ADR 0073).
+# The registry-* recipes above are PAUSED (pub.xsoulspace.dev unsupported);
+# they remain for index inspection only.
+changesets-add:
+    dart run pkgs/dart_changesets/bin/dart_changesets.dart add
+
+changesets-status:
+    dart run pkgs/dart_changesets/bin/dart_changesets.dart status
+
+# Release gates + pub.dev presence census (pass no-network=true to skip).
+release-gate no-network="false":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    args=""
+    if [ "{{ no-network }}" = "true" ]; then args="--no-network"; fi
+    dart run pkgs/dart_changesets/bin/dart_changesets.dart doctor $args
+
+# Full publish dry-run for one package (no upload).
+publish-preflight package:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    version=$(awk -F': ' '/^version:/{print $2; exit}' "pkgs/{{ package }}/pubspec.yaml" | tr -d '"')
+    dart run pkgs/dart_changesets/bin/dart_changesets.dart publish-tag \
+      --tag "{{ package }}-v$version" --skip-existing

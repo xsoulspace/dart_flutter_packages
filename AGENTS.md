@@ -9,6 +9,11 @@ Run the following commands to interact with the project's agentic tools:
 - **Show operational map**: `steward map`
 - **Inspect Steward contract**: `steward doctor --json`
 - **Validate workspace**: use the native validation command recorded in `steward.yaml`
+- **Release intent**: `just changesets-add` (intent file in the PR), `just changesets-status`
+- **Release gates + pub.dev census**: `just release-gate`
+- **Publish dry-run**: `just publish-preflight <package>`
+- **Publishing flow**: [PUBLISHING.md](PUBLISHING.md) — pub.dev primary via
+  [dart_changesets](pkgs/dart_changesets) (ADR 0073); registry flow PAUSED
 
 ## North Star Impact
 
