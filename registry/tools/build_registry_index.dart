@@ -3,15 +3,15 @@ import 'dart:io';
 
 import '_registry_workspace.dart';
 
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   final options = _BuildOptions.parse(args);
   final allPackages = await discoverAllPackages(repoRoot: options.repoRoot);
   final packages = allPackages
-      .where((final package) => package.isPublic)
+      .where((package) => package.isPublic)
       .toList(growable: false);
   final excludedPackageNames = allPackages
-      .where((final package) => package.isPrivate)
-      .map((final package) => package.name)
+      .where((package) => package.isPrivate)
+      .map((package) => package.name)
       .toSet();
   final existingPackages = options.existingIndexDirectory == null
       ? <String, Map<String, Object?>>{}
@@ -129,7 +129,7 @@ Future<void> main(final List<String> args) async {
     ).convert(<String, Object?>{'packages': packageNames}),
   );
 
-  manifestEntries.sort((final left, final right) {
+  manifestEntries.sort((left, right) {
     final leftName = left['name'] as String;
     final rightName = right['name'] as String;
     return leftName.compareTo(rightName);
@@ -153,7 +153,7 @@ Future<void> main(final List<String> args) async {
   );
 }
 
-List<Map<String, Object?>> _readVersions(final Map<String, Object?>? payload) {
+List<Map<String, Object?>> _readVersions(Map<String, Object?>? payload) {
   if (payload == null) {
     return <Map<String, Object?>>[];
   }
@@ -166,12 +166,12 @@ List<Map<String, Object?>> _readVersions(final Map<String, Object?>? payload) {
   final versions = rawVersions
       .whereType<Map>()
       .map(
-        (final version) =>
+        (version) =>
             Map<String, Object?>.from(version.cast<String, Object?>()),
       )
       .toList(growable: false);
 
-  versions.sort((final left, final right) {
+  versions.sort((left, right) {
     final leftVersion = SemanticVersion.parse(left['version'] as String);
     final rightVersion = SemanticVersion.parse(right['version'] as String);
     return leftVersion.compareTo(rightVersion);
@@ -180,8 +180,8 @@ List<Map<String, Object?>> _readVersions(final Map<String, Object?>? payload) {
 }
 
 List<Map<String, Object?>> _mergeVersions({
-  required final List<Map<String, Object?>> existingVersions,
-  required final Map<String, Object?> newVersion,
+  required List<Map<String, Object?>> existingVersions,
+  required Map<String, Object?> newVersion,
 }) {
   final byVersion = <String, Map<String, Object?>>{
     for (final version in existingVersions)
@@ -196,7 +196,7 @@ List<Map<String, Object?>> _mergeVersions({
   byVersion[versionKey] = newVersion;
 
   final merged = byVersion.values.toList(growable: false);
-  merged.sort((final left, final right) {
+  merged.sort((left, right) {
     final leftVersion = SemanticVersion.parse(left['version'] as String);
     final rightVersion = SemanticVersion.parse(right['version'] as String);
     return leftVersion.compareTo(rightVersion);
@@ -205,9 +205,9 @@ List<Map<String, Object?>> _mergeVersions({
 }
 
 String _resolvePublishedAt({
-  required final Map<String, Object?>? existingPayload,
-  required final String version,
-  required final String fallback,
+  required Map<String, Object?>? existingPayload,
+  required String version,
+  required String fallback,
 }) {
   for (final existingVersion in _readVersions(existingPayload)) {
     if (existingVersion['version'] == version) {
@@ -235,7 +235,7 @@ class _BuildOptions {
   final String? existingIndexDirectory;
   final String? githubRepository;
 
-  static _BuildOptions parse(final List<String> args) {
+  static _BuildOptions parse(List<String> args) {
     var repoRoot = Directory.current.path;
     var outputDirectory = '${Directory.current.path}/build/registry';
     var registryBaseUrl = 'https://pub.xsoulspace.dev';

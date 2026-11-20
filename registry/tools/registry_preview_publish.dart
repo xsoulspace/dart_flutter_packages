@@ -3,7 +3,7 @@ import 'dart:io';
 
 /// Reads [release-manifest.json] from the registry build output and prints
 /// a one-line summary of what would be published (package name + version).
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   final options = _PreviewOptions.parse(args);
   final manifestFile = File('${options.outputDirectory}/release-manifest.json');
   if (!manifestFile.existsSync()) {
@@ -45,7 +45,7 @@ class _PreviewOptions {
 
   final String outputDirectory;
 
-  static _PreviewOptions parse(final List<String> args) {
+  static _PreviewOptions parse(List<String> args) {
     var outputDirectory = '${Directory.current.path}/build/registry';
     for (var i = 0; i < args.length; i++) {
       if (args[i] == '--output-dir' && i + 1 < args.length) {

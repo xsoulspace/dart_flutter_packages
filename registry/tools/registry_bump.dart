@@ -1,7 +1,7 @@
 import 'dart:io';
 
 /// Updates `version:` in `pkgs/<package>/pubspec.yaml` to the given version.
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   final options = _BumpOptions.parse(args);
   final pubspecPath =
       '${options.repoRoot}/pkgs/${options.packageName}/pubspec.yaml';
@@ -48,7 +48,7 @@ class _BumpOptions {
   final String packageName;
   final String version;
 
-  static _BumpOptions parse(final List<String> args) {
+  static _BumpOptions parse(List<String> args) {
     if (args.length < 2) _printUsageAndExit();
     var repoRoot = Directory.current.path;
     var i = 0;

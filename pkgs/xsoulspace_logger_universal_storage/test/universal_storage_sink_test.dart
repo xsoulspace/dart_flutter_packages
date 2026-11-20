@@ -159,6 +159,19 @@ final class _MemoryStorageProvider implements StorageProvider {
   final Map<String, String> files = <String, String>{};
 
   @override
+  Future<FileOperationResult> appendFile(
+    String path,
+    String content, {
+    String? commitMessage,
+  }) async {
+    files[path] = (files[path] ?? '') + content;
+    return FileOperationResult.updated(path: path);
+  }
+
+  @override
+  StorageCapabilities get declaredCapabilities => StorageCapabilities.none;
+
+  @override
   bool get supportsSync => false;
 
   @override

@@ -19,10 +19,10 @@ void main() {
         );
         final allPackages = await discoverAllPackages(repoRoot: repoRoot.path);
 
-        expect(publishable.map((final package) => package.name), [
+        expect(publishable.map((package) => package.name), [
           'public_pkg',
         ]);
-        expect(allPackages.map((final package) => package.name), [
+        expect(allPackages.map((package) => package.name), [
           'private_pkg',
           'public_pkg',
         ]);
@@ -248,7 +248,7 @@ dependencies:
         SemanticVersion.parse('1.0.0+5'),
       ]..sort();
 
-      expect(versions.map((final version) => version.toString()).toList(), [
+      expect(versions.map((version) => version.toString()).toList(), [
         '1.0.0-beta.1',
         '1.0.0-beta.2',
         '1.0.0',
@@ -260,7 +260,7 @@ dependencies:
 
 String get _repoRootPath => Directory.current.path;
 
-Future<Directory> _createRepoFixture({final String? publicPubspec}) async {
+Future<Directory> _createRepoFixture({String? publicPubspec}) async {
   final repoRoot = await Directory.systemTemp.createTemp('xs-registry-repo-');
   final pkgsDir = Directory('${repoRoot.path}/pkgs');
   await pkgsDir.create(recursive: true);
@@ -297,9 +297,9 @@ dependencies:
 }
 
 Future<void> _writePackage(
-  final String pkgsDir, {
-  required final String name,
-  required final String pubspec,
+  String pkgsDir, {
+  required String name,
+  required String pubspec,
 }) async {
   final packageDir = Directory('$pkgsDir/$name');
   await packageDir.create(recursive: true);

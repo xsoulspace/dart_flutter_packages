@@ -53,6 +53,16 @@ final class _NoopStorageProvider implements StorageProvider {
   Future<void> restore(String path, {String? versionId}) async {}
 
   @override
+  Future<FileOperationResult> appendFile(
+    String path,
+    String content, {
+    String? commitMessage,
+  }) async => FileOperationResult.updated(path: path);
+
+  @override
+  StorageCapabilities get declaredCapabilities => StorageCapabilities.none;
+
+  @override
   bool get supportsSync => false;
 
   @override

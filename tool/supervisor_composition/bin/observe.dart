@@ -17,7 +17,7 @@ import 'package:resource_composition/resource_composition.dart';
 
 import 'package:supervisor_composition/desired.dart';
 
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   var project = _defaultProjectRoot();
   var port = ModelServeFacts.port;
   var json = false;

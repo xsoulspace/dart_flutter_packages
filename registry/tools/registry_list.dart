@@ -3,7 +3,7 @@ import 'dart:io';
 
 /// Lists package names (and optionally latest versions) from a local registry
 /// build or from the live gateway.
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   final options = _ListOptions.parse(args);
   List<String> names;
   Map<String, String>? latestVersions;
@@ -84,7 +84,7 @@ Future<void> main(final List<String> args) async {
   }
 }
 
-Future<String?> _httpGet(final String url) async {
+Future<String?> _httpGet(String url) async {
   final uri = Uri.parse(url);
   final client = HttpClient();
   try {
@@ -108,7 +108,7 @@ class _ListOptions {
   final String? gatewayUrl;
   final bool showVersions;
 
-  static _ListOptions parse(final List<String> args) {
+  static _ListOptions parse(List<String> args) {
     String? outputDirectory;
     String? gatewayUrl;
     var showVersions = false;

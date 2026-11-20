@@ -4,17 +4,17 @@ import 'dart:io';
 import '_pubspec_rewriter.dart';
 import '_registry_workspace.dart';
 
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   final options = _ValidateOptions.parse(args);
   final allPackages = await discoverAllPackages(repoRoot: options.repoRoot);
   final packages = allPackages
-      .where((final package) => package.isPublic)
+      .where((package) => package.isPublic)
       .toList(growable: false);
   final packageMap = mapPackagesByName(packages);
   final internalNames = packageMap.keys.toSet();
   final privatePackageNames = allPackages
-      .where((final package) => package.isPrivate)
-      .map((final package) => package.name)
+      .where((package) => package.isPrivate)
+      .map((package) => package.name)
       .toSet();
 
   final issues = <String>[];
@@ -65,8 +65,8 @@ Future<void> main(final List<String> args) async {
           final files = packagesDir
               .listSync()
               .whereType<File>()
-              .where((final file) => file.path.endsWith('.json'))
-              .map((final file) => basename(file.path))
+              .where((file) => file.path.endsWith('.json'))
+              .map((file) => basename(file.path))
               .toList(growable: false);
           files.sort();
           return files;
@@ -74,7 +74,7 @@ Future<void> main(final List<String> args) async {
       : <String>[];
   final expectedMetadataFiles =
       packageNames
-          .map((final packageName) => '$packageName.json')
+          .map((packageName) => '$packageName.json')
           .toList(growable: false)
         ..sort();
   if (actualMetadataFiles.join('\n') != expectedMetadataFiles.join('\n')) {
@@ -89,8 +89,8 @@ Future<void> main(final List<String> args) async {
           final files = archivesDir
               .listSync()
               .whereType<File>()
-              .where((final file) => file.path.endsWith('.tar.gz'))
-              .map((final file) => basename(file.path))
+              .where((file) => file.path.endsWith('.tar.gz'))
+              .map((file) => basename(file.path))
               .toList(growable: false);
           files.sort();
           return files;
@@ -113,14 +113,14 @@ Future<void> main(final List<String> args) async {
       (manifestPayload?['packages'] as List?)
           ?.whereType<Map>()
           .map(
-            (final entry) =>
+            (entry) =>
                 Map<String, Object?>.from(entry.cast<String, Object?>()),
           )
           .toList(growable: false) ??
       <Map<String, Object?>>[];
   final manifestNames =
       manifestEntries
-          .map((final entry) => entry['name'])
+          .map((entry) => entry['name'])
           .whereType<String>()
           .toList(growable: false)
         ..sort();
@@ -193,7 +193,7 @@ Future<void> main(final List<String> args) async {
     }
 
     final currentVersion = versions.firstWhere(
-      (final version) => version['version'] == package.version,
+      (version) => version['version'] == package.version,
       orElse: () => <String, Object?>{},
     );
     if (currentVersion.isEmpty) {
@@ -288,9 +288,9 @@ Future<void> main(final List<String> args) async {
 }
 
 Future<Map<String, Object?>?> _readJsonObject({
-  required final File file,
-  required final List<String> issues,
-  required final String missingMessage,
+  required File file,
+  required List<String> issues,
+  required String missingMessage,
 }) async {
   if (!file.existsSync()) {
     issues.add(missingMessage);
@@ -307,9 +307,9 @@ Future<Map<String, Object?>?> _readJsonObject({
 }
 
 List<Map<String, Object?>> _readVersions(
-  final Map<String, Object?> payload,
-  final String filePath,
-  final List<String> issues,
+  Map<String, Object?> payload,
+  String filePath,
+  List<String> issues,
 ) {
   final rawVersions = payload['versions'];
   if (rawVersions is! List) {
@@ -320,7 +320,7 @@ List<Map<String, Object?>> _readVersions(
   final versions = rawVersions
       .whereType<Map>()
       .map(
-        (final entry) =>
+        (entry) =>
             Map<String, Object?>.from(entry.cast<String, Object?>()),
       )
       .toList(growable: false);
@@ -329,7 +329,7 @@ List<Map<String, Object?>> _readVersions(
     return <Map<String, Object?>>[];
   }
 
-  versions.sort((final left, final right) {
+  versions.sort((left, right) {
     final leftVersion = SemanticVersion.parse(left['version'] as String);
     final rightVersion = SemanticVersion.parse(right['version'] as String);
     return leftVersion.compareTo(rightVersion);
@@ -350,7 +350,7 @@ class _ValidateOptions {
   final String registryBaseUrl;
   final String hostedUrl;
 
-  static _ValidateOptions parse(final List<String> args) {
+  static _ValidateOptions parse(List<String> args) {
     var repoRoot = Directory.current.path;
     var outputDirectory = '${Directory.current.path}/build/registry';
     var registryBaseUrl = 'https://pub.xsoulspace.dev';

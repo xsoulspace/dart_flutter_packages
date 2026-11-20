@@ -3,7 +3,7 @@ import 'dart:io';
 import '_pubspec_rewriter.dart';
 import '_registry_workspace.dart';
 
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   final options = _RewriteOptions.parse(args);
   final packages = await discoverPackages(
     repoRoot: options.repoRoot,
@@ -19,7 +19,7 @@ Future<void> main(final List<String> args) async {
       ? packages
       : packages
             .where(
-              (final package) => options.packageFilter!.contains(package.name),
+              (package) => options.packageFilter!.contains(package.name),
             )
             .toList(growable: false);
 
@@ -75,7 +75,7 @@ class _RewriteOptions {
   final bool dryRun;
   final Set<String>? packageFilter;
 
-  static _RewriteOptions parse(final List<String> args) {
+  static _RewriteOptions parse(List<String> args) {
     var repoRoot = Directory.current.path;
     var hostedUrl = 'https://pub.xsoulspace.dev';
     var dryRun = false;
@@ -93,8 +93,8 @@ class _RewriteOptions {
         case '--packages':
           packageFilter = args[++index]
               .split(',')
-              .map((final name) => name.trim())
-              .where((final name) => name.isNotEmpty)
+              .map((name) => name.trim())
+              .where((name) => name.isNotEmpty)
               .toSet();
         default:
           stderr.writeln('Unknown argument: $arg');

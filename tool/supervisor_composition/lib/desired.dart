@@ -92,12 +92,12 @@ final class ObserveOnlyProvider implements ResourceProvider {
       ProviderCapabilities(readinessProbe: tcpProbePorts.isNotEmpty);
 
   @override
-  Future<StartReport> start(final StartRequest request) => Future.error(
+  Future<StartReport> start(StartRequest request) => Future.error(
     StateError('observe-only composition never starts processes'),
   );
 
   @override
-  Future<Observation> inspect(final ResourceRef ref) async {
+  Future<Observation> inspect(ResourceRef ref) async {
     final port = tcpProbePorts[ref.componentId];
     if (port == null) {
       return const Observation(
@@ -132,8 +132,8 @@ final class ObserveOnlyProvider implements ResourceProvider {
 
   @override
   Future<StopReport> stop(
-    final ResourceRef ref, {
-    required final Duration grace,
+    ResourceRef ref, {
+    required Duration grace,
   }) => Future.value(
     const StopReport(
       disposition: StopDisposition.refused,
@@ -142,7 +142,7 @@ final class ObserveOnlyProvider implements ResourceProvider {
   );
 
   @override
-  Future<Observation> reconcile(final ResourceRef ref) => inspect(ref);
+  Future<Observation> reconcile(ResourceRef ref) => inspect(ref);
 }
 
 /// The composition root's factory: resolves [ObserveOnlyProvider.name]
@@ -150,8 +150,8 @@ final class ObserveOnlyProvider implements ResourceProvider {
 /// [modelServePort] is given (the bin wires it; pure validation may
 /// leave it null — the capability then stays off and validation of a
 /// readiness-declaring spec correctly fails).
-ProviderFactory observeOnlyFactory({final int? modelServePort}) =>
-    (final name) {
+ProviderFactory observeOnlyFactory({int? modelServePort}) =>
+    (name) {
       if (name != ObserveOnlyProvider.name) {
         throw ArgumentError('unknown provider name: $name');
       }
@@ -176,7 +176,7 @@ ProviderFactory observeOnlyFactory({final int? modelServePort}) =>
 ///
 /// `maxRestarts: 0` encodes the observe-only posture as policy: even a
 /// hypothetical apply pass never restarts anything.
-ComponentSpec modelServeSpec({final int port = ModelServeFacts.port}) =>
+ComponentSpec modelServeSpec({int port = ModelServeFacts.port}) =>
     ComponentSpec(
       id: 'model-serve',
       providerName: ObserveOnlyProvider.name,
@@ -217,7 +217,7 @@ const ComponentSpec nightlyModelAuditSpec = ComponentSpec(
 /// The whole desired state: the model-serve service plus the record-only
 /// nightly audit job. Validate-before-side-effects applies unchanged —
 /// `DesiredState.validate` contacts no provider.
-DesiredState desiredComposition({final int? port}) => DesiredState(
+DesiredState desiredComposition({int? port}) => DesiredState(
   specs: [
     modelServeSpec(port: port ?? ModelServeFacts.port),
     nightlyModelAuditSpec,

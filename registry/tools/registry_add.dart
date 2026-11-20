@@ -3,7 +3,7 @@ import 'dart:io';
 import '_registry_workspace.dart';
 
 /// Adds (or updates) a hosted internal dependency to a package's pubspec.yaml.
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   final options = _AddOptions.parse(args);
   final pubspecPath =
       '${options.repoRoot}/pkgs/${options.targetPackage}/pubspec.yaml';
@@ -19,7 +19,7 @@ Future<void> main(final List<String> args) async {
     repoRoot: options.repoRoot,
     includePrivate: false,
   );
-  final internalNames = packages.map((final p) => p.name).toSet();
+  final internalNames = packages.map((p) => p.name).toSet();
   if (!internalNames.contains(options.dependencyPackage)) {
     stderr.writeln(
       '${options.dependencyPackage} is not a public package in this repo. '
@@ -62,9 +62,9 @@ Future<void> main(final List<String> args) async {
 }
 
 String _hostedBlock({
-  required final String packageName,
-  required final String hostedUrl,
-  required final String version,
+  required String packageName,
+  required String hostedUrl,
+  required String version,
 }) {
   final url = normalizeUrl(hostedUrl);
   return '''
@@ -77,10 +77,10 @@ String _hostedBlock({
 
 /// Returns new content, or null if section not found, or same content if no change.
 String? _insertOrUpdateHostedDependency({
-  required final String content,
-  required final String section,
-  required final String packageName,
-  required final String block,
+  required String content,
+  required String section,
+  required String packageName,
+  required String block,
 }) {
   final lines = content.split('\n');
   final sectionHeader = '$section:';
@@ -120,7 +120,7 @@ String? _insertOrUpdateHostedDependency({
 
   final blockLines = block
       .split('\n')
-      .where((final l) => l.isNotEmpty)
+      .where((l) => l.isNotEmpty)
       .toList(growable: false);
 
   if (existingStart >= 0) {
@@ -141,13 +141,13 @@ String? _insertOrUpdateHostedDependency({
   return _preserveTrailingNewline(content, newContent);
 }
 
-int _indentOf(final String line) {
+int _indentOf(String line) {
   var i = 0;
   while (i < line.length && (line[i] == ' ' || line[i] == '\t')) i++;
   return i;
 }
 
-String _preserveTrailingNewline(final String original, final String updated) {
+String _preserveTrailingNewline(String original, String updated) {
   if (original.endsWith('\n') && !updated.endsWith('\n')) return '$updated\n';
   if (!original.endsWith('\n') && updated.endsWith('\n')) {
     return updated.substring(0, updated.length - 1);
@@ -170,7 +170,7 @@ class _AddOptions {
   final String dependencyPackage;
   final String version;
 
-  static _AddOptions parse(final List<String> args) {
+  static _AddOptions parse(List<String> args) {
     final positional = <String>[];
     var repoRoot = Directory.current.path;
     var hostedUrl = 'https://pub.xsoulspace.dev';

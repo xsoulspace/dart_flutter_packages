@@ -31,8 +31,8 @@ class PackageInfo {
 }
 
 Future<List<PackageInfo>> discoverPackages({
-  required final String repoRoot,
-  final bool includePrivate = true,
+  required String repoRoot,
+  bool includePrivate = true,
 }) async {
   final pkgsDir = Directory('$repoRoot/pkgs');
   if (!pkgsDir.existsSync()) {
@@ -42,7 +42,7 @@ Future<List<PackageInfo>> discoverPackages({
   final packages = <PackageInfo>[];
   final directories = pkgsDir.listSync().whereType<Directory>().toList(
     growable: false,
-  )..sort((final a, final b) => a.path.compareTo(b.path));
+  )..sort((a, b) => a.path.compareTo(b.path));
 
   for (final directory in directories) {
     final pubspec = File('${directory.path}/pubspec.yaml');
@@ -93,17 +93,17 @@ Future<List<PackageInfo>> discoverPackages({
 }
 
 Future<List<PackageInfo>> discoverAllPackages({
-  required final String repoRoot,
+  required String repoRoot,
 }) {
   return discoverPackages(repoRoot: repoRoot, includePrivate: true);
 }
 
-Object? _parsePubspec(final String content) {
+Object? _parsePubspec(String content) {
   final document = loadYaml(content);
   return _normalizeYamlValue(document);
 }
 
-Object? _normalizeYamlValue(final Object? value) {
+Object? _normalizeYamlValue(Object? value) {
   if (value is YamlMap) {
     final result = <String, Object?>{};
     for (final entry in value.entries) {
@@ -128,19 +128,19 @@ Object? _normalizeYamlValue(final Object? value) {
 }
 
 Map<String, PackageInfo> mapPackagesByName(
-  final Iterable<PackageInfo> packages,
+  Iterable<PackageInfo> packages,
 ) {
   return {for (final package in packages) package.name: package};
 }
 
-Set<String> packageNameSet(final Iterable<PackageInfo> packages) {
-  return packages.map((final package) => package.name).toSet();
+Set<String> packageNameSet(Iterable<PackageInfo> packages) {
+  return packages.map((package) => package.name).toSet();
 }
 
-List<String> expectedArchiveFileNames(final Iterable<PackageInfo> packages) {
+List<String> expectedArchiveFileNames(Iterable<PackageInfo> packages) {
   return packages
       .map(
-        (final package) => buildArchiveAssetName(
+        (package) => buildArchiveAssetName(
           packageName: package.name,
           version: package.version,
         ),
@@ -149,41 +149,41 @@ List<String> expectedArchiveFileNames(final Iterable<PackageInfo> packages) {
     ..sort();
 }
 
-List<String> expectedMetadataFileNames(final Iterable<PackageInfo> packages) {
+List<String> expectedMetadataFileNames(Iterable<PackageInfo> packages) {
   return packages
-      .map((final package) => '${package.name}.json')
+      .map((package) => '${package.name}.json')
       .toList(growable: false)
     ..sort();
 }
 
-String normalizeUrl(final String url) {
+String normalizeUrl(String url) {
   return url.replaceFirst(RegExp(r'/+$'), '');
 }
 
 String buildArchiveUrl({
-  required final String registryBaseUrl,
-  required final String packageName,
-  required final String version,
+  required String registryBaseUrl,
+  required String packageName,
+  required String version,
 }) {
   final baseUrl = normalizeUrl(registryBaseUrl);
   return '$baseUrl/packages/$packageName/versions/$version.tar.gz';
 }
 
 String buildReleaseTag({
-  required final String packageName,
-  required final String version,
+  required String packageName,
+  required String version,
 }) {
   return '$packageName-v$version';
 }
 
 String buildArchiveAssetName({
-  required final String packageName,
-  required final String version,
+  required String packageName,
+  required String version,
 }) {
   return '$packageName-$version.tar.gz';
 }
 
-Future<void> recreateDirectory(final Directory directory) async {
+Future<void> recreateDirectory(Directory directory) async {
   if (directory.existsSync()) {
     await directory.delete(recursive: true);
   }
@@ -191,7 +191,7 @@ Future<void> recreateDirectory(final Directory directory) async {
 }
 
 Future<List<String>> listTrackedPackageFiles({
-  required final PackageInfo package,
+  required PackageInfo package,
 }) async {
   try {
     final result = await Process.run('git', <String>[
@@ -202,9 +202,9 @@ Future<List<String>> listTrackedPackageFiles({
 
     if (result.exitCode == 0) {
       final files = LineSplitter.split(result.stdout.toString())
-          .map((final line) => line.trim())
-          .where((final line) => line.isNotEmpty)
-          .where((final line) => line != 'pubspec_overrides.yaml')
+          .map((line) => line.trim())
+          .where((line) => line.isNotEmpty)
+          .where((line) => line != 'pubspec_overrides.yaml')
           .toList(growable: false);
 
       if (files.isNotEmpty) {
@@ -218,7 +218,7 @@ Future<List<String>> listTrackedPackageFiles({
   return Directory(package.directoryPath)
       .listSync(recursive: true)
       .whereType<File>()
-      .where((final file) {
+      .where((file) {
         final relative = file.path.substring(package.directoryPath.length + 1);
         if (relative == 'pubspec_overrides.yaml') {
           return false;
@@ -232,15 +232,15 @@ Future<List<String>> listTrackedPackageFiles({
         return true;
       })
       .map(
-        (final file) => file.path.substring(package.directoryPath.length + 1),
+        (file) => file.path.substring(package.directoryPath.length + 1),
       )
       .toList(growable: false)
     ..sort();
 }
 
 Future<File> createPackageArchive({
-  required final PackageInfo package,
-  required final String outputDirectory,
+  required PackageInfo package,
+  required String outputDirectory,
 }) async {
   final files = await listTrackedPackageFiles(package: package);
   if (files.isEmpty) {
@@ -299,7 +299,7 @@ Future<File> createPackageArchive({
   return archiveFile;
 }
 
-Future<String> computeSha256Hex(final File file) async {
+Future<String> computeSha256Hex(File file) async {
   final candidates = <List<String>>[
     <String>['shasum', '-a', '256', file.path],
     <String>['sha256sum', file.path],
@@ -327,8 +327,8 @@ Future<String> computeSha256Hex(final File file) async {
 }
 
 Future<String?> gitLastCommitTimestamp({
-  required final String repoRoot,
-  required final String relativePath,
+  required String repoRoot,
+  required String relativePath,
 }) async {
   final result = await Process.run('git', <String>[
     '-C',
@@ -352,7 +352,7 @@ Future<String?> gitLastCommitTimestamp({
 }
 
 Future<Map<String, Map<String, Object?>>> loadExistingRegistryPackages({
-  required final String existingIndexDirectory,
+  required String existingIndexDirectory,
 }) async {
   final packagesDir = Directory('$existingIndexDirectory/api/packages');
   if (!packagesDir.existsSync()) {
@@ -364,9 +364,9 @@ Future<Map<String, Map<String, Object?>>> loadExistingRegistryPackages({
       packagesDir
           .listSync()
           .whereType<File>()
-          .where((final file) => file.path.endsWith('.json'))
+          .where((file) => file.path.endsWith('.json'))
           .toList(growable: false)
-        ..sort((final a, final b) => a.path.compareTo(b.path));
+        ..sort((a, b) => a.path.compareTo(b.path));
 
   for (final file in files) {
     final content = await file.readAsString();
@@ -384,14 +384,14 @@ Future<Map<String, Map<String, Object?>>> loadExistingRegistryPackages({
   return result;
 }
 
-String basename(final String path) {
+String basename(String path) {
   final normalized = path.replaceAll('\\', '/');
   final segments = normalized.split('/');
   return segments.isEmpty ? path : segments.last;
 }
 
 class SemanticVersion implements Comparable<SemanticVersion> {
-  SemanticVersion.parse(final String version)
+  SemanticVersion.parse(String version)
     : original = version,
       buildMetadata = _extractBuild(version),
       _coreAndPrerelease = _stripBuild(version) {
@@ -420,15 +420,15 @@ class SemanticVersion implements Comparable<SemanticVersion> {
   late final int patch;
   late final List<String> prerelease;
 
-  static String _stripBuild(final String value) => value.split('+').first;
+  static String _stripBuild(String value) => value.split('+').first;
 
-  static String? _extractBuild(final String value) {
+  static String? _extractBuild(String value) {
     final parts = value.split('+');
     return parts.length > 1 ? parts.sublist(1).join('+') : null;
   }
 
   @override
-  int compareTo(final SemanticVersion other) {
+  int compareTo(SemanticVersion other) {
     final coreComparison =
         _compareInts(major, other.major) ??
         _compareInts(minor, other.minor) ??
@@ -470,14 +470,14 @@ class SemanticVersion implements Comparable<SemanticVersion> {
     return 0;
   }
 
-  static int? _compareInts(final int left, final int right) {
+  static int? _compareInts(int left, int right) {
     if (left == right) {
       return null;
     }
     return left < right ? -1 : 1;
   }
 
-  static int _comparePrereleasePart(final String left, final String right) {
+  static int _comparePrereleasePart(String left, String right) {
     final leftNumber = int.tryParse(left);
     final rightNumber = int.tryParse(right);
     if (leftNumber != null && rightNumber != null) {

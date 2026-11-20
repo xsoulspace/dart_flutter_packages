@@ -153,7 +153,7 @@ class _RustoreBillingExampleState extends State<RustoreBillingExample> {
   }
 
   void _handlePurchaseResult(
-    final RustoreProductPurchaseResult result, {
+    RustoreProductPurchaseResult result, {
     required String prefix,
   }) {
     final purchaseId = result.purchase?.purchaseId ?? '-';

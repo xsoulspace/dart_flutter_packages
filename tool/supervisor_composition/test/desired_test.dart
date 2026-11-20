@@ -17,7 +17,7 @@ void main() {
     final report = desiredComposition().validate(observeOnlyFactory());
     expect(report.ok, isFalse);
     expect(
-      report.issues.map((final issue) => issue.code),
+      report.issues.map((issue) => issue.code),
       contains('capabilityReadiness'),
     );
   });
@@ -94,7 +94,7 @@ void main() {
       expect(report.restarted, 0);
       expect(report.failedStarts, 0);
       final findings = report.plan.findings
-          .map((final finding) => finding.code)
+          .map((finding) => finding.code)
           .toSet();
       expect(findings, isNot(contains('giveUp')));
     },

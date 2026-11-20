@@ -16,7 +16,7 @@ final _wipReadmePatterns = <RegExp>[
   RegExp(r'placeholder\s+implementation', caseSensitive: false),
 ];
 
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   final options = _Options.parse(args);
   final repoRoot = Directory.current.path;
   final pkgsDir = Directory('$repoRoot/pkgs');
@@ -31,13 +31,13 @@ Future<void> main(final List<String> args) async {
           .listSync()
           .whereType<Directory>()
           .where(
-            (final dir) =>
+            (dir) =>
                 basename(dir.path).startsWith('xsoulspace_') &&
                 !_excludedPackages.contains(basename(dir.path)) &&
                 File('${dir.path}/pubspec.yaml').existsSync(),
           )
           .toList(growable: false)
-        ..sort((final a, final b) => a.path.compareTo(b.path));
+        ..sort((a, b) => a.path.compareTo(b.path));
 
   final reports = <Map<String, Object?>>[];
 
@@ -64,7 +64,7 @@ Future<void> main(final List<String> args) async {
     final checks = <_CheckResult>[];
     final requiredChecks = <String>{};
 
-    void registerRequired(final String name) {
+    void registerRequired(String name) {
       requiredChecks.add(name);
     }
 
@@ -175,9 +175,9 @@ Future<void> main(final List<String> args) async {
     }
 
     final failingChecks = checks
-        .where((final check) => requiredChecks.contains(check.name))
-        .where((final check) => !check.passed)
-        .map((final check) => check.name)
+        .where((check) => requiredChecks.contains(check.name))
+        .where((check) => !check.passed)
+        .map((check) => check.name)
         .toList(growable: false);
 
     final status = failingChecks.isEmpty
@@ -188,18 +188,18 @@ Future<void> main(final List<String> args) async {
       'package': packageName,
       'status': status,
       'is_internal': isInternal,
-      'checks': checks.map((final check) => check.toJson()).toList(),
+      'checks': checks.map((check) => check.toJson()).toList(),
       'failing_checks': failingChecks,
     });
   }
 
-  final readyPublic = reports.where((final report) {
+  final readyPublic = reports.where((report) {
     return report['status'] == 'ready_public';
   }).length;
-  final readyInternal = reports.where((final report) {
+  final readyInternal = reports.where((report) {
     return report['status'] == 'ready_internal';
   }).length;
-  final blocked = reports.where((final report) {
+  final blocked = reports.where((report) {
     return report['status'] == 'blocked';
   }).length;
 
@@ -238,7 +238,7 @@ Future<void> main(final List<String> args) async {
   }
 }
 
-_CheckResult _checkNoLocalPath(final String pubspecContent) {
+_CheckResult _checkNoLocalPath(String pubspecContent) {
   final hasLocalPath = RegExp(
     r'^\s*path:\s*(\.{1,2}/|/)',
     multiLine: true,
@@ -254,10 +254,10 @@ _CheckResult _checkNoLocalPath(final String pubspecContent) {
   return const _CheckResult.success(name: 'no_local_path_overrides');
 }
 
-_RequiredDocsChecks _checkDocs(final String packageDir) {
+_RequiredDocsChecks _checkDocs(String packageDir) {
   const requiredFiles = <String>['README.md', 'CHANGELOG.md', 'LICENSE'];
   final missing = requiredFiles
-      .where((final file) => !File('$packageDir/$file').existsSync())
+      .where((file) => !File('$packageDir/$file').existsSync())
       .toList(growable: false);
 
   final filesCheck = missing.isEmpty
@@ -280,7 +280,7 @@ _RequiredDocsChecks _checkDocs(final String packageDir) {
 
   final readmeContent = readmeFile.readAsStringSync();
   final hasWipText = _wipReadmePatterns.any(
-    (final pattern) => pattern.hasMatch(readmeContent),
+    (pattern) => pattern.hasMatch(readmeContent),
   );
 
   return _RequiredDocsChecks(
@@ -296,9 +296,9 @@ _RequiredDocsChecks _checkDocs(final String packageDir) {
 }
 
 Future<_CheckResult> _runCommand({
-  required final String name,
-  required final List<String> command,
-  required final String workingDirectory,
+  required String name,
+  required List<String> command,
+  required String workingDirectory,
 }) async {
   final process = await Process.start(
     command.first,
@@ -331,7 +331,7 @@ Future<_CheckResult> _runCommand({
   );
 }
 
-Future<String> _tailProcessOutput(final Stream<List<int>> stream) async {
+Future<String> _tailProcessOutput(Stream<List<int>> stream) async {
   const maxLines = 80;
   final lines = <String>[];
 
@@ -407,7 +407,7 @@ final class _Options {
   final String outputPath;
   final bool failOnBlocked;
 
-  static _Options parse(final List<String> args) {
+  static _Options parse(List<String> args) {
     var scope = _Scope.all;
     var outputPath = 'tool/artifacts/xsoulspace_production_readiness.json';
     var failOnBlocked = false;
@@ -447,7 +447,7 @@ final class _Options {
     );
   }
 
-  static Never _usageAndExit(final String? message, {int exitCode = 2}) {
+  static Never _usageAndExit(String? message, {int exitCode = 2}) {
     if (message != null) {
       stderr.writeln(message);
     }
@@ -460,7 +460,7 @@ final class _Options {
   }
 }
 
-String basename(final String path) {
+String basename(String path) {
   final separator = Platform.pathSeparator;
   final normalized = path.endsWith(separator)
       ? path.substring(0, path.length - 1)

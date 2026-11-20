@@ -25,10 +25,10 @@ class DependencyValidationIssue {
 }
 
 DependencyRewriteResult rewriteHostedDependencies({
-  required final String content,
-  required final Set<String> internalPackageNames,
-  required final Map<String, String> internalPackageVersions,
-  required final String hostedUrl,
+  required String content,
+  required Set<String> internalPackageNames,
+  required Map<String, String> internalPackageVersions,
+  required String hostedUrl,
 }) {
   final endsWithNewline = content.endsWith('\n');
   final lines = content.split('\n');
@@ -112,9 +112,9 @@ DependencyRewriteResult rewriteHostedDependencies({
 }
 
 List<DependencyValidationIssue> validateHostedDependencies({
-  required final String content,
-  required final Set<String> internalPackageNames,
-  required final String hostedUrl,
+  required String content,
+  required Set<String> internalPackageNames,
+  required String hostedUrl,
 }) {
   final issues = <DependencyValidationIssue>[];
   final lines = content.split('\n');
@@ -201,11 +201,11 @@ const _targetSections = <String>{
 };
 
 _ReplacementEntry? _rewriteEntry({
-  required final String entryKey,
-  required final List<String> entryLines,
-  required final Set<String> internalPackageNames,
-  required final Map<String, String> internalPackageVersions,
-  required final String hostedUrl,
+  required String entryKey,
+  required List<String> entryLines,
+  required Set<String> internalPackageNames,
+  required Map<String, String> internalPackageVersions,
+  required String hostedUrl,
 }) {
   if (!internalPackageNames.contains(entryKey)) {
     return null;
@@ -246,8 +246,8 @@ _ReplacementEntry? _rewriteEntry({
 }
 
 _EntryAnalysis _analyseEntry(
-  final String entryKey,
-  final List<String> entryLines,
+  String entryKey,
+  List<String> entryLines,
 ) {
   final firstLine = entryLines.first.trimLeft();
   final firstSeparator = firstLine.indexOf(':');
@@ -305,7 +305,7 @@ _EntryAnalysis _analyseEntry(
   );
 }
 
-List<_ChildBlock> _collectChildBlocks(final List<String> entryLines) {
+List<_ChildBlock> _collectChildBlocks(List<String> entryLines) {
   final blocks = <_ChildBlock>[];
   var index = 1;
   while (index < entryLines.length) {
@@ -347,8 +347,8 @@ List<_ChildBlock> _collectChildBlocks(final List<String> entryLines) {
 }
 
 Map<String, String> _collectNestedChildren(
-  final List<String> lines, {
-  required final int indent,
+  List<String> lines, {
+  required int indent,
 }) {
   final result = <String, String>{};
   for (final line in lines.skip(1)) {
@@ -369,7 +369,7 @@ Map<String, String> _collectNestedChildren(
   return result;
 }
 
-int _findDependencyEntryEnd(final List<String> lines, final int startIndex) {
+int _findDependencyEntryEnd(List<String> lines, int startIndex) {
   var index = startIndex + 1;
   while (index < lines.length) {
     final line = lines[index];
@@ -388,18 +388,18 @@ int _findDependencyEntryEnd(final List<String> lines, final int startIndex) {
   return index;
 }
 
-bool _isTopLevelSectionBoundary(final String line) {
+bool _isTopLevelSectionBoundary(String line) {
   return !_isIgnorable(line) &&
       _indentOf(line) == 0 &&
       _looksLikeMappingEntry(line);
 }
 
-bool _isIgnorable(final String line) {
+bool _isIgnorable(String line) {
   final trimmed = line.trimLeft();
   return trimmed.isEmpty || trimmed.startsWith('#');
 }
 
-bool _looksLikeMappingEntry(final String line) {
+bool _looksLikeMappingEntry(String line) {
   final trimmed = line.trimLeft();
   final separator = trimmed.indexOf(':');
   if (separator <= 0) {
@@ -408,12 +408,12 @@ bool _looksLikeMappingEntry(final String line) {
   return !trimmed.startsWith('- ');
 }
 
-String _entryKey(final String line) {
+String _entryKey(String line) {
   final trimmed = line.trimLeft();
   return trimmed.substring(0, trimmed.indexOf(':')).trim();
 }
 
-int _indentOf(final String line) => line.length - line.trimLeft().length;
+int _indentOf(String line) => line.length - line.trimLeft().length;
 
 class _ChildBlock {
   const _ChildBlock({
