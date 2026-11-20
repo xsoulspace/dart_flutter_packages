@@ -108,3 +108,17 @@ requires it.
   that run is the remaining verification debt.
 - pub.dev's exact version-upload rate limit is undocumented ("much higher"
   per maintainers); the train design tolerates any value via skip-existing.
+
+## Postscript (2026-11-21): sibling repos migrated
+
+The "separate later decision" above was made: `intentcall`, `oka`,
+`mcp_flutter`, and `ecsly` now run this engine for their pub package trains
+(assembly + per-tag publish via `Arenukvern/dart_changesets@v1`; release-please
+trains retired). Per-repo decisions: intentcall `ecec7a5` (PUBLISHING.md),
+oka ADR 0054 (`0086269`), mcp_flutter `1990ddfc` (binary harness + MCP
+Registry dispatch kept separate), ecsly `1e713d6` (`release-validation.yml`
+kept). Engine gained workspace-glob package discovery (`a18b895`, 44/44) and
+a configurable Flutter version in the reusable publish workflow (`265bf3e`).
+All four repos' first live assemble runs succeeded on GitHub runners
+(2026-11-20T23:02–23:07Z). pub.dev bootstrap (first-publish + per-package
+automated-publishing toggles) remains owner-paced per repo.
