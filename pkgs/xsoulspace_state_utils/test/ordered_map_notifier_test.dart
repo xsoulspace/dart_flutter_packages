@@ -353,7 +353,7 @@ void main() {
         notifier.dispose();
         expect(
           () => notifier.upsert('value1', key: 'key1'),
-          throwsA(isA<AssertionError>()),
+          throwsA(isA<StateError>()),
         );
         expect(notified, isFalse);
       });
@@ -463,7 +463,7 @@ void main() {
         // These should cause notifications or crashes
         expect(
           () => notifier.upsert('value1', key: 'key1'),
-          throwsA(isA<AssertionError>()),
+          throwsA(isA<StateError>()),
         );
         expect(notified, isFalse);
       });
@@ -473,7 +473,7 @@ void main() {
           stringToKey,
         );
         notifier.dispose();
-        expect(notifier.dispose, throwsA(isA<AssertionError>()));
+        expect(notifier.dispose, throwsA(isA<StateError>()));
       });
     });
 

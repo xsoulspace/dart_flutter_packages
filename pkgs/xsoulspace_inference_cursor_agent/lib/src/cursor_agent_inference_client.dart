@@ -63,7 +63,7 @@ class CursorAgentInferenceClient implements InferenceClient {
     InferenceRequest request, {
     ToolRegistry? toolRegistry,
   }) async {
-    if (!supportedTasks.contains(request.task)) {
+    if (!supportedTasks.contains(effectiveInferenceTask(request))) {
       return InferenceResult<InferenceResponse>.fail(
         code: errorCodeTaskUnsupported,
         message: 'Task ${request.task.name} is not supported by $id',
@@ -546,14 +546,16 @@ class CursorAgentInferenceClient implements InferenceClient {
       return trimmed;
     }
 
-    final directParse = parseStrictJsonObject(trimmed);
-    if (directParse.success) {
-      return trimmed;
-    }
-
+    // Prefer fence extraction over the (fence-tolerant) direct parse so the
+    // reported rawOutput is the payload JSON, not the surrounding markdown.
     final fencedJson = _extractFencedJsonObject(trimmed);
     if (fencedJson != null) {
       return fencedJson;
+    }
+
+    final directParse = parseStrictJsonObject(trimmed);
+    if (directParse.success) {
+      return trimmed;
     }
 
     final embeddedJson = _extractEmbeddedJsonObject(trimmed);

@@ -9,21 +9,21 @@ abstract class AnalyticsService extends AnalyticsServicePlugin {
 }
 
 abstract class AnalyticsServicePlugin implements Loadable, Disposable {
-  void reportIntededException([final dynamic value]) {}
+  void reportIntededException([dynamic value]) {}
   Future<void> logAnalyticEvent(AnalyticEvents event);
   Future<void> onDelayedLoad();
   Future<void> recordError(
-    final dynamic exception,
-    final StackTrace? stack, {
-    final dynamic reason,
-    final Iterable<DiagnosticsNode> information = const [],
-    final bool fatal = false,
-    final bool? printDetails,
+    dynamic exception,
+    StackTrace? stack, {
+    dynamic reason,
+    Iterable<DiagnosticsNode> information = const [],
+    bool fatal = false,
+    bool? printDetails,
   });
 
   Future<void> recordFlutterError(
-    final FlutterErrorDetails flutterErrorDetails, {
-    final bool fatal = false,
+    FlutterErrorDetails flutterErrorDetails, {
+    bool fatal = false,
   });
 
   @override
@@ -31,28 +31,28 @@ abstract class AnalyticsServicePlugin implements Loadable, Disposable {
 
   /// noop implementation
   void dynamicLog(
-    final dynamic value, {
-    final String message = '',
-    final StackTrace? stackTrace,
+    dynamic value, {
+    String message = '',
+    StackTrace? stackTrace,
   }) {}
   void dynamicWarningLog(
-    final dynamic value, {
-    final String message = '',
-    final StackTrace? stackTrace,
+    dynamic value, {
+    String message = '',
+    StackTrace? stackTrace,
   }) {}
 
   /// noop implementation
   void dynamicInfoLog(
-    final dynamic value, {
-    final String message = '',
-    final StackTrace? stackTrace,
+    dynamic value, {
+    String message = '',
+    StackTrace? stackTrace,
   }) {}
 
   /// noop implementation
   void dynamicErrorLog(
-    final dynamic value, {
-    final String message = '',
-    final StackTrace? stackTrace,
+    dynamic value, {
+    String message = '',
+    StackTrace? stackTrace,
   }) {}
 
   @override

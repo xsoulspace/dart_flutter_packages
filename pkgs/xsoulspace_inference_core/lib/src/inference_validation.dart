@@ -7,6 +7,20 @@ import 'inference_result.dart';
 import 'models/inference_models.dart';
 
 const String errorCodeTaskUnsupported = 'task_unsupported';
+
+/// Resolves the effective task of a request.
+///
+/// A bare [InferenceTask.text] request that carries an output schema is an
+/// implicitly-structured-text request: the caller asked for text and a
+/// schema implies structured output. Exec-style providers (codex exec,
+/// cursor agent) gate on [InferenceTask.implicitlyStructuredText], so the
+/// upgrade must happen before the supported-task check, not inside each
+/// provider.
+InferenceTask effectiveInferenceTask(InferenceRequest request) =>
+    (request.task == InferenceTask.text && request.outputSchema.isNotEmpty)
+    ? InferenceTask.implicitlyStructuredText
+    : request.task;
+
 const String errorCodeAudioInputMissing = 'audio_input_missing';
 const String errorCodeAudioInputInvalid = 'audio_input_invalid';
 const String errorCodeTtsTextEmpty = 'tts_text_empty';

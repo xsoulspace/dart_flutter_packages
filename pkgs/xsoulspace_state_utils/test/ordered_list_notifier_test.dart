@@ -287,7 +287,7 @@ void main() {
         notifier.addListener(() => notified = true);
 
         notifier.dispose();
-        expect(() => notifier.add('item'), throwsA(isA<AssertionError>()));
+        expect(() => notifier.add('item'), throwsA(isA<StateError>()));
       });
     });
 
@@ -407,7 +407,7 @@ void main() {
         // These should throw after dispose
         expect(
           () => notifier.add('after-dispose'),
-          throwsA(isA<AssertionError>()),
+          throwsA(isA<StateError>()),
         );
 
         expect(notified, isFalse);
@@ -416,7 +416,7 @@ void main() {
       test('dispose does throw on multiple calls', () {
         final notifier = env.makeOrderedListNotifier<String>();
         notifier.dispose();
-        expect(notifier.dispose, throwsA(isA<AssertionError>()));
+        expect(notifier.dispose, throwsA(isA<StateError>()));
       });
     });
 

@@ -393,7 +393,7 @@ class CodexExecInferenceClient
   InferenceResult<InferenceResponse>? _validateRequest(
     InferenceRequest request,
   ) {
-    if (!supportedTasks.contains(request.task)) {
+    if (!supportedTasks.contains(effectiveInferenceTask(request))) {
       return InferenceResult<InferenceResponse>.fail(
         code: errorCodeTaskUnsupported,
         message: 'Task ${request.task.name} is not supported by $id',

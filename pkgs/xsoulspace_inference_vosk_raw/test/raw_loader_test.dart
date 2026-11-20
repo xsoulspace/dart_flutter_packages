@@ -20,7 +20,7 @@ void main() {
 
   test('upstream lock metadata is present', () {
     final file = File(
-      '/Users/anton/xs/dart_flutter_packages/pkgs/xsoulspace_inference_vosk_raw/tool/upstream_lock.json',
+      '${Directory.current.path}/tool/upstream_lock.json',
     );
     expect(file.existsSync(), isTrue);
     expect(file.readAsStringSync(), contains('vosk-api'));

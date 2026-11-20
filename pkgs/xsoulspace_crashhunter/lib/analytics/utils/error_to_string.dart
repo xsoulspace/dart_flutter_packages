@@ -4,12 +4,12 @@ import 'package:flutter/foundation.dart';
 
 // ignore: long-parameter-list
 String convertErrorDetailsToString(
-  final dynamic exception,
-  final StackTrace? stack, {
-  final dynamic reason,
-  final Iterable<DiagnosticsNode> information = const [],
-  final bool fatal = false,
-  final bool? printDetails,
+  dynamic exception,
+  StackTrace? stack, {
+  dynamic reason,
+  Iterable<DiagnosticsNode> information = const [],
+  bool fatal = false,
+  bool? printDetails,
 }) {
   final errorDetails = StringBuffer();
   final String info = information.isEmpty

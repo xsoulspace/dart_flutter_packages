@@ -42,12 +42,12 @@ class FirebaseAnalyticsPlugin extends AnalyticsServicePlugin {
 
   @override
   Future<void> recordError(
-    final dynamic exception,
-    final StackTrace? stack, {
-    final dynamic reason,
-    final Iterable<DiagnosticsNode> information = const [],
-    final bool fatal = false,
-    final bool? printDetails,
+    dynamic exception,
+    StackTrace? stack, {
+    dynamic reason,
+    Iterable<DiagnosticsNode> information = const [],
+    bool fatal = false,
+    bool? printDetails,
   }) async {
     if (!_isEnabled || !_shouldRecordErrors) return;
     final errorDetailsStr = convertErrorDetailsToString(
@@ -66,8 +66,8 @@ class FirebaseAnalyticsPlugin extends AnalyticsServicePlugin {
 
   @override
   Future<void> recordFlutterError(
-    final FlutterErrorDetails flutterErrorDetails, {
-    final bool fatal = false,
+    FlutterErrorDetails flutterErrorDetails, {
+    bool fatal = false,
   }) async {
     if (!_isEnabled || !_shouldRecordErrors) return;
     await recordError(
@@ -134,12 +134,12 @@ class FirebaseCrashlyticsPlugin extends AnalyticsServicePlugin {
 
   @override
   Future<void> recordError(
-    final dynamic exception,
-    final StackTrace? stack, {
-    final dynamic reason,
-    final Iterable<DiagnosticsNode> information = const [],
-    final bool fatal = false,
-    final bool? printDetails,
+    dynamic exception,
+    StackTrace? stack, {
+    dynamic reason,
+    Iterable<DiagnosticsNode> information = const [],
+    bool fatal = false,
+    bool? printDetails,
   }) async {
     if (!isEnabled) return;
     await FirebaseCrashlytics.instance.recordError(
@@ -154,8 +154,8 @@ class FirebaseCrashlyticsPlugin extends AnalyticsServicePlugin {
 
   @override
   Future<void> recordFlutterError(
-    final FlutterErrorDetails flutterErrorDetails, {
-    final bool fatal = false,
+    FlutterErrorDetails flutterErrorDetails, {
+    bool fatal = false,
   }) async {
     if (!isEnabled) return;
     await FirebaseCrashlytics.instance.recordFlutterError(

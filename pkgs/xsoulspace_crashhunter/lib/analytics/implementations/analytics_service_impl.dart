@@ -11,7 +11,7 @@ import '../utils/utils.dart';
 @immutable
 class AnalyticsServiceImpl extends AnalyticsService {
   AnalyticsServiceImpl({
-    final Map<Type, AnalyticsServicePlugin>? plugins,
+    Map<Type, AnalyticsServicePlugin>? plugins,
     this.isTerminalUseAnsiEscapeSequences = false,
   }) : plugins = plugins ?? {};
 
@@ -64,9 +64,9 @@ class AnalyticsServiceImpl extends AnalyticsService {
 
   @override
   void dynamicLog(
-    final dynamic value, {
-    final String message = '',
-    final StackTrace? stackTrace,
+    dynamic value, {
+    String message = '',
+    StackTrace? stackTrace,
   }) {
     logger.d(message, error: value, stackTrace: stackTrace);
     logString('$message $value $stackTrace');
@@ -74,9 +74,9 @@ class AnalyticsServiceImpl extends AnalyticsService {
 
   @override
   void dynamicInfoLog(
-    final dynamic value, {
-    final String message = '',
-    final StackTrace? stackTrace,
+    dynamic value, {
+    String message = '',
+    StackTrace? stackTrace,
   }) {
     logger.i(message, error: value, stackTrace: stackTrace);
     logString('$message $value $stackTrace');
@@ -84,9 +84,9 @@ class AnalyticsServiceImpl extends AnalyticsService {
 
   @override
   void dynamicWarningLog(
-    final dynamic value, {
-    final String message = '',
-    final StackTrace? stackTrace,
+    dynamic value, {
+    String message = '',
+    StackTrace? stackTrace,
   }) {
     logger.w(message, error: value, stackTrace: stackTrace);
     logString('$message $value $stackTrace');
@@ -94,9 +94,9 @@ class AnalyticsServiceImpl extends AnalyticsService {
 
   @override
   void dynamicErrorLog(
-    final dynamic value, {
-    final String message = '',
-    final StackTrace? stackTrace,
+    dynamic value, {
+    String message = '',
+    StackTrace? stackTrace,
   }) {
     logger.e(message, error: value, stackTrace: stackTrace);
     logString('$message $value $stackTrace');
@@ -107,7 +107,7 @@ class AnalyticsServiceImpl extends AnalyticsService {
   }
 
   @override
-  void reportIntededException([final dynamic value]) {
+  void reportIntededException([dynamic value]) {
     dynamicWarningLog(value);
     for (final plugin in plugins.values) {
       plugin.reportIntededException(value);
@@ -116,11 +116,11 @@ class AnalyticsServiceImpl extends AnalyticsService {
 
   @override
   Future<void> recordError(
-    final dynamic exception,
-    final StackTrace? stack, {
-    final dynamic reason,
-    final Iterable<DiagnosticsNode> information = const [],
-    final bool fatal = false,
+    dynamic exception,
+    StackTrace? stack, {
+    dynamic reason,
+    Iterable<DiagnosticsNode> information = const [],
+    bool fatal = false,
     bool? printDetails,
   }) async {
     // Use the debug flag if printDetails is not provided
@@ -153,8 +153,8 @@ class AnalyticsServiceImpl extends AnalyticsService {
   /// Use [fatal] to indicate whether the error is a fatal or not.
   @override
   Future<void> recordFlutterError(
-    final FlutterErrorDetails flutterErrorDetails, {
-    final bool fatal = false,
+    FlutterErrorDetails flutterErrorDetails, {
+    bool fatal = false,
   }) async {
     FlutterError.presentError(flutterErrorDetails);
     for (final plugin in plugins.values) {
