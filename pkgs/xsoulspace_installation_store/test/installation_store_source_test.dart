@@ -20,10 +20,18 @@ void main() {
     });
   });
 
-  group('InstallationTargetStore metadata', () {
-    test('exposes stable human-readable names', () {
-      expect(InstallationTargetStore.mobileGooglePlay.name, 'Google Play');
-      expect(InstallationTargetStore.rustore.name, 'RuStore');
+  group('InstallationTargetStore (open StoreKey)', () {
+    test('well-known keys carry stable identity and labels', () {
+      expect(installationTargetGooglePlay, const StoreKey('google-play'));
+      expect(installationTargetGooglePlay.label, 'Google Play');
+      expect(installationTargetRuStore, const StoreKey('rustore'));
+      expect(installationTargetRuStore.label, 'RuStore');
+    });
+
+    test('the set stays open: a novel key needs no PR here', () {
+      const mine = StoreKey('my-market');
+      expect(StoreKey.isValidName(mine.name), isTrue);
+      expect(mine.label, 'my-market'); // fallback = raw name
     });
   });
 }

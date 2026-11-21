@@ -1,7 +1,7 @@
 name: xsoulspace_monetization_foundation
 description: A Flutter package for managing in-app purchases, subscriptions, and
   advertisements across multiple platforms.
-version: 0.10.0
+version: 0.11.0
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_monetization_foundation
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
@@ -17,6 +17,7 @@ dependencies:
   flutter:
     sdk: flutter
   is_dart_empty_or_not: ^0.4.0
+  oka_store: ^0.12.0
   xsoulspace_foundation: ^0.4.0
   xsoulspace_monetization_ads_interface: ^0.0.1
   xsoulspace_monetization_interface: ^0.9.0

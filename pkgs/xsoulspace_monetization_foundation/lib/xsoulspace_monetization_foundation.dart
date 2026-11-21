@@ -77,6 +77,7 @@ export 'src/local_api/local_api.dart';
 export 'src/models/models.dart';
 // Main Orchestrator
 export 'src/monetization_foundation.dart';
+export 'src/store_binding.dart';
 // Testing Implementations
 export 'src/noop_providers/noop_providers.dart';
 // State Management Resources
