@@ -46,9 +46,3 @@ dependency_overrides:
       url: https://github.com/Arenukvern/universal_storage.git
       ref: bf41893ee5ecc644daf492f2ddd18ed13f08fffd
       path: pkgs/universal_storage_filesystem
-  # xsoulspace_meaning_core declares hosted agentic_executables_wire (unpublished).
-  agentic_executables_wire:
-    git:
-      url: https://github.com/fluent-meaning-symbiotic/agentic_executables.git
-      ref: e4387315447cb6a64123271af7cdada66fc1b7d7
-      path: agentic_executables_wire
