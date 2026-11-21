@@ -28,5 +28,9 @@ jobs:
           fetch-depth: 0
 
       - uses: Arenukvern/dart_changesets@v1
+        with:
+          # This repo's per-tag publish workflow (the action's default
+          # `publish.yml` does not exist here).
+          publish-workflow: dart_changesets_publish.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
