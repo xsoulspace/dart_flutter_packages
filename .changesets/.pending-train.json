@@ -1,0 +1,14 @@
+[
+  {
+    "package": "xsoulspace_installation_store",
+    "version": "0.3.0",
+    "tag": "xsoulspace_installation_store-v0.3.0",
+    "directory": "pkgs/xsoulspace_installation_store"
+  },
+  {
+    "package": "xsoulspace_monetization_foundation",
+    "version": "0.12.0",
+    "tag": "xsoulspace_monetization_foundation-v0.12.0",
+    "directory": "pkgs/xsoulspace_monetization_foundation"
+  }
+]
