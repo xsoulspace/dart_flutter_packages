@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.12.0
+
+### Minor Changes
+
+- **Store name is a plain String — no oka dependency (oka ADR-0056).**
+  
+  `MonetizationStoreBinding.key` is now a `String` (lowercase store
+  identifier: `google-play`, `rustore`, `appgallery`, …) and
+  `storeNameNoop = 'noop'` replaces the imported `storeKeyNoop`. The
+  package no longer depends on `oka_store`: monetization and oka are
+  separate ecosystems that join on the store-NAME contract (oka bakes
+  `OKA_STORE=<name>` into a delivery build; the app boot verifies its
+  binding carries the same name), never on a shared type. BREAKING for
+  binding implementors that typed `key` as oka's `StoreKey` — return the
+  name string instead.
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
@@ -45,3 +60,4 @@ BREAKING:
 
 - chore: update is_dart_empty_or_not dependency to 0.4.0
 - chore: update xsoulspace_monetization_interface dependency to 0.8.2
+
