@@ -28,7 +28,6 @@ resolution: workspace
 
 dependencies:
   meta: ^1.19.0
-  oka_store: ^0.12.0
   web: ^1.1.1
 
 dev_dependencies:

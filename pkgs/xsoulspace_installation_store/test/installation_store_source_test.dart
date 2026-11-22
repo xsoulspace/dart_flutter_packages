@@ -20,17 +20,17 @@ void main() {
     });
   });
 
-  group('InstallationTargetStore (open StoreKey)', () {
+  group('InstallationTargetStore (open key)', () {
     test('well-known keys carry stable identity and labels', () {
-      expect(installationTargetGooglePlay, const StoreKey('google-play'));
+      expect(installationTargetGooglePlay.name, 'google-play');
       expect(installationTargetGooglePlay.label, 'Google Play');
-      expect(installationTargetRuStore, const StoreKey('rustore'));
+      expect(installationTargetRuStore.name, 'rustore');
       expect(installationTargetRuStore.label, 'RuStore');
     });
 
     test('the set stays open: a novel key needs no PR here', () {
-      const mine = StoreKey('my-market');
-      expect(StoreKey.isValidName(mine.name), isTrue);
+      const mine = InstallationTargetStore('my-market');
+      expect(InstallationTargetStore.isValidName(mine.name), isTrue);
       expect(mine.label, 'my-market'); // fallback = raw name
     });
   });

@@ -16,7 +16,7 @@
 ///
 /// See also:
 /// - [InstallationStoreUtils] for detection logic
-/// - the open `StoreKey` (installation target) for intended distribution targets
+/// - the open `InstallationTargetStore` key for intended distribution targets
 /// {@endtemplate}
 enum InstallationStoreSource {
   /// {@template android_amazon_app_store}

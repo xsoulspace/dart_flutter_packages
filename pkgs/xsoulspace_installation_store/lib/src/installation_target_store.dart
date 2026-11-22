@@ -1,31 +1,36 @@
-/// The installation target store as an **open key** (ADR-0055 lineage in
-/// the oka repo).
+/// The installation target store as an **open key**.
 ///
 /// This used to be a closed `enum` — which locked the store list into
 /// this package: every developer targeting a store it never heard of had
-/// to send a PR. The identity is now oka's open `StoreKey` (a validated
-/// string extension type): a new store is a new key value composed by the
+/// to send a PR. The identity is now [InstallationTargetStore], a
+/// validated string extension type owned HERE (oka ADR-0056 dependency
+/// law: a store-adjacent package must not depend on oka store packages
+/// just to name a store): a new store is a new key value composed by the
 /// project, never a package change. Nothing switches on these names.
 ///
 /// ```dart
-/// const myStore = StoreKey('my-market'); // works everywhere
-/// final binding = MyStoreBinding();      // implements StoreBinding
-/// if (monetizationStoreTarget == storeKeyRuStore) { ... }
+/// const myStore = InstallationTargetStore('my-market'); // works everywhere
+/// if (monetizationStoreTarget == installationTargetRuStore) { ... }
 /// ```
 library;
 
-import 'package:oka_store/oka_store.dart';
+/// The installation target store identity: a lowercase identifier
+/// (`google-play`, `rustore`, `appgallery`, `apple-store`, …).
+///
+/// Erasure caveat: the value IS its [String] at runtime — the type is
+/// static only, and `==` compares name values.
+extension type const InstallationTargetStore(String name) {
+  /// The name pattern for store keys: lowercase identifiers, digits,
+  /// dashes, underscores.
+  static final RegExp namePattern = RegExp(r'^[a-z][a-z0-9_-]*$');
 
-export 'package:oka_store/oka_store.dart'
-    show NoopStoreBinding, StoreBinding, StoreKey;
-
-/// The installation target store identity — an alias of oka's open key,
-/// kept for existing import sites.
-typedef InstallationTargetStore = StoreKey;
+  /// Whether [name] is a valid store key.
+  static bool isValidName(String name) => namePattern.hasMatch(name);
+}
 
 /// Human-friendly labels for well-known stores (display only; nothing
 /// switches on these, and unknown keys fall back to the raw name).
-extension InstallationTargetStoreLabel on StoreKey {
+extension InstallationTargetStoreLabel on InstallationTargetStore {
   /// Display label for the store key.
   String get label => switch (name) {
     'google-play' => 'Google Play',
@@ -40,17 +45,17 @@ extension InstallationTargetStoreLabel on StoreKey {
   };
 }
 
-/// Well-known installation targets (convenience only — see
-/// `oka_store` for the fuller set; both are open sets).
+/// Well-known installation targets (convenience only — the set stays
+/// open: compose your own [InstallationTargetStore] value).
 
 /// The Google Play installation target.
-const installationTargetGooglePlay = storeKeyGooglePlay;
+const installationTargetGooglePlay = InstallationTargetStore('google-play');
 
 /// The Apple App Store installation target.
-const installationTargetAppleAppStore = storeKeyAppleStore;
+const installationTargetAppleAppStore = InstallationTargetStore('apple-store');
 
 /// The RuStore installation target.
-const installationTargetRuStore = storeKeyRuStore;
+const installationTargetRuStore = InstallationTargetStore('rustore');
 
 /// The Huawei AppGallery installation target.
-const installationTargetHuawei = storeKeyAppGallery;
+const installationTargetHuawei = InstallationTargetStore('appgallery');
